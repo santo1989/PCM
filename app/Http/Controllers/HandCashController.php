@@ -667,7 +667,7 @@ class HandCashController extends Controller
         for ($year = $startYear; $year <= $currentYear; $year++) {
             // Get the total income for the year
             $yearlyIncome = (float) ExpenseCalculation::whereYear('date', $year)
-                ->where('types', 'income')
+                ->where('types', 'income')->where('category_id', 1)
                 ->sum('amount');
 
             // Calculate investment percentage based on years active
