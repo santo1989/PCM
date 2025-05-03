@@ -1,0 +1,85 @@
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+
+                           
+                            <form method="POST" action="{{route('kpi_Mark_entry.show')}}">
+                            @csrf
+                            <table class="user-table table-borderless table-responsive card-1 p-4">
+                            <tr>
+                            <td>Period</td>
+                                                <td>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="radio"
+                                                                name="kpi_period" id="radio1"
+                                                                value="1st Phase, {{ date('Y') }}" >
+                                                            <label class="form-check-label" for="radio1">
+                                                                1st Phase, {{ date('Y') }}
+                                                            </label>
+                                                        </div>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="radio"
+                                                                name="kpi_period" id="radio2"
+                                                                value="2nd Phase, {{ date('Y') }}">
+                                                            <label class="form-check-label" for="radio2">
+                                                                2nd Phase, {{ date('Y') }}
+                                                            </label>
+                                                        </div>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="radio"
+                                                                name="kpi_period" id="radio3"
+                                                                value="3rd Phase, {{ date('Y') }}">
+                                                            <label class="form-check-label" for="radio3">
+                                                                3rd Phase, {{ date('Y') }}
+                                                            </label>
+                                                        </div>
+                                                </td>
+                                            </tr>
+                                            </table>
+
+
+                        </div>
+                        <!-- /.card-header -->
+                        <div class="card-body">
+                            {{-- role Table goes here --}}
+
+                            <table id="datatablesSimple"  class="table table-bordered table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Sl#</th>
+                                        <th>Name</th>
+                                        <th>Designation</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @php $sl=0 @endphp
+                                    {{-- @dd($users) --}}
+                                    @foreach ($users as $user)
+                                    <input type="hidden" name="user_id" value="{{$user->id}}">
+                                    
+                                        <tr>
+                                            <td>{{ ++$sl }}</td>
+                                            <td>{{ $user->name }}</td>
+                                            <td>{{ $user->designation->name }}</td>
+                                            <td>
+                                          
+                                                    <x-backend.form.Createbutton/>KPI Mark Input
+                                            </td>
+                                        </tr>
+                                    @endforeach
+ </form>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- /.card-body -->
+                    </div>
+                    <!-- /.card -->
+
+
+                    <!-- /.card -->
+                </div>
+                <!-- /.col -->
+            </div>
+            <!-- /.row -->
