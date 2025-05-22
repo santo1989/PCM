@@ -3,34 +3,24 @@
     <x-slot name="pageTitle">
         Admin Dashboard
     </x-slot>
-    {{-- <x-slot name='breadCrumb'>
+    {{-- <!-- <x-slot name='breadCrumb'>
                 <x-backend.layouts.elements.breadcrumb>
                     <x-slot name="pageHeader"> Dashboard </x-slot>
                     <li class="breadcrumb-item active">Dashboard</li>
                 </x-backend.layouts.elements.breadcrumb>
-            </x-slot> --}}
+            </x-slot> --> --}}
 
-    <div class="container">
-        <div class="row justify-content-center pt-4">
-            <div class="col-md-2">
-                <a href="{{ route('Budge_Projection') }}" class="btn btn-sm btn-outline-danger">Budge Projection</a>
-            </div>
+<div class="row pt-4">
+    <div class="col text-end">
+        <a href="{{ route('Budge_Projection') }}" class="btn btn-sm btn-outline-danger me-2">Budge Projection</a>
+        <a href="{{ route('Yearly_report') }}" class="btn btn-sm btn-outline-danger me-2">Yearly Report</a>
+        <a href="{{ route('Monthly_report') }}" class="btn btn-sm btn-outline-danger me-2">Monthly Report</a>
+        <a href="{{ route('Monthly_invest') }}" class="btn btn-sm btn-outline-danger me-2">Monthly Investment</a>
+        <a href="{{ route('power_bi_report') }}" class="btn btn-sm btn-outline-danger">BI Report</a>
+    </div>
+</div>
 
-            <div class="col-md-2">
-                <a href="{{ route('Yearly_report') }}" class="btn btn-sm btn-outline-danger">Yearly Report</a>
 
-            </div>
-            <div class="col-md-2">
-                <a href="{{ route('Monthly_report') }}" class="btn btn-sm btn-outline-danger">Monthly Report</a>
-            </div>
-            <div class="col-md-2">
-                <a href="{{ route('Monthly_invest') }}" class="btn btn-sm btn-outline-danger">Monthly Investment</a>
-            </div>
-            <div class="col-md-2">
-                <a href="{{ route('power_bi_report') }}" class="btn btn-sm btn-outline-danger">BI Report</a>
-            </div>
-
-        </div>
         <div class="container mt-4">
             <ul class="nav nav-tabs" id="contractTabs" role="tablist">
                 <li class="nav-item">
@@ -54,7 +44,7 @@
                     <div class="row justify-content-center pt-4">
 
 
-                        {{-- Yearly Monthly Data Start --}}
+                        <!-- Yearly Monthly Data Start -->
                         <div class="col-md-12">
                             <h2><strong class="text-center"> Last 12 Month Income & Expense With 50% Needs, 30% Wants,
                                     20% Savings Rule </strong>
@@ -129,7 +119,7 @@
                                 </thead>
                                 <tbody>
                                     @foreach ($monthlyData as $month => $data)
-                                        {{-- @if ($month === $currentMonth || $month === $currentMonth - 1 || $month === $currentMonth + 0) --}}
+                                        {{-- <!-- @if ($month === $currentMonth || $month === $currentMonth - 1 || $month === $currentMonth + 0) --> --}}
                                         <tr>
                                             <td rowspan="2">
                                                 {{ date('F', mktime(0, 0, 0, $month, 1)) }} </td>
@@ -152,7 +142,7 @@
                                             <td>{{ $data['thisMonthwants'] }}</td>
                                             <td>{{ $data['thisMonthsavings'] }}</td>
                                         </tr>
-                                        {{-- @endif --}}
+                                        {{-- <!-- @endif --> --}}
                                     @endforeach
                                     <tr class="bg-success">
                                         <th rowspan="2">Total</th>
@@ -185,7 +175,7 @@
 
                         </div>
                     </div>
-                    {{-- Yearly Monthly Data End --}}
+                    <!-- Yearly Monthly Data End -->
 
                 </div>
 
@@ -393,7 +383,7 @@
                             <table class="table table-bordered">
                                 <thead>
                                     <tr>
-                                        {{-- <th>Date</th> --}}
+                                        <!-- <th>Date</th> -->
                                         <th>Name</th>
                                         <th>Amount</th>
                                     </tr>
