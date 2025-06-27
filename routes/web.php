@@ -85,7 +85,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/expenseCalculations/{cash}', [ExpenseCalculationController::class, 'update'])->name('expenseCalculations.update');
     Route::delete('/expenseCalculations/{cash}', [ExpenseCalculationController::class, 'destroy'])->name('expenseCalculations.destroy');
 
-    Route::get('/expenseCalculations/export', [CashesController::class, 'Excelexport'])->name('cashes_export');
+    // Route::get('/expenseCalculations/export', [CashesController::class, 'Excelexport'])->name('cashes_export');
 
     //reports
 

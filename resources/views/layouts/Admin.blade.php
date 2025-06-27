@@ -34,7 +34,7 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" id="t3" data-toggle="tab" href="#t3">T3</a>
+                    <a class="nav-link" id="CategoryMonthlyData" data-toggle="tab" href="#CategoryMonthly">Category ways Monthly</a>
                 </li>
             </ul>
 
@@ -320,7 +320,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="tab-pane fade" id="t3">
+                <div class="tab-pane fade" id="CategoryMonthly">
                     <div class="row justify-content-center mt-5">
 
 

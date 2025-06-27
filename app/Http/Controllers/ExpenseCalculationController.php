@@ -17,7 +17,7 @@ class ExpenseCalculationController extends Controller
 {
     public function index()
     {
-        $expenseCalculations = ExpenseCalculation::latest();
+        $expenseCalculations = ExpenseCalculation::latest()->orderBy('date', 'desc');
 
         $search_cashes = null; // Initialize the variable
         $search_category_id = null; // Initialize the variable
