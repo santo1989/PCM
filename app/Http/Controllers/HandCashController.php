@@ -614,7 +614,7 @@ class HandCashController extends Controller
                 $years = max($currentYear - $startYear, 0);
 
                 // Calculate investment percentage with 10% yearly increase
-                $baseInvestmentPercent = 0.5;
+                $baseInvestmentPercent = 0.3;
                 $investmentPercent = min($baseInvestmentPercent * pow(1.1, $years), 0.8);
 
             $amount = (float)$item->amount;
@@ -623,7 +623,7 @@ class HandCashController extends Controller
                     'date' => $item->date,
                     'amount' => $amount,
                     'investment' => $amount * $investmentPercent,
-                    'needs' => $amount * 0.3,
+                    'needs' => $amount * 0.5,
                     'wants' => $amount * 0.1,
                     'future' => $amount * 0.1,
                 ];
@@ -635,6 +635,16 @@ class HandCashController extends Controller
             ->whereBetween('date', [$startDate, $endDate])
             ->get()
             ->groupBy('rules');
+        // Map expenses to include amounts and convert to float
+        $expenses = $expenses->map(function ($group) {
+            return $group->map(function ($item) {
+                $item->amount = (float)$item->amount; // Convert model's amount
+                return $item;
+            });
+        });
+
+        //total expenses 
+        $totalExpenses = $expenses->flatten()->sum('amount');
 
         // Investment growth calculation (NEW)
         $investmentGrowth = $this->calculateInvestmentGrowth($startDate, $endDate);
@@ -647,7 +657,7 @@ class HandCashController extends Controller
         });
         return view(
             'backend.reports.Monthly_invest',
-            compact('incomes', 'expenses', 'startDate', 'endDate', 'investmentGrowth')
+            compact('incomes', 'expenses', 'startDate', 'endDate', 'investmentGrowth', 'totalExpenses')
         );
     }
 
@@ -672,7 +682,7 @@ class HandCashController extends Controller
 
             // Calculate investment percentage based on years active
             $yearsActive = $year - $startYear;
-            $investmentPercent = min(0.5 * pow(1.1, $yearsActive), 0.8);
+            $investmentPercent = min(0.3 * pow(1.1, $yearsActive), 0.8);
 
             // Store the growth data
             $growthData[] = [

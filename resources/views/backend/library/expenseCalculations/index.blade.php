@@ -303,19 +303,35 @@
                                                     </div>
                                                 </div>
                                                 <!--  Category end -->
-                                                <!--  Name start -->
+                                                <!-- Name start -->
                                                 <div class="col-md-2">
                                                     <div class="mt-3">
-                                                        <x-label for="name" :value="__('Name')" class="ml-2 " />
+                                                        <x-label for="name" :value="__('Name')" class="ml-2" />
                                                         <div class="row">
                                                             <div class="col-12">
-                                                                <x-input name="name[]" class="form-control"
-                                                                    autofocus />
+                                                                @php
+                                                                    $nameList = App\Models\ExpenseCalculation::select(
+                                                                        'name',
+                                                                    )
+                                                                        ->distinct()
+                                                                        ->pluck('name');
+                                                                @endphp
+
+                                                                <input list="nameList" name="name[]"
+                                                                    class="form-control" />
+
+                                                                <datalist id="nameList">
+                                                                    @foreach ($nameList as $n)
+                                                                        <option value="{{ $n }}">
+                                                                            {{ $n }}</option>
+                                                                    @endforeach
+                                                                </datalist>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <!--  Name end -->
+                                                <!-- Name end -->
+
                                                 <!--  Amount start -->
                                                 <div class="col-md-2">
                                                     <div class="mt-3 ">

@@ -54,8 +54,8 @@
                             <thead class="thead-dark">
                                 <tr>
                                     <th>Total Income</th>
-                                    <th>Investment (50% + 10%/yr)</th>
-                                    <th>Needs (30%)</th>
+                                    <th>Investment (30% + 10%/yr)</th>
+                                    <th>Needs (50%)</th>
                                     <th>Wants (10%)</th>
                                     <th>Future Goals (10%)</th>
                                 </tr>
@@ -160,9 +160,9 @@
                                         
                                         @php
                                             // Convert sums to floats
-                                            $totalExpense = (float) $expenses->sum('amount');
-                                            echo number_format($totalExpense, 2);
-                                            
+                                            // $totalExpense = (float) $expenses->sum('amount');
+                                            // echo number_format($totalExpense, 2);
+                                            echo number_format($totalExpenses, 2);
                                         @endphp
                                     </strong></td>
 
