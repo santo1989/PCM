@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\DB;
 
 class HandCashController extends Controller
 {
@@ -85,7 +86,7 @@ class HandCashController extends Controller
         $bankRules = ['City_Bank', 'Sonali_Bank_Gulshan', 'Sonali_Bank_Tongi', 'DBBL', 'PBL', 'FD', 'DPS'];
 
         $mobile_cash_save = HandCash::query()
-            ->select(['rules', 'types', \DB::raw('SUM(amount) as total')])
+            ->select(['rules', 'types', DB::raw('SUM(amount) as total')])
             ->whereIn('rules', $mobileRules)
             ->where('types', 'Save')
             ->groupBy('rules', 'types')
@@ -93,7 +94,7 @@ class HandCashController extends Controller
 
 
         $mobile_cash_withdraw = HandCash::query()
-            ->select(['rules', 'types', \DB::raw('SUM(amount) as total')])
+            ->select(['rules', 'types', DB::raw('SUM(amount) as total')])
             ->whereIn('rules', $mobileRules)
             ->where('types', 'Widrows')
             ->groupBy('rules', 'types')
@@ -102,14 +103,14 @@ class HandCashController extends Controller
 
 
         $bank_cash_save = HandCash::query()
-            ->select(['rules', 'types', \DB::raw('SUM(amount) as total')])
+            ->select(['rules', 'types', DB::raw('SUM(amount) as total')])
             ->whereIn('rules', $bankRules)
             ->where('types', 'Save')
             ->groupBy('rules', 'types')
             ->get();
 
         $bank_cash_withdraw = HandCash::query()
-            ->select(['rules', 'types', \DB::raw('SUM(amount) as total')])
+            ->select(['rules', 'types', DB::raw('SUM(amount) as total')])
             ->whereIn('rules', $bankRules)
             ->where('types', 'Widrows')
             ->groupBy('rules', 'types')
@@ -120,7 +121,7 @@ class HandCashController extends Controller
         $mobile_cash = HandCash::query()
             ->select([
                 'rules',
-                \DB::raw('SUM(CASE WHEN types = "Save" THEN amount ELSE 0 END) - SUM(CASE WHEN types = "Widrows" THEN amount ELSE 0 END) as Balance'),
+                DB::raw('SUM(CASE WHEN types = "Save" THEN amount ELSE 0 END) - SUM(CASE WHEN types = "Widrows" THEN amount ELSE 0 END) as Balance'),
             ])
             ->whereIn('rules', $mobileRules)
             ->groupBy('rules') // Remove 'types' from the GROUP BY clause
@@ -132,7 +133,7 @@ class HandCashController extends Controller
         $bank_cash = HandCash::query()
             ->select([
                 'rules',
-                \DB::raw('SUM(CASE WHEN types = "Save" THEN amount ELSE 0 END) - SUM(CASE WHEN types = "Widrows" THEN amount ELSE 0 END) as Balance'),
+                DB::raw('SUM(CASE WHEN types = "Save" THEN amount ELSE 0 END) - SUM(CASE WHEN types = "Widrows" THEN amount ELSE 0 END) as Balance'),
             ])
             ->whereIn('rules', $bankRules)
             ->groupBy('rules')
@@ -405,7 +406,7 @@ class HandCashController extends Controller
                 ->whereMonth('date', $month)
                 // ->whereYear('date', $currentYear)
                 ->groupBy('category_id')
-                ->select('category_id', \DB::raw('SUM(amount) as totalExpense'))
+                ->select('category_id', DB::raw('SUM(amount) as totalExpense'))
                 ->get();
 
             $thisMonthneeds = ExpenseCalculation::where('rules', 'needs')
@@ -519,7 +520,7 @@ class HandCashController extends Controller
             ->where('types', 'expense')
             ->whereBetween('date', [$startDate, $endDate])
             ->groupBy('category_id')
-            ->select('category_id', \DB::raw('SUM(amount) as totalExpense'))
+            ->select('category_id', DB::raw('SUM(amount) as totalExpense'))
             ->orderBy('totalExpense', 'desc')
             ->get();
 
@@ -548,7 +549,7 @@ class HandCashController extends Controller
             ->where('types', 'income')
             ->whereBetween('date', [$startDate, $endDate])
             ->groupBy('category_id')
-            ->select('category_id', \DB::raw('SUM(amount) as totalIncomeYear'))
+            ->select('category_id', DB::raw('SUM(amount) as totalIncomeYear'))
             ->orderBy('totalIncomeYear', 'desc')
             ->get();
 
@@ -557,7 +558,7 @@ class HandCashController extends Controller
             ->where('types', 'expense')
             ->whereBetween('date', [$startDate, $endDate])
             ->groupBy('category_id')
-            ->select('category_id', \DB::raw('SUM(amount) as totalExpenseYear'))
+            ->select('category_id', DB::raw('SUM(amount) as totalExpenseYear'))
             ->orderBy('totalExpenseYear', 'desc')
             ->get();
 
