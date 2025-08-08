@@ -230,9 +230,9 @@ class HandCashController extends Controller
         $MyLoan_balance = $MyLoan_pay - $MyLoan_borrow;
 
         // Calculate the total HandCashes
-        $hands = $handCashes_Mobile_balence + $handCashes_Bank_balence + $handCashes_Cash_balence + $handCashes_loan_balence + $CreditCard_balance + $MyLoan_balance;
+        $hands = $handCashes_Mobile_balence + $handCashes_Bank_balence + $handCashes_Cash_balence + $handCashes_loan_balence + $CreditCard_balance;
 
-        //Calculate the total amount without loan, CreditCard and Peti and DPS
+        //Calculate the total amount without loan, CreditCard, Peti, MyLoan and DPS
         $total = $hands- $handCashes_Peti_balence - $Bank_DPS_balence- $CreditCard_balance- $handCashes_loan_balence - $MyLoan_balance;
 
         // Calculate the total amounts without loan, CreditCard and Peti, DPS, Bank FD, cash 
