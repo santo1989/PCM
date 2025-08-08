@@ -56,6 +56,7 @@
                             <option value="CreditCard">Credit Card</option>
                             <option value="FD">FD</option>
                             <option value="DPS">DPS</option>
+                            <option value="MyLoan">MyLoan</option>
                         </select>
                     </div>
 
@@ -93,6 +94,7 @@
                             <option value="CreditCard">Credit Card</option>
                             <option value="FD">FD</option>
                             <option value="DPS">DPS</option>
+                            <option value="MyLoan">MyLoan</option>
                         </select> 
                     </div>
 

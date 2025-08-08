@@ -87,29 +87,6 @@
                                             </table>
                                         </div>
                                         <div class="col-md-3">
-                                            <h4>Hand Cash</h4>
-                                            <table class="table table-bordered table-hover">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Cash</th>
-                                                        <td>Balence</td>
-
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <tr>
-                                                        <th>Shanta Hand Cash Balence</th>
-                                                        <td>{{ $handCashes_Cash_balence }}</td>
-
-                                                    </tr>
-                                                    <tr>
-                                                        <th>Peti Cash Balance</th>
-                                                        <td>{{ $handCashes_Peti_balence }}</td>
-                                                    </tr>
-
-
-                                                </tbody>
-                                            </table>
                                             <h4>Loan To Other</h4>
                                             <table class="table table-bordered table-hover">
                                                 <thead>
@@ -125,6 +102,30 @@
 
                                                 </tbody>
                                             </table>
+                                             <h4>My Loan</h4>
+                                            <table class="table table-bordered table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Pay</th>
+                                                        <th>Borrow</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+
+                                                    <tr>
+                                                        <td>{{ $MyLoan_pay }}</td>
+                                                        <td>{{ $MyLoan_borrow }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Balance</td>
+                                                        <td>{{ $MyLoan_balance }}</td>
+                                                    </tr>
+
+
+                                                </tbody>
+                                            </table>
+                                            
+                                            
                                         </div>
                                         <div class="col-md-3">
                                             <h4>Bank Cash Handlings</h4>
@@ -151,12 +152,32 @@
                                                 </tbody>
                                             </table>
                                         </div>
-                                        {{-- <div class="col-md-3">
-
-                                        </div> --}}
 
                                         <div class="col-md-3">
-                                            <h4>Total Balence</h4>
+                                           <h4>Hand Cash</h4>
+                                            <table class="table table-bordered table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Cash</th>
+                                                        <td>Balence</td>
+
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr>
+                                                        <th>Shanta Hand Cash Balence</th>
+                                                        <td>{{ $handCashes_Cash_balence }}</td>
+
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Peti Cash Balance</th>
+                                                        <td>{{ $handCashes_Peti_balence }}</td>
+                                                    </tr>
+
+
+                                                </tbody>
+                                            </table>
+                                            <h4 class="pt-2">Total Balence</h4>
                                             <table class="table table-bordered table-hover">
                                                 <thead>
                                                     <tr>

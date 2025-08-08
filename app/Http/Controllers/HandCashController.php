@@ -225,18 +225,22 @@ class HandCashController extends Controller
 
         $CreditCard_balance = $CreditCard_Credit - $CreditCard_withdraw;
 
+        $MyLoan_pay = HandCash::where('rules', 'MyLoan')->where('types', 'Save')->sum('amount');
+        $MyLoan_borrow = HandCash::where('rules', 'MyLoan')->where('types', 'Widrows')->sum('amount');
+        $MyLoan_balance = $MyLoan_pay - $MyLoan_borrow;
+
         // Calculate the total HandCashes
-        $hands = $handCashes_Mobile_balence + $handCashes_Bank_balence + $handCashes_Cash_balence + $handCashes_loan_balence + $CreditCard_balance;
+        $hands = $handCashes_Mobile_balence + $handCashes_Bank_balence + $handCashes_Cash_balence + $handCashes_loan_balence + $CreditCard_balance + $MyLoan_balance;
 
         //Calculate the total amount without loan, CreditCard and Peti and DPS
-        $total = $hands- $handCashes_Peti_balence - $Bank_DPS_balence- $CreditCard_balance- $handCashes_loan_balence;
+        $total = $hands- $handCashes_Peti_balence - $Bank_DPS_balence- $CreditCard_balance- $handCashes_loan_balence - $MyLoan_balance;
 
         // Calculate the total amounts without loan, CreditCard and Peti, DPS, Bank FD, cash 
 
 
 
         // Pass the calculated data to the view
-        return view('backend.library.handCashes.index', compact('mobile_cash_save', 'mobile_cash_withdraw', 'bank_cash_save', 'cash_cash_save', 'cash_cash_withdraw', 'bank_cash_withdraw', 'handCashes', 'hands', 'handCashes_Mobile_balence', 'handCashes_Bank_balence', 'handCashes_Cash_balence', 'handCashes_loan_balence', 'loan_cash_save', 'loan_cash_withdraw', 'mobile_cash', 'bank_cash', 'CreditCard_Credit', 'CreditCard_withdraw', 'CreditCard_balance', 'Bank_FD', 'Bank_FD_withdraw', 'Bank_FD_balence', 'Bank_DPS', 'Bank_DPS_withdraw', 'Bank_DPS_balence',  'handCashes_Peti_balence', 'handCashes_Peti_save', 'handCashes_Peti_withdraw', 'total'));
+        return view('backend.library.handCashes.index', compact('mobile_cash_save', 'mobile_cash_withdraw', 'bank_cash_save', 'cash_cash_save', 'cash_cash_withdraw', 'bank_cash_withdraw', 'handCashes', 'hands', 'handCashes_Mobile_balence', 'handCashes_Bank_balence', 'handCashes_Cash_balence', 'handCashes_loan_balence', 'loan_cash_save', 'loan_cash_withdraw', 'mobile_cash', 'bank_cash', 'CreditCard_Credit', 'CreditCard_withdraw', 'CreditCard_balance', 'Bank_FD', 'Bank_FD_withdraw', 'Bank_FD_balence', 'Bank_DPS', 'Bank_DPS_withdraw', 'Bank_DPS_balence',  'handCashes_Peti_balence', 'handCashes_Peti_save', 'handCashes_Peti_withdraw', 'total', 'MyLoan_pay', 'MyLoan_borrow', 'MyLoan_balance'));
     }
 
 
@@ -438,56 +442,6 @@ class HandCashController extends Controller
 
         return view('backend.reports.yearly_report', compact('monthlyData'));
     }
-
-    // public function Yearly_report()
-    // {
-
-    //     $currentYear = date('Y');
-
-    //     $monthlyData = [];
-
-    //     for ($month = 1; $month <= 12; $month++) {
-    //         $thisMonthIncome = ExpenseCalculation::where('types', 'income')
-    //         ->whereMonth('date', $month)
-    //             ->whereYear('date', $currentYear)
-    //             ->get();
-
-    //         $thisMonthExpense = ExpenseCalculation::where('types', 'expense')
-    //         ->whereMonth('date', $month)
-    //             ->whereYear('date', $currentYear)
-    //             ->groupBy('category_id')
-    //             ->select('category_id', \DB::raw('SUM(amount) as totalExpense'))
-    //             ->get();
-
-    //         $thisMonthneeds = ExpenseCalculation::where('rules', 'needs')
-    //         ->whereMonth('date', $month)
-    //             ->whereYear('date', $currentYear)
-    //             ->sum('amount');
-
-    //         $thisMonthwants = ExpenseCalculation::where('rules', 'wants')
-    //         ->whereMonth('date', $month)
-    //             ->whereYear('date', $currentYear)
-    //             ->sum('amount');
-
-    //         $thisMonthsavings = ExpenseCalculation::where('rules', 'savings')
-    //         ->whereMonth('date', $month)
-    //             ->whereYear('date', $currentYear)
-    //             ->sum('amount');
-
-    //         $monthlyData[$month] = [
-    //             'income' => $thisMonthIncome->sum('amount'),
-    //             'needs' => $thisMonthIncome->sum('amount') * 0.5,
-    //             'wants' => $thisMonthIncome->sum('amount') * 0.3,
-    //             'savings' => $thisMonthIncome->sum('amount') * 0.2,
-    //             'expense' => $thisMonthExpense->sum('totalExpense'),
-    //             'thisMonthneeds' => $thisMonthneeds,
-    //             'thisMonthwants' => $thisMonthwants,
-    //             'thisMonthsavings' => $thisMonthsavings,
-    //         ];
-    //     }
-
-    //     return view('backend.reports.yearly_report', compact('monthlyData'));
-    // }
 
 
 
@@ -697,28 +651,5 @@ class HandCashController extends Controller
             'amounts' => array_map('floatval', array_column($growthData, 'amount'))
         ];
     }
-    // {
-    //     $startYear = 2022;
-    //     $currentYear = now()->year;
-    //     $growthData = [];
-
-    //     for ($year = $startYear; $year <= $currentYear; $year++) {
-    //         $yearlyIncome = (float) ExpenseCalculation::whereYear('date', $year)
-    //             ->where('types', 'income')
-    //             ->sum('amount');
-
-    //         $yearsActive = $year - $startYear;
-    //         $investmentPercent = min(0.5 * pow(1.1, $yearsActive), 0.8);
-
-    //         $growthData[] = [
-    //             'year' => $year,
-    //             'amount' => (float) $yearlyIncome * $investmentPercent
-    //         ];
-    //     }
-
-    //     return [
-    //         'years' => array_column($growthData, 'year'),
-    //         'amounts' => array_map('floatval', array_column($growthData, 'amount'))
-    //     ];
-    // }
+   
 }

@@ -65,6 +65,7 @@
                     <option value="CreditCard" {{ $handCashes->rules == 'CreditCard' ? 'selected' : '' }}>Credit Card </option>
                     <option value="FD" {{ $handCashes->rules == 'FD' ? 'selected' : '' }}>FD</option>
                     <option value="DPS" {{ $handCashes->rules == 'DPS' ? 'selected' : '' }}>DPS</option>
+                    <option value="MyLoan" {{ $handCashes->rules == 'MyLoan' ? 'selected' : '' }}>MyLoan</option>
 
 
                 </select>
