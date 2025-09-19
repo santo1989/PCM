@@ -106,19 +106,25 @@
                                             <table class="table table-bordered table-hover">
                                                 <thead>
                                                     <tr>
+                                                        <th>Name</th>
                                                         <th>Pay</th>
                                                         <th>Borrow</th>
+                                                        <th>Balance</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
 
                                                     <tr>
+                                                        <td>My Loan</td>
                                                         <td>{{ $MyLoan_pay }}</td>
                                                         <td>{{ $MyLoan_borrow }}</td>
+                                                        <td>{{ $MyLoan_balance }}</td>
                                                     </tr>
                                                     <tr>
-                                                        <td>Balance</td>
-                                                        <td>{{ $MyLoan_balance }}</td>
+                                                        <td>DPS Loan</td>
+                                                        <td>{{ $DPSLoan_pay }}</td>
+                                                        <td>{{ $DPSLoan_borrow }}</td>
+                                                        <td>{{ $DPSLoan_balance }}</td>
                                                     </tr>
 
 
@@ -188,11 +194,11 @@
                                                 <tbody>
                                                     <tr>
                                                         <td>Net Cash</td>
-                                                        <td>{{ $total }}</td>
+                                                        <td>{{ $hands }}</td>
                                                     </tr>
                                                     <tr>
                                                         <td>Gross Cash</td>
-                                                        <td>{{ $hands }}</td>
+                                                        <td>{{ $total }}</td>
                                                     </tr>
                                                 </tbody>
                                             </table>

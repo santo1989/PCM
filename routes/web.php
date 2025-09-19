@@ -98,7 +98,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/handCashes_transfer_create', [HandCashController::class, 'handCashes_transfer_create'])->name('handCashes_transfer_create');
     Route::post('/handCashes_transfer', [HandCashController::class, 'handCashes_transfer'])->name('handCashes_transfer');
 
-    
+    Route::post('/calculate-and-save-budget', [HandCashController::class, 'calculateAndSaveBudget'])->name('calculate_and_save_budget');
 });
 
 

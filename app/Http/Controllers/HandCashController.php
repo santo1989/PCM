@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\ExpenseCalculation;
 use App\Models\HandCash;
+use App\Models\ProjectedExpense;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -229,18 +231,26 @@ class HandCashController extends Controller
         $MyLoan_borrow = HandCash::where('rules', 'MyLoan')->where('types', 'Widrows')->sum('amount');
         $MyLoan_balance = $MyLoan_pay - $MyLoan_borrow;
 
+        // DPSLoan
+        $DPSLoan_pay = HandCash::where('rules', 'DPSLoan')->where('types', 'Save')->sum('amount');
+        $DPSLoan_borrow = HandCash::where('rules', 'DPSLoan')->where('types', 'Widrows')->sum('amount');
+        $DPSLoan_balance = $DPSLoan_pay - $DPSLoan_borrow;
+
+
+
         // Calculate the total HandCashes
-        $hands = $handCashes_Mobile_balence + $handCashes_Bank_balence + $handCashes_Cash_balence + $handCashes_loan_balence + $CreditCard_balance;
+        // $hands = $handCashes_Mobile_balence + $handCashes_Bank_balence + $handCashes_Cash_balence + $handCashes_loan_balence + $CreditCard_balance;
+        $total = $handCashes_Mobile_balence + $handCashes_Bank_balence + $handCashes_Cash_balence  + $CreditCard_balance +  $handCashes_Peti_balence ;
 
         //Calculate the total amount without loan, CreditCard, Peti, MyLoan and DPS
-        $total = $hands- $handCashes_Peti_balence - $Bank_DPS_balence- $CreditCard_balance- $handCashes_loan_balence - $MyLoan_balance;
+        $hands  = $total + $DPSLoan_balance + $MyLoan_balance + $handCashes_loan_balence;
 
         // Calculate the total amounts without loan, CreditCard and Peti, DPS, Bank FD, cash 
 
 
 
         // Pass the calculated data to the view
-        return view('backend.library.handCashes.index', compact('mobile_cash_save', 'mobile_cash_withdraw', 'bank_cash_save', 'cash_cash_save', 'cash_cash_withdraw', 'bank_cash_withdraw', 'handCashes', 'hands', 'handCashes_Mobile_balence', 'handCashes_Bank_balence', 'handCashes_Cash_balence', 'handCashes_loan_balence', 'loan_cash_save', 'loan_cash_withdraw', 'mobile_cash', 'bank_cash', 'CreditCard_Credit', 'CreditCard_withdraw', 'CreditCard_balance', 'Bank_FD', 'Bank_FD_withdraw', 'Bank_FD_balence', 'Bank_DPS', 'Bank_DPS_withdraw', 'Bank_DPS_balence',  'handCashes_Peti_balence', 'handCashes_Peti_save', 'handCashes_Peti_withdraw', 'total', 'MyLoan_pay', 'MyLoan_borrow', 'MyLoan_balance'));
+        return view('backend.library.handCashes.index', compact('mobile_cash_save', 'mobile_cash_withdraw', 'bank_cash_save', 'cash_cash_save', 'cash_cash_withdraw', 'bank_cash_withdraw', 'handCashes', 'hands', 'handCashes_Mobile_balence', 'handCashes_Bank_balence', 'handCashes_Cash_balence', 'handCashes_loan_balence', 'loan_cash_save', 'loan_cash_withdraw', 'mobile_cash', 'bank_cash', 'CreditCard_Credit', 'CreditCard_withdraw', 'CreditCard_balance', 'Bank_FD', 'Bank_FD_withdraw', 'Bank_FD_balence', 'Bank_DPS', 'Bank_DPS_withdraw', 'Bank_DPS_balence',  'handCashes_Peti_balence', 'handCashes_Peti_save', 'handCashes_Peti_withdraw', 'total', 'MyLoan_pay', 'MyLoan_borrow', 'MyLoan_balance', 'DPSLoan_pay', 'DPSLoan_borrow', 'DPSLoan_balance'));
     }
 
 
@@ -385,13 +395,7 @@ class HandCashController extends Controller
         return redirect()->route('handCashes.index')->withMessage('HandCash and related data are deleted successfully!');
     }
 
-    public function Budge_Projection()
-    {
-
-        $handCashes = HandCash::all();
-
-        return view('backend.reports.projection_report', compact('handCashes'));
-    }
+   
 
     public function Yearly_report()
     {
@@ -651,5 +655,127 @@ class HandCashController extends Controller
             'amounts' => array_map('floatval', array_column($growthData, 'amount'))
         ];
     }
-   
+    public function Budge_Projection()
+    {
+        // Retrieve all categories, excluding specified ones
+        $categories = Category::all()->except([1, 19, 20, 23]);
+
+        // Calculate this year's average expenses per category (excluding current month)
+        $allYearExpenses = ExpenseCalculation::where('types', 'expense')
+            ->whereYear('date', Carbon::now()->year)
+            ->whereMonth('date', '!=', Carbon::now()->month)
+            ->groupBy('category_id')
+            ->select('category_id', DB::raw('sum(amount) as totalExpense'), DB::raw('count(distinct MONTH(date)) as totalMonths'))
+            ->get();
+
+        $thisYearExpense = [];
+        foreach ($allYearExpenses as $expense) {
+            $averageExpense = $expense->totalExpense / $expense->totalMonths;
+            $thisYearExpense[] = [
+                'category_id' => $expense->category_id,
+                'averageExpense' => ceil($averageExpense),
+            ];
+        }
+
+        // Get last month's expenses per category
+        $lastMonth = date('m') == '01' ? '12' : str_pad(date('m') - 1, 2, '0', STR_PAD_LEFT);
+        $lastYear = date('m') == '01' ? date('Y') - 1 : date('Y');
+
+        $lastMonthExpense = ExpenseCalculation::whereYear('date', $lastYear)
+            ->whereMonth('date', $lastMonth)
+            ->where('types', 'expense')
+            ->groupBy('category_id')
+            ->select('category_id', \DB::raw('SUM(amount) as totalExpense'))
+            ->get()
+            ->map(function ($expense) {
+                $expense->totalExpense = ceil($expense->totalExpense);
+                return $expense;
+            });
+
+        $totallastMonthExpense = $lastMonthExpense->sum('totalExpense');
+
+        // Get total income for the current month
+        $totalMonthlyIncome = ExpenseCalculation::where('category_id', 1)
+            ->whereYear('date', now()->year)
+            ->whereMonth('date', now()->month)
+            ->sum('amount');
+
+        // Calculate total expense limit (40% of income) and savings (10%)
+        // We will not use the 40% rule as it's not dynamic enough.
+        // Instead, we will calculate a total budget based on a 10% savings goal.
+        $savingRate = 0.10;
+        $MonthlyactualLimitExpense = $totalMonthlyIncome * (1 - $savingRate);
+
+        // This is a new part of the code to get the projected expenses for this month
+        $thisMonthProjectedExpenses = ProjectedExpense::whereYear('date', now()->year)
+            ->whereMonth('date', now()->month)
+            ->get()
+            ->keyBy('category_id');
+
+        return view('backend.reports.projection_report', compact(
+            'categories',
+            'thisYearExpense',
+            'lastMonthExpense',
+            'totallastMonthExpense',
+            'MonthlyactualLimitExpense',
+            'totalMonthlyIncome',
+            'thisMonthProjectedExpenses'
+        ));
+    }
+
+    public function calculateAndSaveBudget()
+    {
+        // 1. Get total income for the current month
+        $totalMonthlyIncome = ExpenseCalculation::where('category_id', 1)
+            ->whereYear('date', Carbon::now()->year)
+            ->whereMonth('date', Carbon::now()->month)
+            ->sum('amount');
+
+        if ($totalMonthlyIncome <= 0) {
+            return back()->with('error', 'No income data found for the current month. Cannot calculate budget.');
+        }
+
+        // 2. Calculate the total budget for expenses after a 10% saving
+        $savingRate = 0.10;
+        $totalBudgetForExpenses = $totalMonthlyIncome * (1 - $savingRate);
+
+        // 3. Get total average yearly expenses for proportional allocation
+        $allYearExpenses = ExpenseCalculation::where('types', 'expense')
+            ->whereYear('date', Carbon::now()->year)
+            ->whereMonth('date', '!=', Carbon::now()->month)
+            ->groupBy('category_id')
+            ->select('category_id', DB::raw('sum(amount) as totalExpense'))
+            ->get();
+
+        $totalAllYearExpense = $allYearExpenses->sum('totalExpense');
+
+        // 4. Allocate budget to each category and prepare for saving
+        $projectedExpensesData = [];
+        $nextMonth = Carbon::now()->addMonth();
+
+        // Delete existing projected budget for the next month to avoid duplicates
+        ProjectedExpense::whereYear('date', $nextMonth->year)
+            ->whereMonth('date', $nextMonth->month)
+            ->delete();
+
+        foreach ($allYearExpenses as $expense) {
+            $proportion = ($totalAllYearExpense > 0) ? ($expense->totalExpense / $totalAllYearExpense) : 0;
+            $allocatedAmount = ceil($totalBudgetForExpenses * $proportion);
+
+            $projectedExpensesData[] = [
+                'category_id' => $expense->category_id,
+                'date' => $nextMonth,
+                'amount' => $allocatedAmount,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+
+        // 5. Save the new projected budget to the database
+        if (!empty($projectedExpensesData)) {
+            ProjectedExpense::insert($projectedExpensesData);
+        }
+
+        return back()->with('success', 'Dynamic budget for next month has been calculated and saved successfully!');
+    }
 }

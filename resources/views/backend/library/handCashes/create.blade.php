@@ -37,31 +37,28 @@
                         <select class="form-control" name="types[]">
                             <option value="Save">Savings</option>
                             <option value="Widrows">Withdraws</option>
-                            
+
                         </select>
                     </div>
                     <div class="col-md-2">
                         <label for="rules[]">Cash Rules</label>
                         <select class="form-control" name="rules[]">
-                            {{-- <option value="Mobile">Mobile</option>
-                        <option value="Bank">Bank</option>
-                        <option value="Cash">Cash</option>
-                        <option value="loan">Loan To Other </option> --}}
-                            <option value="Mobile_Bkash">Bkash</option>
-                            <option value="Mobile_Rocket">Rocket</option>
+                            <option value="Peti">Peti Cash</option>
+                            <option value="Cash">Cash</option>
                             <option value="City_Bank">City Bank</option>
+                            <option value="FD">FD</option>
+                            <option value="DPS">DPS</option>
+                            <option value="MyLoan">MyLoan</option>
+                            <option value="DPSLoan">DPS Loan</option>
+                            <option value="loan">Loan To Other </option>
+                            <option value="CreditCard">Credit Card</option>
                             <option value="Sonali_Bank_Gulshan">Sonali Bank Gulshan</option>
                             <option value="Sonali_Bank_Tongi">Sonali Bank Tongi</option>
                             <option value="DBBL">Dutch Bangla Bank</option>
                             <option value="PBL">Prime Bank Ltd</option>
                             <option value="Mobile_Nagad">Nagad</option>
-                            <option value="Cash">Cash</option>
-                            <option value="Peti">Peti Cash</option>
-                            <option value="loan">Loan To Other </option>
-                            <option value="CreditCard">Credit Card</option>
-                            <option value="FD">FD</option>
-                            <option value="DPS">DPS</option>
-                            <option value="MyLoan">MyLoan</option>
+                            <option value="Mobile_Bkash">Bkash</option>
+                            <option value="Mobile_Rocket">Rocket</option>
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -103,21 +100,22 @@
             <div class="col-md-2">
                 <label for="rules[]">Cash Rules</label>
                 <select class="form-control" name="rules[]">
-                    <option value="Mobile_Bkash">Bkash</option>
-                    <option value="Mobile_Rocket">Rocket</option>
-                    <option value="City_Bank">City Bank</option> 
-                    <option value="Sonali_Bank_Gulshan">Sonali Bank Gulshan</option>
-                    <option value="Sonali_Bank_Tongi">Sonali Bank Tongi</option>
-                    <option value="DBBL">Dutch Bangla Bank</option>
-                    <option value="PBL">Prime Bank Ltd</option>
-                    <option value="Mobile_Nagad">Nagad</option>
-                    <option value="Cash">Cash</option>
-                    <option value="Peti">Peti Cash</option>
-                    <option value="loan">Loan To Other </option>
-                    <option value="CreditCard">Credit Card</option>
-                    <option value="FD">FD</option>
-                    <option value="DPS">DPS</option>
-                    <option value="MyLoan">MyLoan</option>
+                            <option value="Peti">Peti Cash</option>
+                            <option value="Cash">Cash</option>
+                            <option value="City_Bank">City Bank</option>
+                            <option value="FD">FD</option>
+                            <option value="DPS">DPS</option>
+                            <option value="MyLoan">MyLoan</option>
+                            <option value="DPSLoan">DPS Loan</option>
+                            <option value="loan">Loan To Other </option>
+                            <option value="CreditCard">Credit Card</option>
+                            <option value="Sonali_Bank_Gulshan">Sonali Bank Gulshan</option>
+                            <option value="Sonali_Bank_Tongi">Sonali Bank Tongi</option>
+                            <option value="DBBL">Dutch Bangla Bank</option>
+                            <option value="PBL">Prime Bank Ltd</option>
+                            <option value="Mobile_Nagad">Nagad</option>
+                            <option value="Mobile_Bkash">Bkash</option>
+                            <option value="Mobile_Rocket">Rocket</option>
                 </select>
             </div>
             <div class="col-md-2">
