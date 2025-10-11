@@ -41,7 +41,7 @@
                     </div>
                     <div class="col-md-2">
                         <label for="rules1">Rules</label>
-                        <select class="form-control" name="rules1"> 
+                        <select class="form-control" name="rules1">
                             <option value="Mobile_Bkash">Bkash</option>
                             <option value="Mobile_Rocket">Rocket</option>
                             <option value="City_Bank">City Bank</option>
@@ -57,6 +57,7 @@
                             <option value="FD">FD</option>
                             <option value="DPS">DPS</option>
                             <option value="MyLoan">MyLoan</option>
+                            <option value="DPSLoan">DPS Loan</option>
                         </select>
                     </div>
 
@@ -73,7 +74,7 @@
                                 types2 = 'Widrows';
                             } else {
                                 types2 = 'Save';
-                                 
+
                             }
                         </script>
                     </div>
@@ -95,7 +96,8 @@
                             <option value="FD">FD</option>
                             <option value="DPS">DPS</option>
                             <option value="MyLoan">MyLoan</option>
-                        </select> 
+                            <option value="DPSLoan">DPS Loan</option>
+                        </select>
                     </div>
 
 
@@ -107,5 +109,5 @@
         </div>
     </form>
 
-     
+
 </x-backend.layouts.master>
