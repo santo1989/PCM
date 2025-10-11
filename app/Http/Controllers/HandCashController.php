@@ -685,7 +685,7 @@ class HandCashController extends Controller
             ->whereMonth('date', $lastMonth)
             ->where('types', 'expense')
             ->groupBy('category_id')
-            ->select('category_id', \DB::raw('SUM(amount) as totalExpense'))
+            ->select('category_id', DB::raw('SUM(amount) as totalExpense'))
             ->get()
             ->map(function ($expense) {
                 $expense->totalExpense = ceil($expense->totalExpense);
