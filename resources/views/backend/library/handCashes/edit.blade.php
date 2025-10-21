@@ -42,6 +42,7 @@
                     <option value="Cash" {{ $handCashes->rules == 'Cash' ? 'selected' : '' }}>Cash</option>
                     <option value="City_Bank" {{ $handCashes->rules == 'City_Bank' ? 'selected' : '' }}>City Bank
                     </option>
+                    <option value="City_Bank_Islamic" {{ $handCashes->rules == 'City_Bank_Islamic' ? 'selected' : '' }}>City Bank Islamic</option>
                     <option value="FD" {{ $handCashes->rules == 'FD' ? 'selected' : '' }}>FD</option>
                     <option value="DPS" {{ $handCashes->rules == 'DPS' ? 'selected' : '' }}>DPS</option>
                     <option value="MyLoan" {{ $handCashes->rules == 'MyLoan' ? 'selected' : '' }}>MyLoan</option>

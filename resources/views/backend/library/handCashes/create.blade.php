@@ -46,6 +46,7 @@
                             <option value="Peti">Peti Cash</option>
                             <option value="Cash">Cash</option>
                             <option value="City_Bank">City Bank</option>
+                            <option value="City_Bank_Islamic">City Bank Islamic</option>
                             <option value="FD">FD</option>
                             <option value="DPS">DPS</option>
                             <option value="MyLoan">MyLoan</option>
@@ -103,6 +104,7 @@
                             <option value="Peti">Peti Cash</option>
                             <option value="Cash">Cash</option>
                             <option value="City_Bank">City Bank</option>
+                            <option value="City_Bank_Islamic">City Bank Islamic</option>
                             <option value="FD">FD</option>
                             <option value="DPS">DPS</option>
                             <option value="MyLoan">MyLoan</option>

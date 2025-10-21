@@ -15,6 +15,16 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// Interactive dashboard
+Route::get('/interactive-dashboard', [App\Http\Controllers\HandCashController::class, 'interactiveDashboard'])->name('interactive.dashboard');
+Route::get('/interactive-dashboard/data/summary', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardSummary']);
+Route::get('/interactive-dashboard/data/monthly-trend', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardMonthlyTrend']);
+Route::get('/interactive-dashboard/data/category-breakdown', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardCategoryBreakdown']);
+Route::get('/interactive-dashboard/data/savings-loans', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardSavingsLoans']);
+Route::get('/interactive-dashboard/data/top-categories', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardTopCategories']);
+Route::get('/interactive-dashboard/data/running-balance', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardRunningBalance']);
+Route::get('/interactive-dashboard/data/recent-transactions', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardRecentTransactions']);
+
 Route::get('/filter', [ExpenseCalculationController::class, 'filter'])->name('expenseCalculations.filter');
 
 // power_bi_report

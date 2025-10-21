@@ -315,6 +315,10 @@
                                                                     )
                                                                         ->distinct()
                                                                         ->pluck('name');
+
+                                                                        $nameList = $nameList->sortByDesc(function ($name) {
+                                                                            return App\Models\ExpenseCalculation::where('name', $name)->count();
+                                                                        });
                                                                 @endphp
 
                                                                 <input list="nameList" name="name[]"
@@ -368,6 +372,8 @@
                                                             <option value="Sonali_Bank_Gulshan">Sonali Bank Gulshan
                                                             </option>
                                                             <option value="Sonali_Bank_Tongi">Sonali Bank Tongi
+                                                            </option>
+                                                            <option value="City_Bank_Islamic">City Bank Islamic
                                                             </option>
                                                             <option value="DBBL">Dutch Bangla Bank</option>
                                                             <option value="PBL">Prime Bank Ltd</option>
@@ -475,8 +481,9 @@
                                                         <option value="Mobile_Bkash">Bkash</option>
                                                         <option value="Mobile_Rocket">Rocket</option>
                                                         <option value="Sonali_Bank_Gulshan">Sonali Bank Gulshan
-                                                        </option>
-                                                        <option value="Sonali_Bank_Tongi">Sonali Bank Tongi</option>
+                                                            </option>
+                                                            <option value="Sonali_Bank_Tongi">Sonali Bank Tongi</option>
+                                                            <option value="City_Bank_Islamic">City Bank Islamic</option>
                                                         <option value="DBBL">Dutch Bangla Bank</option>
                                                         <option value="PBL">Prime Bank Ltd</option>
                                                         <option value="Mobile_Nagad">Nagad</option>

@@ -40,6 +40,11 @@
                         Cash Management
                     </a>
 
+                    <a class="nav-link" href="{{ route('interactive.dashboard') }}">
+                        <div class="sb-nav-link-icon"></div>
+                        Interactive Dashboard
+                    </a>
+
 
                     {{-- </nav>
                     </div> --}}

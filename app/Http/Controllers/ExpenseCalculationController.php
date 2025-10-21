@@ -92,6 +92,11 @@ class ExpenseCalculationController extends Controller
         }
 
         $categories = Category::all();
+        //serialize highest uses categories in top to bottom sorting
+        $categories = $categories->sortByDesc(function ($category) {
+            return ExpenseCalculation::where('category_id', $category->id)->count();
+        });
+
         return view('backend.library.expenseCalculations.index', compact('expenseCalculations', 'search_cashes', 'categories', 'search_category_id', 'search_types', 'search_entry_date_start', 'search_entry_date_end'));
     }
 

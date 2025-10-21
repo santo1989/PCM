@@ -85,7 +85,7 @@ class HandCashController extends Controller
         // Perform the database queries and retrieve the data
 
         $mobileRules = ['Mobile_Bkash', 'Mobile_Rocket', 'Mobile_Nagad'];
-        $bankRules = ['City_Bank', 'Sonali_Bank_Gulshan', 'Sonali_Bank_Tongi', 'DBBL', 'PBL', 'FD', 'DPS'];
+        $bankRules = ['City_Bank', 'City_Bank_Islamic', 'Sonali_Bank_Gulshan', 'Sonali_Bank_Tongi', 'DBBL', 'PBL', 'FD', 'DPS'];
 
         $mobile_cash_save = HandCash::query()
             ->select(['rules', 'types', DB::raw('SUM(amount) as total')])
@@ -240,7 +240,7 @@ class HandCashController extends Controller
 
         // Calculate the total HandCashes
         // $hands = $handCashes_Mobile_balence + $handCashes_Bank_balence + $handCashes_Cash_balence + $handCashes_loan_balence + $CreditCard_balance;
-        $total = $handCashes_Mobile_balence + $handCashes_Bank_balence + $handCashes_Cash_balence  + $CreditCard_balance +  $handCashes_Peti_balence ;
+        $total = $handCashes_Mobile_balence + $handCashes_Bank_balence + $handCashes_Cash_balence  + $CreditCard_balance +  $handCashes_Peti_balence;
 
         //Calculate the total amount without loan, CreditCard, Peti, MyLoan and DPS
         $hands  = $total + $DPSLoan_balance + $MyLoan_balance + $handCashes_loan_balence;
@@ -395,7 +395,7 @@ class HandCashController extends Controller
         return redirect()->route('handCashes.index')->withMessage('HandCash and related data are deleted successfully!');
     }
 
-   
+
 
     public function Yearly_report()
     {
@@ -537,7 +537,7 @@ class HandCashController extends Controller
         ));
     }
 
-   
+
 
     public function power_bi_report()
     {
@@ -566,7 +566,7 @@ class HandCashController extends Controller
             ->orderBy('amount', 'desc')
             ->get()
             ->map(function ($item) {
-                 $amount = (float)$item->amount;
+                $amount = (float)$item->amount;
                 // Get employment duration in years
                 $startYear = 2022; // Replace with actual user start year
                 $currentYear = now()->year;
@@ -576,7 +576,7 @@ class HandCashController extends Controller
                 $baseInvestmentPercent = 0.3;
                 $investmentPercent = min($baseInvestmentPercent * pow(1.1, $years), 0.8);
 
-            $amount = (float)$item->amount;
+                $amount = (float)$item->amount;
 
                 return [
                     'date' => $item->date,
@@ -721,6 +721,228 @@ class HandCashController extends Controller
             'totalMonthlyIncome',
             'thisMonthProjectedExpenses'
         ));
+    }
+
+    /**
+     * Interactive dashboard view
+     */
+    public function interactiveDashboard()
+    {
+        return view('backend.reports.interactive_dashboard');
+    }
+
+    /**
+     * JSON: high-level summary (totals)
+     */
+    public function interactiveDashboardSummary(Request $request)
+    {
+        $year = $request->get('year', now()->year);
+        $month = $request->get('month', now()->month);
+
+        $totalIncome = ExpenseCalculation::where('types', 'income')
+            ->whereYear('date', $year)
+            ->sum('amount');
+
+        $totalExpense = ExpenseCalculation::where('types', 'expense')
+            ->whereYear('date', $year)
+            ->sum('amount');
+
+        // Current month totals
+        $monthIncome = ExpenseCalculation::where('types', 'income')
+            ->whereYear('date', $year)
+            ->whereMonth('date', $month)
+            ->sum('amount');
+
+        $monthExpense = ExpenseCalculation::where('types', 'expense')
+            ->whereYear('date', $year)
+            ->whereMonth('date', $month)
+            ->sum('amount');
+
+        // Cash balances grouped by rules (hand cash)
+        $cashBalances = HandCash::select('rules', DB::raw('SUM(CASE WHEN types = "Save" THEN amount ELSE 0 END) - SUM(CASE WHEN types = "Widrows" THEN amount ELSE 0 END) as balance'))
+            ->groupBy('rules')
+            ->get()
+            ->mapWithKeys(function ($item) {
+                return [$item->rules => (float) $item->balance];
+            });
+
+        return response()->json([
+            'year' => (int) $year,
+            'month' => (int) $month,
+            'totalIncome' => (float) $totalIncome,
+            'totalExpense' => (float) $totalExpense,
+            'monthIncome' => (float) $monthIncome,
+            'monthExpense' => (float) $monthExpense,
+            'cashBalances' => $cashBalances,
+            'net' => (float) ($totalIncome - $totalExpense),
+        ]);
+    }
+
+    /**
+     * JSON: monthly trend for the last 12 months
+     */
+    public function interactiveDashboardMonthlyTrend(Request $request)
+    {
+        $end = now();
+        $start = now()->subMonths(11);
+
+        $months = [];
+        $incomeSeries = [];
+        $expenseSeries = [];
+
+        for ($dt = $start; $dt->lte($end); $dt->addMonth()) {
+            $m = $dt->month;
+            $y = $dt->year;
+            $label = $dt->format('Y-m');
+            $months[] = $label;
+
+            $incomeSeries[] = (float) ExpenseCalculation::where('types', 'income')
+                ->whereYear('date', $y)
+                ->whereMonth('date', $m)
+                ->sum('amount');
+
+            $expenseSeries[] = (float) ExpenseCalculation::where('types', 'expense')
+                ->whereYear('date', $y)
+                ->whereMonth('date', $m)
+                ->sum('amount');
+        }
+
+        return response()->json([
+            'months' => $months,
+            'income' => $incomeSeries,
+            'expense' => $expenseSeries,
+        ]);
+    }
+
+    /**
+     * JSON: category breakdown for selected period
+     */
+    public function interactiveDashboardCategoryBreakdown(Request $request)
+    {
+        $year = $request->get('year', now()->year);
+        $month = $request->get('month', null);
+
+        $q = ExpenseCalculation::where('types', 'expense')
+            ->groupBy('category_id')
+            ->select('category_id', DB::raw('SUM(amount) as total'));
+
+        if ($month) {
+            $q->whereYear('date', $year)->whereMonth('date', $month);
+        } else {
+            $q->whereYear('date', $year);
+        }
+
+        $items = $q->orderBy('total', 'desc')->get();
+
+        // Map category names
+        $data = $items->map(function ($item) {
+            $category = Category::find($item->category_id);
+            return [
+                'category_id' => $item->category_id,
+                'category' => $category ? $category->name : 'Unknown',
+                'total' => (float) $item->total,
+            ];
+        })->values();
+
+        return response()->json($data);
+    }
+
+    /**
+     * JSON: savings vs loans (hand cash rules) summary
+     */
+    public function interactiveDashboardSavingsLoans(Request $request)
+    {
+        // total savings and total loans across HandCash
+        $savings = HandCash::where('types', 'Save')->sum('amount');
+        $withdrawals = HandCash::where('types', 'Widrows')->sum('amount');
+
+        // separate out Loan rules if present
+        $loan_in = HandCash::where('rules', 'loan')->where('types', 'Save')->sum('amount');
+        $loan_out = HandCash::where('rules', 'loan')->where('types', 'Widrows')->sum('amount');
+
+        return response()->json([
+            'savings_total' => (float) $savings,
+            'withdrawals_total' => (float) $withdrawals,
+            'loan_in' => (float) $loan_in,
+            'loan_out' => (float) $loan_out,
+        ]);
+    }
+
+    /**
+     * JSON: top expense categories for year/month
+     */
+    public function interactiveDashboardTopCategories(Request $request)
+    {
+        $year = $request->get('year', now()->year);
+        $limit = (int) $request->get('limit', 8);
+
+        $items = ExpenseCalculation::where('types', 'expense')
+            ->whereYear('date', $year)
+            ->groupBy('category_id')
+            ->select('category_id', DB::raw('SUM(amount) as total'))
+            ->orderBy('total', 'desc')
+            ->limit($limit)
+            ->get()
+            ->map(function ($item) {
+                $c = Category::find($item->category_id);
+                return [
+                    'category' => $c ? $c->name : 'Unknown',
+                    'total' => (float) $item->total,
+                ];
+            });
+
+        return response()->json($items);
+    }
+
+    /**
+     * JSON: running balance (hand cash chronologically)
+     */
+    public function interactiveDashboardRunningBalance(Request $request)
+    {
+        // fetch last 200 handcash transactions ordered by date
+        $rows = HandCash::orderBy('date', 'asc')->orderBy('id', 'asc')->limit(1000)->get(['date', 'name', 'rules', 'types', 'amount']);
+
+        $balance = 0.0;
+        $series = [];
+        foreach ($rows as $r) {
+            $amt = (float) $r->amount;
+            if (strtolower($r->types) === 'save') $balance += $amt;
+            else $balance -= $amt;
+            $series[] = [
+                'date' => $r->date,
+                'name' => $r->name,
+                'rules' => $r->rules,
+                'types' => $r->types,
+                'amount' => $amt,
+                'balance' => round($balance, 2),
+            ];
+        }
+
+        return response()->json($series);
+    }
+
+    /**
+     * JSON: recent transactions (expense/income)
+     */
+    public function interactiveDashboardRecentTransactions(Request $request)
+    {
+        $limit = (int) $request->get('limit', 20);
+        $rows = ExpenseCalculation::with('category')
+            ->orderBy('date', 'desc')
+            ->limit($limit)
+            ->get()
+            ->map(function ($r) {
+                return [
+                    'id' => $r->id,
+                    'date' => $r->date,
+                    'name' => $r->name,
+                    'category' => $r->category->name ?? null,
+                    'types' => $r->types,
+                    'amount' => (float) $r->amount,
+                ];
+            });
+
+        return response()->json($rows);
     }
 
     public function calculateAndSaveBudget()
