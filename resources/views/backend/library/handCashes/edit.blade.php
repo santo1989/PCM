@@ -45,6 +45,7 @@
                     <option value="City_Bank_Islamic" {{ $handCashes->rules == 'City_Bank_Islamic' ? 'selected' : '' }}>City Bank Islamic</option>
                     <option value="FD" {{ $handCashes->rules == 'FD' ? 'selected' : '' }}>FD</option>
                     <option value="DPS" {{ $handCashes->rules == 'DPS' ? 'selected' : '' }}>DPS</option>
+                    <option value="Islamic_DPS" {{ $handCashes->rules == 'Islamic_DPS' ? 'selected' : '' }}>Islamic DPS</option>
                     <option value="MyLoan" {{ $handCashes->rules == 'MyLoan' ? 'selected' : '' }}>MyLoan</option>
                     <option value="DPSLoan" {{ $handCashes->rules == 'DPSLoan' ? 'selected' : '' }}>DPS Loan</option>
                     <option value="loan" {{ $handCashes->rules == 'loan' ? 'selected' : '' }}>Loan To Other </option>
@@ -63,6 +64,8 @@
                     <option value="Mobile_Bkash" {{ $handCashes->rules == 'Mobile_Bkash' ? 'selected' : '' }}>Bkash
                     </option>
                     <option value="Mobile_Rocket" {{ $handCashes->rules == 'Mobile_Rocket' ? 'selected' : '' }}>Rocket
+                    </option>
+                    <option value="investment" {{ $handCashes->rules == 'investment' ? 'selected' : '' }}>Investment
                     </option>
                 </select>
             </div>

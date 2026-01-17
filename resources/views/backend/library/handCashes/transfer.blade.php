@@ -57,8 +57,10 @@
                             <option value="CreditCard">Credit Card</option>
                             <option value="FD">FD</option>
                             <option value="DPS">DPS</option>
+                            <option value="Islamic_DPS">Islamic DPS</option>
                             <option value="MyLoan">MyLoan</option>
                             <option value="DPSLoan">DPS Loan</option>
+                            <option value="investment">Investment</option>
                         </select>
                     </div>
 
@@ -97,8 +99,10 @@
                             <option value="CreditCard">Credit Card</option>
                             <option value="FD">FD</option>
                             <option value="DPS">DPS</option>
+                            <option value="Islamic_DPS">Islamic DPS</option>
                             <option value="MyLoan">MyLoan</option>
                             <option value="DPSLoan">DPS Loan</option>
+                            <option value="investment">Investment</option>
                         </select>
                     </div>
 

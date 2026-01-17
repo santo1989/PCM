@@ -52,7 +52,7 @@
                         </div>
                         <div class="col-sm-4">
                             <td>
-                                <button type="submit" class="btn btn-outline-secondary">
+                                <button type="submit" class="btn btn-lg btn-outline-secondary">
                                     <i class="fas fa-search"></i> Search
                                 </button>
                                 <a href="{{ route('Monthly_report') }}" class="btn btn-outline-danger">

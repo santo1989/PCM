@@ -3,8 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\PetiCash;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\View;
 
 class PetiCashController extends Controller
 {
@@ -80,33 +84,33 @@ class PetiCashController extends Controller
         $bankRules = ['City_Bank', 'Sonali_Bank_Gulshan', 'Sonali_Bank_Tongi', 'DBBL', 'PBL'];
 
         $mobile_cash_save = PetiCash::query()
-            ->select(['rules', 'types', \DB::raw('SUM(amount) as total')])
+            ->select(['rules', 'types', DB::raw('SUM(amount) as total')])
             ->whereIn('rules', $mobileRules)
-            ->where('types', 'Save')
+            ->where('types', 'SAVE')
             ->groupBy('rules', 'types')
             ->get();
 
 
         $mobile_cash_withdraw = PetiCash::query()
-            ->select(['rules', 'types', \DB::raw('SUM(amount) as total')])
+            ->select(['rules', 'types', DB::raw('SUM(amount) as total')])
             ->whereIn('rules', $mobileRules)
-            ->where('types', 'Widrows')
+            ->where('types', 'WIDROWS')
             ->groupBy('rules', 'types')
             ->get();
 
 
 
         $bank_cash_save = PetiCash::query()
-            ->select(['rules', 'types', \DB::raw('SUM(amount) as total')])
+            ->select(['rules', 'types', DB::raw('SUM(amount) as total')])
             ->whereIn('rules', $bankRules)
-            ->where('types', 'Save')
+            ->where('types', 'SAVE')
             ->groupBy('rules', 'types')
             ->get();
 
         $bank_cash_withdraw = PetiCash::query()
-            ->select(['rules', 'types', \DB::raw('SUM(amount) as total')])
+            ->select(['rules', 'types', DB::raw('SUM(amount) as total')])
             ->whereIn('rules', $bankRules)
-            ->where('types', 'Widrows')
+            ->where('types', 'WIDROWS')
             ->groupBy('rules', 'types')
             ->get();
 
@@ -115,7 +119,7 @@ class PetiCashController extends Controller
         $mobile_cash = PetiCash::query()
             ->select([
                 'rules',
-                \DB::raw('SUM(CASE WHEN types = "Save" THEN amount ELSE 0 END) - SUM(CASE WHEN types = "Widrows" THEN amount ELSE 0 END) as Balance'),
+                DB::raw('SUM(CASE WHEN types = "SAVE" THEN amount ELSE 0 END) - SUM(CASE WHEN types = "WIDROWS" THEN amount ELSE 0 END) as Balance'),
             ])
             ->whereIn('rules', $mobileRules)
             ->groupBy('rules') // Remove 'types' from the GROUP BY clause
@@ -127,7 +131,7 @@ class PetiCashController extends Controller
         $bank_cash = PetiCash::query()
             ->select([
                 'rules',
-                \DB::raw('SUM(CASE WHEN types = "Save" THEN amount ELSE 0 END) - SUM(CASE WHEN types = "Widrows" THEN amount ELSE 0 END) as Balance'),
+                DB::raw('SUM(CASE WHEN types = "SAVE" THEN amount ELSE 0 END) - SUM(CASE WHEN types = "WIDROWS" THEN amount ELSE 0 END) as Balance'),
             ])
             ->whereIn('rules', $bankRules)
             ->groupBy('rules')
@@ -144,14 +148,14 @@ class PetiCashController extends Controller
         // $handCashes_Peti_withdrow = 
 
         // dd($handCashes_Peti_withdrow);
-        $handCashes_Peti_save = PetiCash::where('rules', 'Peti')->where('types', 'Save')->sum('amount');
-        $handCashes_Peti_withdrow = PetiCash::where('rules', 'Peti')->where('types', 'Widrows')->sum('amount');
+        $handCashes_Peti_save = PetiCash::where('rules', 'PETI')->where('types', 'SAVE')->sum('amount');
+        $handCashes_Peti_withdrow = PetiCash::where('rules', 'PETI')->where('types', 'WIDROWS')->sum('amount');
         $handCashes_Peti_balence = $handCashes_Peti_save - $handCashes_Peti_withdrow;
 
-        $cash_cash_save = PetiCash::where('rules', 'Cash')->where('types', 'Save')->get();
-        $cash_cash_withdraw = PetiCash::where('rules', 'Cash')->where('types', 'Widrows')->get();
-        $loan_cash_save = PetiCash::where('rules', 'loan')->where('types', 'Save')->get();
-        $loan_cash_withdraw = PetiCash::where('rules', 'loan')->where('types', 'Widrows')->get();
+        $cash_cash_save = PetiCash::where('rules', 'CASH')->where('types', 'SAVE')->get();
+        $cash_cash_withdraw = PetiCash::where('rules', 'CASH')->where('types', 'WIDROWS')->get();
+        $loan_cash_save = PetiCash::where('rules', 'LOAN')->where('types', 'SAVE')->get();
+        $loan_cash_withdraw = PetiCash::where('rules', 'LOAN')->where('types', 'WIDROWS')->get();
 
         // $mobileCash = 
 
@@ -198,8 +202,8 @@ class PetiCashController extends Controller
         // Calculate the total HandCashes
         $hands = $handCashes_Mobile_balence + $handCashes_Bank_balence + $handCashes_Cash_balence;
 
-        $CreditCard_Credit = PetiCash::where('rules', 'CreditCard')->where('types', 'Save')->sum('amount');
-        $CreditCard_withdraw = PetiCash::where('rules', 'CreditCard')->where('types', 'Widrows')->sum('amount');
+        $CreditCard_Credit = PetiCash::where('rules', 'CREDITCARD')->where('types', 'SAVE')->sum('amount');
+        $CreditCard_withdraw = PetiCash::where('rules', 'CREDITCARD')->where('types', 'WIDROWS')->sum('amount');
 
         $CreditCard_balance = $CreditCard_Credit - $CreditCard_withdraw;
 
@@ -248,9 +252,10 @@ class PetiCashController extends Controller
             $cash = new PetiCash();
 
             // Set the values for each field
-            $cash->rules = $request->input('rules')[$i];
-            $cash->types = $request->input('types')[$i];
-            $cash->name = $request->input('name')[$i];
+            // Normalize inputs to uppercase before saving (also handled by model mutators)
+            $cash->rules = isset($request->input('rules')[$i]) ? strtoupper($request->input('rules')[$i]) : null;
+            $cash->types = isset($request->input('types')[$i]) ? strtoupper($request->input('types')[$i]) : null;
+            $cash->name = isset($request->input('name')[$i]) ? strtoupper($request->input('name')[$i]) : null;
             $cash->date = $request->input('date')[$i];
             $cash->amount = $request->input('amount')[$i];
 
@@ -284,9 +289,10 @@ class PetiCashController extends Controller
     {
         $petiCash = PetiCash::findOrFail($id);
 
-        $petiCash->rules = $request->input('rules');
-        $petiCash->types = $request->input('types');
-        $petiCash->name = $request->input('name');
+        // Normalize inputs to uppercase (also handled by model mutators)
+        $petiCash->rules = $request->input('rules') ? strtoupper($request->input('rules')) : null;
+        $petiCash->types = $request->input('types') ? strtoupper($request->input('types')) : null;
+        $petiCash->name = $request->input('name') ? strtoupper($request->input('name')) : null;
         $petiCash->date = $request->input('date');
         $petiCash->amount = $request->input('amount');
 
@@ -306,5 +312,4 @@ class PetiCashController extends Controller
 
         return redirect()->route('petiCash.index')->withMessage('PetiCash and related data are deleted successfully!');
     }
-    
 }

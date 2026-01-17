@@ -34,6 +34,30 @@
                         </div>
                         <!-- /.card-header -->
                         <div class="card-body justify-content-between">
+                            {{-- Date Filter Form --}}
+                            <div class="row mb-4">
+                                <div class="col-md-12">
+                                    <form action="{{ route('handCashes.index') }}" method="GET" class="form-inline justify-content-center">
+                                        <div class="form-group mr-3">
+                                            <label for="balance_date_start" class="mr-2">From:</label>
+                                            <input type="date" name="balance_date_start" id="balance_date_start" 
+                                                   class="form-control" value="{{ request('balance_date_start') }}">
+                                        </div>
+                                        <div class="form-group mr-3">
+                                            <label for="balance_date_end" class="mr-2">To:</label>
+                                            <input type="date" name="balance_date_end" id="balance_date_end" 
+                                                   class="form-control" value="{{ request('balance_date_end') }}">
+                                        </div>
+                                        <button type="submit" class="btn btn-primary mr-2">
+                                            <i class="bi bi-filter"></i> Filter
+                                        </button>
+                                        <a href="{{ route('handCashes.index') }}" class="btn btn-secondary">
+                                            <i class="bi bi-x-circle"></i> Clear
+                                        </a>
+                                    </form>
+                                </div>
+                            </div>
+
                             {{-- handCash Table goes here --}}
 
                             <div class="row justify-content-between text-center">

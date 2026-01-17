@@ -20,5 +20,19 @@ class ExpenseCalculation extends Model
         return $query->whereMonth('date', $month)->whereYear('date', $year);
     }
 
+    /**
+     * Ensure 'types' is always stored uppercase.
+     */
+    public function setTypesAttribute($value)
+    {
+        $this->attributes['types'] = is_null($value) ? null : strtoupper($value);
+    }
 
+    /**
+     * Ensure 'rules' is always stored uppercase.
+     */
+    public function setRulesAttribute($value)
+    {
+        $this->attributes['rules'] = is_null($value) ? null : strtoupper($value);
+    }
 }

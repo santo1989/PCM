@@ -49,6 +49,7 @@
                             <option value="City_Bank_Islamic">City Bank Islamic</option>
                             <option value="FD">FD</option>
                             <option value="DPS">DPS</option>
+                            <option value="Islamic_DPS">Islamic DPS</option>
                             <option value="MyLoan">MyLoan</option>
                             <option value="DPSLoan">DPS Loan</option>
                             <option value="loan">Loan To Other </option>
@@ -60,6 +61,8 @@
                             <option value="Mobile_Nagad">Nagad</option>
                             <option value="Mobile_Bkash">Bkash</option>
                             <option value="Mobile_Rocket">Rocket</option>
+                            <option value="investment">Investment</option>
+
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -107,6 +110,7 @@
                             <option value="City_Bank_Islamic">City Bank Islamic</option>
                             <option value="FD">FD</option>
                             <option value="DPS">DPS</option>
+                            <option value="Islamic_DPS">Islamic DPS</option>
                             <option value="MyLoan">MyLoan</option>
                             <option value="DPSLoan">DPS Loan</option>
                             <option value="loan">Loan To Other </option>
@@ -118,6 +122,7 @@
                             <option value="Mobile_Nagad">Nagad</option>
                             <option value="Mobile_Bkash">Bkash</option>
                             <option value="Mobile_Rocket">Rocket</option>
+                            <option value="investment">Investment</option>
                 </select>
             </div>
             <div class="col-md-2">

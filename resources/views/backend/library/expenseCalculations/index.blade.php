@@ -100,7 +100,7 @@
                     </div>
 
                     <div class="row pt-1">
-                        <div class="col-md-3 col-sm-12">
+                        <div class="col-md-2 col-sm-12">
                             <a type="button" class="btn btn-outline-dark" data-bs-toggle="modal"
                                 data-bs-target="#CashEntryModal"><i class="fa fa-plus" aria-hidden="true"></i>
                                 Create
@@ -116,18 +116,228 @@
                                     ->whereMonth('date', date('m'))
                                     ->whereYear('date', date('Y'))
                                     ->sum('amount');
+                            // dd($this_month_expense);
+                            $all_time_income = App\Models\ExpenseCalculation::where('types', 'income')
+                                ->sum('amount');
+                            // dd($all_time_income);
+                            $all_time_expense = App\Models\ExpenseCalculation::where('types', 'expense')
+                                ->sum('amount');
+                            // dd($all_time_expense);
                             @endphp
                         </div>
-                        <div class="col-md-3 col-sm-12">
-                            <h5 class="text-center">This Month Income: {{ $this_month_income }}</h5>
+                        <div class="col-md-2 col-sm-12">
+                            <h5 class="text-center"> 
+                                <!--modal trigger button for show categories wise this month income-->
+                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#categoriesWiseIncomeModal">
+                                    This Month Income: {{ $this_month_income }}
+                                </button>
+                                <!-- Modal -->
+                                <div class="modal fade" id="categoriesWiseIncomeModal" tabindex="-1" aria-labelledby="categoriesWiseIncomeModalLabel" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="categoriesWiseIncomeModalLabel">Categories Wise This Month Income</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <table class="table table-bordered">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Category</th>
+                                                            <th>Income Amount</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @php
+                                                            $categories = App\Models\Category::all();
+                                                        @endphp
+                                                        @foreach ($categories as $category)
+                                                            @php
+                                                                $category_income = App\Models\ExpenseCalculation::where('types', 'income')
+                                                                    ->where('category_id', $category->id)
+                                                                    ->whereMonth('date', date('m'))
+                                                                    ->whereYear('date', date('Y'))
+                                                                    ->sum('amount');
+                                                            @endphp
+                                                            @if ($category_income > 0)
+                                                            <tr>
+                                                                <td>{{ $category->name }}</td>
+                                                                <td>{{ $category_income }}</td>
+                                                            </tr>
+                                                            @endif
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Modal End -->
+
+                            </h5>
 
                         </div>
-                        <div class="col-md-3 col-sm-12">
-                            <h5 class="text-center">This Month Expense: {{ $this_month_expense }}</h5>
+                        <div class="col-md-2 col-sm-12">
+                            <h5 class="text-center">
+                                <!--modal trigger button for show categories wise this month expense-->
+                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#categoriesWiseExpenseModal">
+                                    This Month Expense: {{ $this_month_expense }}
+                                </button>
+
+                                <!-- Modal -->
+                                <div class="modal fade" id="categoriesWiseExpenseModal" tabindex="-1" aria-labelledby="categoriesWiseExpenseModalLabel" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="categoriesWiseExpenseModalLabel">Categories Wise This Month Expense</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <table class="table table-bordered">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Category</th>
+                                                            <th>Expense Amount</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @php
+                                                            $categories = App\Models\Category::all();
+                                                        @endphp
+                                                        @foreach ($categories as $category)
+                                                            @php
+                                                                $category_expense = App\Models\ExpenseCalculation::where('types', 'expense')
+                                                                    ->where('category_id', $category->id)
+                                                                    ->whereMonth('date', date('m'))
+                                                                    ->whereYear('date', date('Y'))
+                                                                    ->sum('amount');
+                                                            @endphp
+                                                            @if ($category_expense > 0)
+                                                                <tr>
+                                                                    <td>{{ $category->name }}</td>
+                                                                    <td>{{ $category_expense }}</td>
+                                                                </tr>
+                                                            @endif
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            <div class="modal-footer"> </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Modal End -->
+
+                                
+                            </h5>
 
 
                         </div>
-                        <div class="col-md-3 col-sm-12 text-md-end">
+                         <div class="col-md-2 col-sm-12">
+                            <h5 class="text-center"> 
+                                <!--modal trigger button for show categories wise all month income-->
+                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#categoriesWiseAllTimeIncomeModal">
+                                    Total Income: {{ $all_time_income }}
+                                </button>
+                                <!-- Modal -->
+                                <div class="modal fade" id="categoriesWiseAllTimeIncomeModal" tabindex="-1" aria-labelledby="categoriesWiseAllTimeIncomeModalLabel" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="categoriesWiseAllTimeIncomeModalLabel">Categories Wise All Time Income</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <table class="table table-bordered">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Category</th>
+                                                            <th>Income Amount</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @php
+                                                            $categories = App\Models\Category::all();
+                                                        @endphp
+                                                        @foreach ($categories as $category)
+                                                            @php
+                                                                $category_all_time_income = App\Models\ExpenseCalculation::where('types', 'income')
+                                                                    ->where('category_id', $category->id)
+                                                                    ->sum('amount');
+                                                            @endphp
+                                                            @if ($category_all_time_income > 0)
+                                                            <tr>
+                                                                <td>{{ $category->name }}</td>
+                                                                <td>{{ $category_all_time_income }}</td>
+                                                            </tr>
+                                                            @endif
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Modal End -->
+
+                            </h5>
+
+                        </div>
+                        <div class="col-md-2 col-sm-12">
+                            <h5 class="text-center">
+                                <!--modal trigger button for show categories wise all time expense-->
+                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#categoriesWiseAllTimeExpenseModal">
+                                    Total Expense: {{ $all_time_expense }}
+                                </button>
+
+                                <!-- Modal -->
+                                <div class="modal fade" id="categoriesWiseAllTimeExpenseModal" tabindex="-1" aria-labelledby="categoriesWiseAllTimeExpenseModalLabel" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="categoriesWiseAllTimeExpenseModalLabel">Categories Wise Total Expense</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <table class="table table-bordered">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Category</th>
+                                                            <th>Expense Amount</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @php
+                                                            $categories = App\Models\Category::all();
+                                                        @endphp
+                                                        @foreach ($categories as $category)
+                                                            @php
+                                                                $category_all_time_expense = App\Models\ExpenseCalculation::where('types', 'expense')
+                                                                    ->where('category_id', $category->id)
+                                                                   ->sum('amount');
+                                                            @endphp
+                                                            @if ($category_all_time_expense > 0)
+                                                                <tr>
+                                                                    <td>{{ $category->name }}</td>
+                                                                    <td>{{ $category_all_time_expense }}</td>
+                                                                </tr>
+                                                            @endif
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            <div class="modal-footer"> </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Modal End -->
+
+                                
+                            </h5>
+
+
+                        </div>
+                        <div class="col-md-2 col-sm-12 text-md-end">
                             @if ($search_cashes == !null)
                                 <form method="GET" action="{{ route('expenseCalculations.index') }}">
                                     @csrf
@@ -316,9 +526,12 @@
                                                                         ->distinct()
                                                                         ->pluck('name');
 
-                                                                        $nameList = $nameList->sortByDesc(function ($name) {
-                                                                            return App\Models\ExpenseCalculation::where('name', $name)->count();
-                                                                        });
+                                                                    $nameList = $nameList->sortByDesc(function ($name) {
+                                                                        return App\Models\ExpenseCalculation::where(
+                                                                            'name',
+                                                                            $name,
+                                                                        )->count();
+                                                                    });
                                                                 @endphp
 
                                                                 <input list="nameList" name="name[]"

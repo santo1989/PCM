@@ -50,62 +50,7 @@
                         <h2><strong class="text-center"> Last 12 Month Income & Expense With 50% Needs, 30% Wants,
                                 20% Savings Rule </strong>
                         </h2>
-                        @php
-                            $currentYear = date('Y');
-
-                            $monthlyData = [];
-
-                            // $currentMonth = date('m');
-
-                            for ($month = 1; $month <= 12; $month++) {
-                                $thisMonthIncome = App\Models\ExpenseCalculation::where('types', 'income')
-                                    ->whereMonth('date', $month)
-                                    ->whereYear('date', $currentYear)
-                                    ->latest()
-                                    ->get();
-
-                                $thisMonthSalaryIncome = App\Models\ExpenseCalculation::where('types', 'income')
-                                    ->where('category_id', 1)
-                                    ->whereMonth('date', $month)
-                                    ->whereYear('date', $currentYear)
-                                    ->latest()
-                                    ->get();
-
-                                $thisMonthExpense = App\Models\ExpenseCalculation::where('types', 'expense')
-                                    ->whereMonth('date', $month)
-                                    ->whereYear('date', $currentYear)
-                                    ->groupBy('category_id')
-                                    ->select('category_id', \DB::raw('SUM(amount) as totalExpense'))
-                                    ->orderBy('totalExpense', 'desc')
-                                    ->get();
-
-                                $thisMonthneeds = App\Models\ExpenseCalculation::where('rules', 'needs')
-                                    ->whereMonth('date', $month)
-                                    ->whereYear('date', $currentYear)
-                                    ->sum('amount');
-
-                                $thisMonthwants = App\Models\ExpenseCalculation::where('rules', 'wants')
-                                    ->whereMonth('date', $month)
-                                    ->whereYear('date', $currentYear)
-                                    ->sum('amount');
-
-                                $thisMonthsavings = App\Models\ExpenseCalculation::where('rules', 'savings')
-                                    ->whereMonth('date', $month)
-                                    ->whereYear('date', $currentYear)
-                                    ->sum('amount');
-
-                                $monthlyData[$month] = [
-                                    'income' => $thisMonthIncome->sum('amount'),
-                                    'needs' => $thisMonthSalaryIncome->sum('amount') * 0.5,
-                                    'wants' => $thisMonthSalaryIncome->sum('amount') * 0.3,
-                                    'savings' => $thisMonthSalaryIncome->sum('amount') * 0.2,
-                                    'expense' => $thisMonthExpense->sum('totalExpense'),
-                                    'thisMonthneeds' => $thisMonthneeds,
-                                    'thisMonthwants' => $thisMonthwants,
-                                    'thisMonthsavings' => $thisMonthsavings,
-                                ];
-                            }
-                        @endphp
+                        {{-- monthlyData is composed in AppServiceProvider via a View::composer --}}
 
                         <table class="table table-bordered table-hover text-center">
                             <thead>
@@ -188,65 +133,7 @@
                 <div class="row justify-content-center pt-4">
 
 
-                    @php
-                        // Get the current month and year from the selected values in the dropdowns
-                        $currentMonth = date('m');
-                        $currentYear = date('Y');
-                        if (isset($_GET['year'])) {
-                            $currentYear = $_GET['year'];
-                        }
-                        if (isset($_GET['month'])) {
-                            $currentMonth = $_GET['month'];
-                        }
-
-                        $thisMonthIncome = App\Models\ExpenseCalculation::where('types', 'income')
-                            ->whereMonth('date', $currentMonth)
-                            ->whereYear('date', $currentYear)
-                            ->latest()
-                            ->get();
-
-                        // $thisMonthIncome = App\Models\ExpenseCalculation::Where('types', 'income')
-                        //     ->whereMonth('date', $currentMonth)
-                        //     ->whereYear('date', $currentYear)
-                        //     ->latest()->get();
-                        // dd($thisMonthIncome);
-                        $thisMonthExpense = App\Models\ExpenseCalculation::where('types', 'expense')
-                            ->whereMonth('date', $currentMonth)
-                            ->whereYear('date', $currentYear)
-                            ->groupBy('category_id')
-                            ->select('category_id', \DB::raw('SUM(amount) as totalExpense'))
-                            ->orderBy('totalExpense', 'desc')
-                            ->get();
-                        // dd($thisMonthExpense);
-
-                        $thisMonthneeds = App\Models\ExpenseCalculation::Where('rules', 'needs')
-                            ->whereMonth('date', $currentMonth)
-                            ->whereYear('date', $currentYear)
-                            ->sum('amount');
-
-                        $thisMonthwants = App\Models\ExpenseCalculation::Where('rules', 'wants')
-                            ->whereMonth('date', $currentMonth)
-                            ->whereYear('date', $currentYear)
-                            ->sum('amount');
-
-                        $thisMonthsavings = App\Models\ExpenseCalculation::Where('rules', 'savings')
-                            ->whereMonth('date', $currentMonth)
-                            ->whereYear('date', $currentYear)
-                            ->sum('amount');
-
-                        $thisYearIncome = App\Models\ExpenseCalculation::Where('types', 'income')
-                            ->whereYear('date', $currentYear)
-                            ->latest()
-                            ->get();
-                        // dd($thisMonthIncome);
-                        $thisYearExpense = App\Models\ExpenseCalculation::Where('types', 'expense')
-                            ->whereYear('date', $currentYear)
-                            ->groupBy('category_id')
-                            ->select('category_id', \DB::raw('SUM(amount) as totalExpenseYear'))
-                            ->orderBy('totalExpenseYear', 'desc')
-                            ->get();
-
-                    @endphp
+                    {{-- Exports tab values (thisMonthIncome, thisMonthExpense, thisYearIncome, thisYearExpense, etc.) are provided by View::composer in AppServiceProvider --}}
                     <div class="col-md-6">
                         <h4>{{ date('F') }} Net Income</h4>
                         <table class="table table-bordered">
@@ -370,10 +257,7 @@
                                 @foreach ($thisMonthExpense as $item)
                                     <tr>
                                         <td>
-                                            @php
-                                                $category = App\Models\Category::find($item->category_id);
-                                            @endphp
-                                            {{ $category->name }}
+                                            {{ $categoryMap[$item->category_id] ?? 'Unknown' }}
                                         </td>
                                         <td class="bg-info">{{ $item->totalExpense }}</td>
                                     </tr>
@@ -397,28 +281,20 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @php
-                                    $currentYear = date('Y');
-                                    $thisYearIncome = App\Models\ExpenseCalculation::where('types', 'income')
-                                        ->whereYear('date', $currentYear)
-                                        ->groupBy('category_id')
-                                        ->select('category_id', \DB::raw('SUM(amount) as totalIncameYear'))
-                                        ->get();
-                                @endphp
-
+                                {{-- @dd($thisYearIncome) --}}
                                 @foreach ($thisYearIncome as $item)
                                     <tr>
                                         <td>
-                                            @php
+                                           @php
                                                 $category = App\Models\Category::find($item->category_id);
                                             @endphp
                                             {{ $category->name }}
                                         </td>
-                                        <td class="bg-info">{{ $item->totalIncameYear }}</td>
+                                        <td class="bg-info">{{ $item->amount }}</td>
                                     </tr>
                                 @endforeach
                                 <tr class="bg-success">
-                                    <td colspan="3">Total Income: {{ $thisYearIncome->sum('totalIncameYear') }}
+                                    <td colspan="3">Total Income: {{ $thisYearIncome->sum('amount') }}
                                     </td>
                                 </tr>
                             </tbody>

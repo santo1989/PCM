@@ -7,12 +7,14 @@ use App\Models\ExpenseCalculation;
 use App\Models\HandCash;
 use App\Models\ProjectedExpense;
 use Illuminate\Http\Request;
+use App\Http\Requests\HandCashRequest;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class HandCashController extends Controller
 {
@@ -83,14 +85,20 @@ class HandCashController extends Controller
         }
 
         // Perform the database queries and retrieve the data
+        // Date filtering for balance calculations
+        $balanceDateStart = request('balance_date_start');
+        $balanceDateEnd = request('balance_date_end');
 
         $mobileRules = ['Mobile_Bkash', 'Mobile_Rocket', 'Mobile_Nagad'];
-        $bankRules = ['City_Bank', 'City_Bank_Islamic', 'Sonali_Bank_Gulshan', 'Sonali_Bank_Tongi', 'DBBL', 'PBL', 'FD', 'DPS'];
+        $bankRules = ['City_Bank', 'City_Bank_Islamic', 'Sonali_Bank_Gulshan', 'Sonali_Bank_Tongi', 'DBBL', 'PBL', 'FD', 'DPS', 'Islamic_DPS', 'investment'];
 
         $mobile_cash_save = HandCash::query()
             ->select(['rules', 'types', DB::raw('SUM(amount) as total')])
             ->whereIn('rules', $mobileRules)
-            ->where('types', 'Save')
+            ->where('types', 'SAVE')
+            ->when($balanceDateStart && $balanceDateEnd, function ($query) use ($balanceDateStart, $balanceDateEnd) {
+                return $query->whereBetween('date', [$balanceDateStart, $balanceDateEnd]);
+            })
             ->groupBy('rules', 'types')
             ->get();
 
@@ -98,7 +106,10 @@ class HandCashController extends Controller
         $mobile_cash_withdraw = HandCash::query()
             ->select(['rules', 'types', DB::raw('SUM(amount) as total')])
             ->whereIn('rules', $mobileRules)
-            ->where('types', 'Widrows')
+            ->where('types', 'WIDROWS')
+            ->when($balanceDateStart && $balanceDateEnd, function ($query) use ($balanceDateStart, $balanceDateEnd) {
+                return $query->whereBetween('date', [$balanceDateStart, $balanceDateEnd]);
+            })
             ->groupBy('rules', 'types')
             ->get();
 
@@ -107,14 +118,20 @@ class HandCashController extends Controller
         $bank_cash_save = HandCash::query()
             ->select(['rules', 'types', DB::raw('SUM(amount) as total')])
             ->whereIn('rules', $bankRules)
-            ->where('types', 'Save')
+            ->where('types', 'SAVE')
+            ->when($balanceDateStart && $balanceDateEnd, function ($query) use ($balanceDateStart, $balanceDateEnd) {
+                return $query->whereBetween('date', [$balanceDateStart, $balanceDateEnd]);
+            })
             ->groupBy('rules', 'types')
             ->get();
 
         $bank_cash_withdraw = HandCash::query()
             ->select(['rules', 'types', DB::raw('SUM(amount) as total')])
             ->whereIn('rules', $bankRules)
-            ->where('types', 'Widrows')
+            ->where('types', 'WIDROWS')
+            ->when($balanceDateStart && $balanceDateEnd, function ($query) use ($balanceDateStart, $balanceDateEnd) {
+                return $query->whereBetween('date', [$balanceDateStart, $balanceDateEnd]);
+            })
             ->groupBy('rules', 'types')
             ->get();
 
@@ -123,9 +140,12 @@ class HandCashController extends Controller
         $mobile_cash = HandCash::query()
             ->select([
                 'rules',
-                DB::raw('SUM(CASE WHEN types = "Save" THEN amount ELSE 0 END) - SUM(CASE WHEN types = "Widrows" THEN amount ELSE 0 END) as Balance'),
+                DB::raw('SUM(CASE WHEN types = "SAVE" THEN amount ELSE 0 END) - SUM(CASE WHEN types = "WIDROWS" THEN amount ELSE 0 END) as Balance'),
             ])
             ->whereIn('rules', $mobileRules)
+            ->when($balanceDateStart && $balanceDateEnd, function ($query) use ($balanceDateStart, $balanceDateEnd) {
+                return $query->whereBetween('date', [$balanceDateStart, $balanceDateEnd]);
+            })
             ->groupBy('rules') // Remove 'types' from the GROUP BY clause
             ->get();
 
@@ -135,9 +155,12 @@ class HandCashController extends Controller
         $bank_cash = HandCash::query()
             ->select([
                 'rules',
-                DB::raw('SUM(CASE WHEN types = "Save" THEN amount ELSE 0 END) - SUM(CASE WHEN types = "Widrows" THEN amount ELSE 0 END) as Balance'),
+                DB::raw('SUM(CASE WHEN types = "SAVE" THEN amount ELSE 0 END) - SUM(CASE WHEN types = "WIDROWS" THEN amount ELSE 0 END) as Balance'),
             ])
             ->whereIn('rules', $bankRules)
+            ->when($balanceDateStart && $balanceDateEnd, function ($query) use ($balanceDateStart, $balanceDateEnd) {
+                return $query->whereBetween('date', [$balanceDateStart, $balanceDateEnd]);
+            })
             ->groupBy('rules')
             ->get();
         //  dd($mobile_cash, $bank_cash);
@@ -152,8 +175,16 @@ class HandCashController extends Controller
         // $handCashes_Peti_withdrow = 
 
         // // dd($handCashes_Peti_withdrow);
-        $handCashes_Peti_save = HandCash::where('rules', 'Peti')->where('types', 'Save')->sum('amount');
-        $handCashes_Peti_withdraw = HandCash::where('rules', 'Peti')->where('types', 'Widrows')->sum('amount');
+        $handCashes_Peti_save = HandCash::where('rules', 'PETI')->where('types', 'SAVE')
+            ->when($balanceDateStart && $balanceDateEnd, function ($query) use ($balanceDateStart, $balanceDateEnd) {
+                return $query->whereBetween('date', [$balanceDateStart, $balanceDateEnd]);
+            })
+            ->sum('amount');
+        $handCashes_Peti_withdraw = HandCash::where('rules', 'PETI')->where('types', 'WIDROWS')
+            ->when($balanceDateStart && $balanceDateEnd, function ($query) use ($balanceDateStart, $balanceDateEnd) {
+                return $query->whereBetween('date', [$balanceDateStart, $balanceDateEnd]);
+            })
+            ->sum('amount');
         $handCashes_Peti_balence = $handCashes_Peti_save - $handCashes_Peti_withdraw;
         // $peti_cash_from_expense = ExpenseCalculation::where('types', 'income')->where('date', '>', '2024-04-09')->whereNotIn('category_id', [1])->sum('amount');
         // $handCashes_Peti_save = $handCashes_Peti_save + $peti_cash_from_expense;
@@ -167,18 +198,61 @@ class HandCashController extends Controller
         // $handCashes_Peti_balence = $handCashes_Peti_save - $handCashes_Peti_withdrow;
         // dd($handCashes_Peti_balence);
 
-        $Bank_FD = HandCash::where('rules', 'FD')->where('types', 'Save')->sum('amount');
-        $Bank_FD_withdraw = HandCash::where('rules', 'FD')->where('types', 'Widrows')->sum('amount');
+        $Bank_FD = HandCash::where('rules', 'FD')->where('types', 'SAVE')
+            ->when($balanceDateStart && $balanceDateEnd, function ($query) use ($balanceDateStart, $balanceDateEnd) {
+                return $query->whereBetween('date', [$balanceDateStart, $balanceDateEnd]);
+            })
+            ->sum('amount');
+        $Bank_FD_withdraw = HandCash::where('rules', 'FD')->where('types', 'WIDROWS')
+            ->when($balanceDateStart && $balanceDateEnd, function ($query) use ($balanceDateStart, $balanceDateEnd) {
+                return $query->whereBetween('date', [$balanceDateStart, $balanceDateEnd]);
+            })
+            ->sum('amount');
         $Bank_FD_balence = $Bank_FD - $Bank_FD_withdraw;
-        $Bank_DPS = HandCash::where('rules', 'DPS')->where('types', 'Save')->sum('amount');
-        $Bank_DPS_withdraw = HandCash::where('rules', 'DPS')->where('types', 'Widrows')->sum('amount');
+        $Bank_DPS = HandCash::where('rules', 'DPS')->where('types', 'SAVE')
+            ->when($balanceDateStart && $balanceDateEnd, function ($query) use ($balanceDateStart, $balanceDateEnd) {
+                return $query->whereBetween('date', [$balanceDateStart, $balanceDateEnd]);
+            })
+            ->sum('amount');
+        $Bank_DPS_withdraw = HandCash::where('rules', 'DPS')->where('types', 'WIDROWS')
+            ->when($balanceDateStart && $balanceDateEnd, function ($query) use ($balanceDateStart, $balanceDateEnd) {
+                return $query->whereBetween('date', [$balanceDateStart, $balanceDateEnd]);
+            })
+            ->sum('amount');
         $Bank_DPS_balence = $Bank_DPS - $Bank_DPS_withdraw;
+        $Bank_Islamic_DPS = HandCash::where('rules', 'ISLAMIC_DPS')->where('types', 'SAVE')
+            ->when($balanceDateStart && $balanceDateEnd, function ($query) use ($balanceDateStart, $balanceDateEnd) {
+                return $query->whereBetween('date', [$balanceDateStart, $balanceDateEnd]);
+            })
+            ->sum('amount');
+        $Bank_Islamic_DPS_withdraw = HandCash::where('rules', 'ISLAMIC_DPS')->where('types', 'WIDROWS')
+            ->when($balanceDateStart && $balanceDateEnd, function ($query) use ($balanceDateStart, $balanceDateEnd) {
+                return $query->whereBetween('date', [$balanceDateStart, $balanceDateEnd]);
+            })
+            ->sum('amount');
+        $Bank_Islamic_DPS_balence = $Bank_Islamic_DPS - $Bank_Islamic_DPS_withdraw;
 
 
-        $cash_cash_save = HandCash::where('rules', 'Cash')->where('types', 'Save')->get();
-        $cash_cash_withdraw = HandCash::where('rules', 'Cash')->where('types', 'Widrows')->get();
-        $loan_cash_save = HandCash::where('rules', 'loan')->where('types', 'Save')->get();
-        $loan_cash_withdraw = HandCash::where('rules', 'loan')->where('types', 'Widrows')->get();
+        $cash_cash_save = HandCash::where('rules', 'CASH')->where('types', 'SAVE')
+            ->when($balanceDateStart && $balanceDateEnd, function ($query) use ($balanceDateStart, $balanceDateEnd) {
+                return $query->whereBetween('date', [$balanceDateStart, $balanceDateEnd]);
+            })
+            ->get();
+        $cash_cash_withdraw = HandCash::where('rules', 'CASH')->where('types', 'WIDROWS')
+            ->when($balanceDateStart && $balanceDateEnd, function ($query) use ($balanceDateStart, $balanceDateEnd) {
+                return $query->whereBetween('date', [$balanceDateStart, $balanceDateEnd]);
+            })
+            ->get();
+        $loan_cash_save = HandCash::where('rules', 'LOAN')->where('types', 'SAVE')
+            ->when($balanceDateStart && $balanceDateEnd, function ($query) use ($balanceDateStart, $balanceDateEnd) {
+                return $query->whereBetween('date', [$balanceDateStart, $balanceDateEnd]);
+            })
+            ->get();
+        $loan_cash_withdraw = HandCash::where('rules', 'LOAN')->where('types', 'WIDROWS')
+            ->when($balanceDateStart && $balanceDateEnd, function ($query) use ($balanceDateStart, $balanceDateEnd) {
+                return $query->whereBetween('date', [$balanceDateStart, $balanceDateEnd]);
+            })
+            ->get();
 
         // $mobileCash = 
 
@@ -222,18 +296,42 @@ class HandCashController extends Controller
             $handCashes_loan_balence -= $loan_cash_withdraw->sum('amount');
         }
 
-        $CreditCard_Credit = HandCash::where('rules', 'CreditCard')->where('types', 'Save')->sum('amount');
-        $CreditCard_withdraw = HandCash::where('rules', 'CreditCard')->where('types', 'Widrows')->sum('amount');
+        $CreditCard_Credit = HandCash::where('rules', 'CREDITCARD')->where('types', 'SAVE')
+            ->when($balanceDateStart && $balanceDateEnd, function ($query) use ($balanceDateStart, $balanceDateEnd) {
+                return $query->whereBetween('date', [$balanceDateStart, $balanceDateEnd]);
+            })
+            ->sum('amount');
+        $CreditCard_withdraw = HandCash::where('rules', 'CREDITCARD')->where('types', 'WIDROWS')
+            ->when($balanceDateStart && $balanceDateEnd, function ($query) use ($balanceDateStart, $balanceDateEnd) {
+                return $query->whereBetween('date', [$balanceDateStart, $balanceDateEnd]);
+            })
+            ->sum('amount');
 
         $CreditCard_balance = $CreditCard_Credit - $CreditCard_withdraw;
 
-        $MyLoan_pay = HandCash::where('rules', 'MyLoan')->where('types', 'Save')->sum('amount');
-        $MyLoan_borrow = HandCash::where('rules', 'MyLoan')->where('types', 'Widrows')->sum('amount');
+        $MyLoan_pay = HandCash::where('rules', 'MYLOAN')->where('types', 'SAVE')
+            ->when($balanceDateStart && $balanceDateEnd, function ($query) use ($balanceDateStart, $balanceDateEnd) {
+                return $query->whereBetween('date', [$balanceDateStart, $balanceDateEnd]);
+            })
+            ->sum('amount');
+        $MyLoan_borrow = HandCash::where('rules', 'MYLOAN')->where('types', 'WIDROWS')
+            ->when($balanceDateStart && $balanceDateEnd, function ($query) use ($balanceDateStart, $balanceDateEnd) {
+                return $query->whereBetween('date', [$balanceDateStart, $balanceDateEnd]);
+            })
+            ->sum('amount');
         $MyLoan_balance = $MyLoan_pay - $MyLoan_borrow;
 
         // DPSLoan
-        $DPSLoan_pay = HandCash::where('rules', 'DPSLoan')->where('types', 'Save')->sum('amount');
-        $DPSLoan_borrow = HandCash::where('rules', 'DPSLoan')->where('types', 'Widrows')->sum('amount');
+        $DPSLoan_pay = HandCash::where('rules', 'DPSLOAN')->where('types', 'SAVE')
+            ->when($balanceDateStart && $balanceDateEnd, function ($query) use ($balanceDateStart, $balanceDateEnd) {
+                return $query->whereBetween('date', [$balanceDateStart, $balanceDateEnd]);
+            })
+            ->sum('amount');
+        $DPSLoan_borrow = HandCash::where('rules', 'DPSLOAN')->where('types', 'WIDROWS')
+            ->when($balanceDateStart && $balanceDateEnd, function ($query) use ($balanceDateStart, $balanceDateEnd) {
+                return $query->whereBetween('date', [$balanceDateStart, $balanceDateEnd]);
+            })
+            ->sum('amount');
         $DPSLoan_balance = $DPSLoan_pay - $DPSLoan_borrow;
 
 
@@ -250,7 +348,7 @@ class HandCashController extends Controller
 
 
         // Pass the calculated data to the view
-        return view('backend.library.handCashes.index', compact('mobile_cash_save', 'mobile_cash_withdraw', 'bank_cash_save', 'cash_cash_save', 'cash_cash_withdraw', 'bank_cash_withdraw', 'handCashes', 'hands', 'handCashes_Mobile_balence', 'handCashes_Bank_balence', 'handCashes_Cash_balence', 'handCashes_loan_balence', 'loan_cash_save', 'loan_cash_withdraw', 'mobile_cash', 'bank_cash', 'CreditCard_Credit', 'CreditCard_withdraw', 'CreditCard_balance', 'Bank_FD', 'Bank_FD_withdraw', 'Bank_FD_balence', 'Bank_DPS', 'Bank_DPS_withdraw', 'Bank_DPS_balence',  'handCashes_Peti_balence', 'handCashes_Peti_save', 'handCashes_Peti_withdraw', 'total', 'MyLoan_pay', 'MyLoan_borrow', 'MyLoan_balance', 'DPSLoan_pay', 'DPSLoan_borrow', 'DPSLoan_balance'));
+        return view('backend.library.handCashes.index', compact('mobile_cash_save', 'mobile_cash_withdraw', 'bank_cash_save', 'cash_cash_save', 'cash_cash_withdraw', 'bank_cash_withdraw', 'handCashes', 'hands', 'handCashes_Mobile_balence', 'handCashes_Bank_balence', 'handCashes_Cash_balence', 'handCashes_loan_balence', 'loan_cash_save', 'loan_cash_withdraw', 'mobile_cash', 'bank_cash', 'CreditCard_Credit', 'CreditCard_withdraw', 'CreditCard_balance', 'Bank_FD', 'Bank_FD_withdraw', 'Bank_FD_balence', 'Bank_DPS', 'Bank_DPS_withdraw', 'Bank_DPS_balence',  'handCashes_Peti_balence', 'handCashes_Peti_save', 'handCashes_Peti_withdraw', 'total', 'MyLoan_pay', 'MyLoan_borrow', 'MyLoan_balance', 'DPSLoan_pay', 'DPSLoan_borrow', 'DPSLoan_balance', 'Bank_Islamic_DPS', 'Bank_Islamic_DPS_withdraw', 'Bank_Islamic_DPS_balence'));
     }
 
 
@@ -265,7 +363,7 @@ class HandCashController extends Controller
     }
 
 
-    public function store(Request $request)
+    public function store(HandCashRequest $request)
     {
         $validator = Validator::make($request->all(), [
             'types.*' => 'nullable',
@@ -289,20 +387,43 @@ class HandCashController extends Controller
         }
 
         // Iterate through each set of input fields
+        $affectedYears = [];
+        $affectedMonths = [];
         for ($i = 0; $i < count($request->input('types')); $i++) {
             // Create a new cash record
             $cash = new HandCash();
 
             // Set the values for each field
-            $cash->rules = $request->input('rules')[$i];
-            $cash->types = $request->input('types')[$i];
-            $cash->name = $request->input('name')[$i];
+            $cash->rules = isset($request->input('rules')[$i]) ? strtoupper($request->input('rules')[$i]) : null;
+            $cash->types = isset($request->input('types')[$i]) ? strtoupper($request->input('types')[$i]) : null;
+            $cash->name = strtoupper($request->input('name')[$i]);
             $cash->date = $request->input('date')[$i];
             $cash->amount = $request->input('amount')[$i];
 
 
             // Save the cash record
             $cash->save();
+
+            // track affected periods for cache invalidation
+            if (!empty($cash->date)) {
+                $affectedYears[date('Y', strtotime($cash->date))] = true;
+                $affectedMonths[date('Y', strtotime($cash->date)) . ':' . date('m', strtotime($cash->date))] = true;
+            }
+        }
+
+        // Clear relevant dashboard caches
+        try {
+            Cache::forget('dashboard:monthly_trend:last12');
+            foreach (array_keys($affectedYears) as $y) {
+                Cache::forget("dashboard:category_breakdown:{$y}:all");
+                Cache::forget("dashboard:top_categories:{$y}");
+            }
+            foreach (array_keys($affectedMonths) as $ym) {
+                [$y, $m] = explode(':', $ym);
+                Cache::forget("dashboard:summary:{$y}:{$m}");
+                Cache::forget("dashboard:category_breakdown:{$y}:{$m}");
+            }
+        } catch (\Exception $e) {
         }
 
         return redirect()->route('handCashes.index')->withMessages('HandCash and related data are added successfully!');
@@ -321,9 +442,9 @@ class HandCashController extends Controller
         $cash1 = new HandCash();
 
         // Set the values for each field
-        $cash1->rules = $request->input('rules1');
-        $cash1->types = $request->input('types1');
-        $cash1->name = $request->input('name');
+        $cash1->rules = $request->input('rules1') ? strtoupper($request->input('rules1')) : null;
+        $cash1->types = $request->input('types1') ? strtoupper($request->input('types1')) : null;
+        $cash1->name = strtoupper($request->input('name'));
         $cash1->date = $request->input('date');
         $cash1->amount = $request->input('amount'); // amount
 
@@ -334,9 +455,9 @@ class HandCashController extends Controller
         $cash2 = new HandCash();
 
         // Set the values for each field
-        $cash2->rules = $request->input('rules2');
-        $cash2->types = $request->input('types2');
-        $cash2->name = $request->input('name');
+        $cash2->rules = strtoupper($request->input('rules2'));
+        $cash2->types = strtoupper($request->input('types2'));
+        $cash2->name = strtoupper($request->input('name'));
         $cash2->date = $request->input('date');
         $cash2->amount = $request->input('amount'); // amount
 
@@ -368,17 +489,30 @@ class HandCashController extends Controller
     }
 
 
-    public function update(Request $request, $id)
+    public function update(HandCashRequest $request, $id)
     {
         $handCashes = HandCash::findOrFail($id);
 
-        $handCashes->rules = $request->input('rules');
-        $handCashes->types = $request->input('types');
-        $handCashes->name = $request->input('name');
+        $handCashes->rules = strtoupper($request->input('rules'));
+        $handCashes->types = strtoupper($request->input('types'));
+        $handCashes->name = strtoupper($request->input('name'));
         $handCashes->date = $request->input('date');
         $handCashes->amount = $request->input('amount');
 
         $handCashes->save();
+
+        // Clear cache for this record's period
+        try {
+            if ($handCashes->date) {
+                $y = date('Y', strtotime($handCashes->date));
+                $m = date('m', strtotime($handCashes->date));
+                Cache::forget('dashboard:monthly_trend:last12');
+                Cache::forget("dashboard:summary:{$y}:{$m}");
+                Cache::forget("dashboard:category_breakdown:{$y}:all");
+                Cache::forget("dashboard:category_breakdown:{$y}:{$m}");
+            }
+        } catch (\Exception $e) {
+        }
 
         // Redirect
         return redirect()->route('handCashes.index')->withMessages('HandCash and related data are updated successfully!');
@@ -388,9 +522,20 @@ class HandCashController extends Controller
     public function destroy($id)
     {
         $handCashes = HandCash::findOrFail($id);
-
+        $date = $handCashes->date;
         $handCashes->delete();
 
+        try {
+            if ($date) {
+                $y = date('Y', strtotime($date));
+                $m = date('m', strtotime($date));
+                Cache::forget('dashboard:monthly_trend:last12');
+                Cache::forget("dashboard:summary:{$y}:{$m}");
+                Cache::forget("dashboard:category_breakdown:{$y}:all");
+                Cache::forget("dashboard:category_breakdown:{$y}:{$m}");
+            }
+        } catch (\Exception $e) {
+        }
 
         return redirect()->route('handCashes.index')->withMessage('HandCash and related data are deleted successfully!');
     }
@@ -405,29 +550,29 @@ class HandCashController extends Controller
         $monthlyData = [];
 
         for ($month = 1; $month <= 12; $month++) {
-            $thisMonthIncome = ExpenseCalculation::where('types', 'income')
+            $thisMonthIncome = ExpenseCalculation::where('types', 'INCOME')
                 ->whereMonth('date', $month)
                 // ->whereYear('date', $currentYear)
                 ->get();
 
-            $thisMonthExpense = ExpenseCalculation::where('types', 'expense')
+            $thisMonthExpense = ExpenseCalculation::where('types', 'EXPENSE')
                 ->whereMonth('date', $month)
                 // ->whereYear('date', $currentYear)
                 ->groupBy('category_id')
                 ->select('category_id', DB::raw('SUM(amount) as totalExpense'))
                 ->get();
 
-            $thisMonthneeds = ExpenseCalculation::where('rules', 'needs')
+            $thisMonthneeds = ExpenseCalculation::where('rules', 'NEEDS')
                 ->whereMonth('date', $month)
                 // ->whereYear('date', $currentYear)
                 ->sum('amount');
 
-            $thisMonthwants = ExpenseCalculation::where('rules', 'wants')
+            $thisMonthwants = ExpenseCalculation::where('rules', 'WANTS')
                 ->whereMonth('date', $month)
                 // ->whereYear('date', $currentYear)
                 ->sum('amount');
 
-            $thisMonthsavings = ExpenseCalculation::where('rules', 'savings')
+            $thisMonthsavings = ExpenseCalculation::where('rules', 'SAVINGS')
                 ->whereMonth('date', $month)
                 // ->whereYear('date', $currentYear)
                 ->sum('amount');
@@ -468,14 +613,14 @@ class HandCashController extends Controller
 
         // Income for the period (individual transactions sorted by amount descending)
         $thisMonthIncome = ExpenseCalculation::with('category')
-            ->where('types', 'income')
+            ->where('types', 'INCOME')
             ->whereBetween('date', [$startDate, $endDate])
             ->orderBy('amount', 'desc')
             ->get();
 
         // Expenses grouped by category (sorted by total amount descending)
         $thisMonthExpense = ExpenseCalculation::with('category')
-            ->where('types', 'expense')
+            ->where('types', 'EXPENSE')
             ->whereBetween('date', [$startDate, $endDate])
             ->groupBy('category_id')
             ->select('category_id', DB::raw('SUM(amount) as totalExpense'))
@@ -483,28 +628,28 @@ class HandCashController extends Controller
             ->get();
 
         // Needs/Wants/Savings totals
-        $thisMonthneeds = ExpenseCalculation::where('rules', 'needs')
+        $thisMonthneeds = ExpenseCalculation::where('rules', 'NEEDS')
             ->whereBetween('date', [$startDate, $endDate])
             ->sum('amount');
 
-        $thisMonthwants = ExpenseCalculation::where('rules', 'wants')
+        $thisMonthwants = ExpenseCalculation::where('rules', 'WANTS')
             ->whereBetween('date', [$startDate, $endDate])
             ->sum('amount');
 
-        $thisMonthsavings = ExpenseCalculation::where('rules', 'savings')
+        $thisMonthsavings = ExpenseCalculation::where('rules', 'SAVINGS')
             ->whereBetween('date', [$startDate, $endDate])
             ->sum('amount');
 
         // Yearly income (individual transactions sorted by amount descending)
         $thisYearIncome = ExpenseCalculation::with('category')
-            ->where('types', 'income')
+            ->where('types', 'INCOME')
             ->whereBetween('date', [$startDate, $endDate])
             ->orderBy('amount', 'desc')
             ->get();
 
         // Yearly income grouped by category (sorted by total amount descending)
         $thisYearIncomecategory = ExpenseCalculation::with('category')
-            ->where('types', 'income')
+            ->where('types', 'INCOME')
             ->whereBetween('date', [$startDate, $endDate])
             ->groupBy('category_id')
             ->select('category_id', DB::raw('SUM(amount) as totalIncomeYear'))
@@ -513,7 +658,7 @@ class HandCashController extends Controller
 
         // Yearly expenses grouped by category (sorted by total amount descending)
         $thisYearExpense = ExpenseCalculation::with('category')
-            ->where('types', 'expense')
+            ->where('types', 'EXPENSE')
             ->whereBetween('date', [$startDate, $endDate])
             ->groupBy('category_id')
             ->select('category_id', DB::raw('SUM(amount) as totalExpenseYear'))
@@ -590,7 +735,7 @@ class HandCashController extends Controller
 
         // Expense calculations
         $expenses = ExpenseCalculation::with('category')
-            ->where('types', 'expense')
+            ->where('types', 'EXPENSE')
             ->whereBetween('date', [$startDate, $endDate])
             ->get()
             ->groupBy('rules');
@@ -636,7 +781,7 @@ class HandCashController extends Controller
         for ($year = $startYear; $year <= $currentYear; $year++) {
             // Get the total income for the year
             $yearlyIncome = (float) ExpenseCalculation::whereYear('date', $year)
-                ->where('types', 'income')->where('category_id', 1)
+                ->where('types', 'INCOME')->where('category_id', 1)
                 ->sum('amount');
 
             // Calculate investment percentage based on years active
@@ -655,6 +800,89 @@ class HandCashController extends Controller
             'amounts' => array_map('floatval', array_column($growthData, 'amount'))
         ];
     }
+    // public function Budge_Projection()
+    // {
+    //     // Retrieve all categories, excluding specified ones
+    //     $categories = Category::all()->except([1, 19, 20, 23]);
+
+    //     // Calculate this year's average expenses per category (excluding current month)
+    //     $allYearExpenses = ExpenseCalculation::where('types', 'expense')
+    //         // ->whereYear('date', Carbon::now()->year)
+    //         // ->whereMonth('date', '!=', Carbon::now()->month)
+    //         ->groupBy('category_id')
+    //         ->select('category_id', DB::raw('sum(amount) as totalExpense'), DB::raw('count(distinct MONTH(date)) as totalMonths'))
+    //         ->get();
+
+    //     $thisYearExpense = [];
+    //     foreach ($allYearExpenses as $expense) {
+    //         $averageExpense = $expense->totalExpense / $expense->totalMonths;
+    //         $thisYearExpense[] = [
+    //             'category_id' => $expense->category_id,
+    //             'averageExpense' => ceil($averageExpense),
+    //         ];
+    //     }
+
+    //     // Get last month's expenses per category
+    //     $lastMonth = date('m') == '01' ? '12' : str_pad(date('m') - 1, 2, '0', STR_PAD_LEFT);
+    //     $lastYear = date('m') == '01' ? date('Y') - 1 : date('Y');
+
+    //     $lastMonthExpense = ExpenseCalculation::whereYear('date', $lastYear)
+    //         ->whereMonth('date', $lastMonth)
+    //         ->where('types', 'EXPENSE')
+    //         ->groupBy('category_id')
+    //         ->select('category_id', DB::raw('SUM(amount) as totalExpense'))
+    //         ->get()
+    //         ->map(function ($expense) {
+    //             $expense->totalExpense = ceil($expense->totalExpense);
+    //             return $expense;
+    //         });
+
+    //     $totallastMonthExpense = $lastMonthExpense->sum('totalExpense');
+
+    //     // Get total income for the current month
+    //     $totalMonthlyIncome = ExpenseCalculation::where('category_id', 1)
+    //         ->whereYear('date', now()->year)
+    //         ->whereMonth('date', now()->month)
+    //         ->sum('amount');
+
+    //     // Calculate monthly actual limit according to finance rules:
+    //     // MonthlyactualLimitExpense = (monthly salary - DPS - Islamic_DPS) * 70%
+    //     // Use DPS and Islamic_DPS contributions for the current month (types = 'Save')
+    //     $dpsThisMonth = HandCash::where('rules', 'DPS')
+    //         ->where('types', 'SAVE')
+    //         ->whereYear('date', now()->year)
+    //         ->whereMonth('date', now()->month)
+    //         ->sum('amount');
+
+    //     $islamicDpsThisMonth = HandCash::where('rules', 'ISLAMIC_DPS')
+    //         ->where('types', 'SAVE')
+    //         ->whereYear('date', now()->year)
+    //         ->whereMonth('date', now()->month)
+    //         ->sum('amount');
+
+    //     $MonthlyactualLimitExpense = max(0, ($totalMonthlyIncome - $dpsThisMonth - $islamicDpsThisMonth) * 0.7);
+
+    //     // This is a new part of the code to get the projected expenses for this month
+    //     $thisMonthProjectedExpenses = ProjectedExpense::whereYear('date', now()->year)
+    //         ->whereMonth('date', now()->month)
+    //         ->get()
+    //         ->keyBy('category_id');
+
+    //     return view('backend.reports.projection_report', compact(
+    //         'categories',
+    //         'thisYearExpense',
+    //         'lastMonthExpense',
+    //         'totallastMonthExpense',
+    //         'MonthlyactualLimitExpense',
+    //         'totalMonthlyIncome',
+    //         'thisMonthProjectedExpenses'
+    //     ));
+    // }
+
+    /**
+     * Interactive dashboard view
+     */
+
     public function Budge_Projection()
     {
         // Retrieve all categories, excluding specified ones
@@ -662,8 +890,6 @@ class HandCashController extends Controller
 
         // Calculate this year's average expenses per category (excluding current month)
         $allYearExpenses = ExpenseCalculation::where('types', 'expense')
-            ->whereYear('date', Carbon::now()->year)
-            ->whereMonth('date', '!=', Carbon::now()->month)
             ->groupBy('category_id')
             ->select('category_id', DB::raw('sum(amount) as totalExpense'), DB::raw('count(distinct MONTH(date)) as totalMonths'))
             ->get();
@@ -677,13 +903,69 @@ class HandCashController extends Controller
             ];
         }
 
+        // ========== NEW: Multi-Year Monthly Averages ==========
+        // Get multi-year monthly averages for each category
+        $multiYearMonthlyAverages = ExpenseCalculation::where('types', 'expense')
+            ->whereIn('category_id', $categories->pluck('id')->toArray())
+            ->groupBy('category_id', DB::raw('MONTH(date)'))
+            ->select(
+                'category_id',
+                DB::raw('MONTH(date) as month'),
+                DB::raw('AVG(amount) as avg_amount'),
+                DB::raw('SUM(amount) as total_amount'),
+                DB::raw('COUNT(DISTINCT YEAR(date)) as years_count'),
+                DB::raw('COUNT(*) as transaction_count')
+            )
+            ->orderBy('category_id')
+            ->orderBy('month')
+            ->get();
+
+        // Format multi-year monthly averages
+        $formattedMultiYearAverages = [];
+        foreach ($multiYearMonthlyAverages as $data) {
+            $formattedMultiYearAverages[$data->category_id][$data->month] = [
+                'month' => $data->month,
+                'month_name' => Carbon::create()->month($data->month)->format('F'),
+                'avg_amount' => ceil($data->avg_amount),
+                'total_amount' => ceil($data->total_amount),
+                'years_count' => $data->years_count,
+                'transaction_count' => $data->transaction_count
+            ];
+        }
+
+        // Get overall multi-year monthly averages (across all categories)
+        $overallMultiYearMonthlyAverages = ExpenseCalculation::where('types', 'expense')
+            ->whereIn('category_id', $categories->pluck('id')->toArray())
+            ->groupBy(DB::raw('MONTH(date)'))
+            ->select(
+                DB::raw('MONTH(date) as month'),
+                DB::raw('AVG(amount) as avg_amount'),
+                DB::raw('SUM(amount) as total_amount'),
+                DB::raw('COUNT(DISTINCT YEAR(date)) as years_count'),
+                DB::raw('COUNT(*) as transaction_count')
+            )
+            ->orderBy('month')
+            ->get();
+
+        $formattedOverallMultiYearAverages = [];
+        foreach ($overallMultiYearMonthlyAverages as $data) {
+            $formattedOverallMultiYearAverages[$data->month] = [
+                'month' => $data->month,
+                'month_name' => Carbon::create()->month($data->month)->format('F'),
+                'avg_amount' => ceil($data->avg_amount),
+                'total_amount' => ceil($data->total_amount),
+                'years_count' => $data->years_count,
+                'transaction_count' => $data->transaction_count
+            ];
+        }
+
         // Get last month's expenses per category
         $lastMonth = date('m') == '01' ? '12' : str_pad(date('m') - 1, 2, '0', STR_PAD_LEFT);
         $lastYear = date('m') == '01' ? date('Y') - 1 : date('Y');
 
         $lastMonthExpense = ExpenseCalculation::whereYear('date', $lastYear)
             ->whereMonth('date', $lastMonth)
-            ->where('types', 'expense')
+            ->where('types', 'EXPENSE')
             ->groupBy('category_id')
             ->select('category_id', DB::raw('SUM(amount) as totalExpense'))
             ->get()
@@ -700,11 +982,20 @@ class HandCashController extends Controller
             ->whereMonth('date', now()->month)
             ->sum('amount');
 
-        // Calculate total expense limit (40% of income) and savings (10%)
-        // We will not use the 40% rule as it's not dynamic enough.
-        // Instead, we will calculate a total budget based on a 10% savings goal.
-        $savingRate = 0.10;
-        $MonthlyactualLimitExpense = $totalMonthlyIncome * (1 - $savingRate);
+        // Calculate monthly actual limit according to finance rules
+        $dpsThisMonth = HandCash::where('rules', 'DPS')
+            ->where('types', 'SAVE')
+            ->whereYear('date', now()->year)
+            ->whereMonth('date', now()->month)
+            ->sum('amount');
+
+        $islamicDpsThisMonth = HandCash::where('rules', 'ISLAMIC_DPS')
+            ->where('types', 'SAVE')
+            ->whereYear('date', now()->year)
+            ->whereMonth('date', now()->month)
+            ->sum('amount');
+
+        $MonthlyactualLimitExpense = max(0, ($totalMonthlyIncome - $dpsThisMonth - $islamicDpsThisMonth) * 0.7);
 
         // This is a new part of the code to get the projected expenses for this month
         $thisMonthProjectedExpenses = ProjectedExpense::whereYear('date', now()->year)
@@ -715,6 +1006,8 @@ class HandCashController extends Controller
         return view('backend.reports.projection_report', compact(
             'categories',
             'thisYearExpense',
+            'formattedMultiYearAverages',
+            'formattedOverallMultiYearAverages',
             'lastMonthExpense',
             'totallastMonthExpense',
             'MonthlyactualLimitExpense',
@@ -722,10 +1015,6 @@ class HandCashController extends Controller
             'thisMonthProjectedExpenses'
         ));
     }
-
-    /**
-     * Interactive dashboard view
-     */
     public function interactiveDashboard()
     {
         return view('backend.reports.interactive_dashboard');
@@ -738,44 +1027,46 @@ class HandCashController extends Controller
     {
         $year = $request->get('year', now()->year);
         $month = $request->get('month', now()->month);
+        $cacheKey = "dashboard:summary:{$year}:{$month}";
+        $data = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($year, $month) {
+            $totalIncome = ExpenseCalculation::where('types', 'income')
+                ->whereYear('date', $year)
+                ->sum('amount');
 
-        $totalIncome = ExpenseCalculation::where('types', 'income')
-            ->whereYear('date', $year)
-            ->sum('amount');
+            $totalExpense = ExpenseCalculation::where('types', 'expense')
+                ->whereYear('date', $year)
+                ->sum('amount');
 
-        $totalExpense = ExpenseCalculation::where('types', 'expense')
-            ->whereYear('date', $year)
-            ->sum('amount');
+            // Current month totals
+            $monthIncome = ExpenseCalculation::where('types', 'income')
+                ->whereYear('date', $year)
+                ->whereMonth('date', $month)
+                ->sum('amount');
 
-        // Current month totals
-        $monthIncome = ExpenseCalculation::where('types', 'income')
-            ->whereYear('date', $year)
-            ->whereMonth('date', $month)
-            ->sum('amount');
+            $monthExpense = ExpenseCalculation::where('types', 'expense')
+                ->whereYear('date', $year)
+                ->whereMonth('date', $month)
+                ->sum('amount');
 
-        $monthExpense = ExpenseCalculation::where('types', 'expense')
-            ->whereYear('date', $year)
-            ->whereMonth('date', $month)
-            ->sum('amount');
+            // Cash balances grouped by rules (hand cash)
+            $cashBalances = HandCash::select('rules', DB::raw('SUM(CASE WHEN types = "Save" THEN amount ELSE 0 END) - SUM(CASE WHEN types = "Widrows" THEN amount ELSE 0 END) as balance'))
+                ->groupBy('rules')
+                ->get()
+                ->mapWithKeys(function ($item) {
+                    return [$item->rules => (float) $item->balance];
+                });
 
-        // Cash balances grouped by rules (hand cash)
-        $cashBalances = HandCash::select('rules', DB::raw('SUM(CASE WHEN types = "Save" THEN amount ELSE 0 END) - SUM(CASE WHEN types = "Widrows" THEN amount ELSE 0 END) as balance'))
-            ->groupBy('rules')
-            ->get()
-            ->mapWithKeys(function ($item) {
-                return [$item->rules => (float) $item->balance];
-            });
+            return [
+                'totalIncome' => (float) $totalIncome,
+                'totalExpense' => (float) $totalExpense,
+                'monthIncome' => (float) $monthIncome,
+                'monthExpense' => (float) $monthExpense,
+                'cashBalances' => $cashBalances,
+                'net' => (float) ($totalIncome - $totalExpense),
+            ];
+        });
 
-        return response()->json([
-            'year' => (int) $year,
-            'month' => (int) $month,
-            'totalIncome' => (float) $totalIncome,
-            'totalExpense' => (float) $totalExpense,
-            'monthIncome' => (float) $monthIncome,
-            'monthExpense' => (float) $monthExpense,
-            'cashBalances' => $cashBalances,
-            'net' => (float) ($totalIncome - $totalExpense),
-        ]);
+        return response()->json(array_merge(['year' => (int)$year, 'month' => (int)$month], $data));
     }
 
     /**
@@ -783,35 +1074,36 @@ class HandCashController extends Controller
      */
     public function interactiveDashboardMonthlyTrend(Request $request)
     {
-        $end = now();
-        $start = now()->subMonths(11);
+        $cacheKey = 'dashboard:monthly_trend:last12';
+        $payload = Cache::remember($cacheKey, now()->addMinutes(5), function () {
+            $end = now();
+            $start = now()->subMonths(11);
 
-        $months = [];
-        $incomeSeries = [];
-        $expenseSeries = [];
+            $months = [];
+            $incomeSeries = [];
+            $expenseSeries = [];
 
-        for ($dt = $start; $dt->lte($end); $dt->addMonth()) {
-            $m = $dt->month;
-            $y = $dt->year;
-            $label = $dt->format('Y-m');
-            $months[] = $label;
+            for ($dt = $start->copy(); $dt->lte($end); $dt->addMonth()) {
+                $m = $dt->month;
+                $y = $dt->year;
+                $label = $dt->format('Y-m');
+                $months[] = $label;
 
-            $incomeSeries[] = (float) ExpenseCalculation::where('types', 'income')
-                ->whereYear('date', $y)
-                ->whereMonth('date', $m)
-                ->sum('amount');
+                $incomeSeries[] = (float) ExpenseCalculation::where('types', 'income')
+                    ->whereYear('date', $y)
+                    ->whereMonth('date', $m)
+                    ->sum('amount');
 
-            $expenseSeries[] = (float) ExpenseCalculation::where('types', 'expense')
-                ->whereYear('date', $y)
-                ->whereMonth('date', $m)
-                ->sum('amount');
-        }
+                $expenseSeries[] = (float) ExpenseCalculation::where('types', 'expense')
+                    ->whereYear('date', $y)
+                    ->whereMonth('date', $m)
+                    ->sum('amount');
+            }
 
-        return response()->json([
-            'months' => $months,
-            'income' => $incomeSeries,
-            'expense' => $expenseSeries,
-        ]);
+            return ['months' => $months, 'income' => $incomeSeries, 'expense' => $expenseSeries];
+        });
+
+        return response()->json($payload);
     }
 
     /**
@@ -821,28 +1113,33 @@ class HandCashController extends Controller
     {
         $year = $request->get('year', now()->year);
         $month = $request->get('month', null);
+        $cacheKey = "dashboard:category_breakdown:{$year}:" . ($month ?: 'all');
+        $data = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($year, $month) {
+            $q = ExpenseCalculation::where('types', 'expense')
+                ->groupBy('category_id')
+                ->select('category_id', DB::raw('SUM(amount) as total'));
 
-        $q = ExpenseCalculation::where('types', 'expense')
-            ->groupBy('category_id')
-            ->select('category_id', DB::raw('SUM(amount) as total'));
+            if ($month) {
+                $q->whereYear('date', $year)->whereMonth('date', $month);
+            } else {
+                $q->whereYear('date', $year);
+            }
 
-        if ($month) {
-            $q->whereYear('date', $year)->whereMonth('date', $month);
-        } else {
-            $q->whereYear('date', $year);
-        }
+            $items = $q->orderBy('total', 'desc')->get();
 
-        $items = $q->orderBy('total', 'desc')->get();
+            // eager load categories in bulk
+            $categoryIds = $items->pluck('category_id')->unique()->filter()->values()->all();
+            $categories = Category::whereIn('id', $categoryIds)->get()->keyBy('id');
 
-        // Map category names
-        $data = $items->map(function ($item) {
-            $category = Category::find($item->category_id);
-            return [
-                'category_id' => $item->category_id,
-                'category' => $category ? $category->name : 'Unknown',
-                'total' => (float) $item->total,
-            ];
-        })->values();
+            return $items->map(function ($item) use ($categories) {
+                $category = $categories->get($item->category_id);
+                return [
+                    'category_id' => $item->category_id,
+                    'category' => $category ? $category->name : 'Unknown',
+                    'total' => (float) $item->total,
+                ];
+            })->values();
+        });
 
         return response()->json($data);
     }
@@ -853,12 +1150,12 @@ class HandCashController extends Controller
     public function interactiveDashboardSavingsLoans(Request $request)
     {
         // total savings and total loans across HandCash
-        $savings = HandCash::where('types', 'Save')->sum('amount');
-        $withdrawals = HandCash::where('types', 'Widrows')->sum('amount');
+        $savings = HandCash::where('types', 'SAVE')->sum('amount');
+        $withdrawals = HandCash::where('types', 'WIDROWS')->sum('amount');
 
         // separate out Loan rules if present
-        $loan_in = HandCash::where('rules', 'loan')->where('types', 'Save')->sum('amount');
-        $loan_out = HandCash::where('rules', 'loan')->where('types', 'Widrows')->sum('amount');
+        $loan_in = HandCash::where('rules', 'LOAN')->where('types', 'SAVE')->sum('amount');
+        $loan_out = HandCash::where('rules', 'LOAN')->where('types', 'WIDROWS')->sum('amount');
 
         return response()->json([
             'savings_total' => (float) $savings,
@@ -971,7 +1268,10 @@ class HandCashController extends Controller
 
         $totalAllYearExpense = $allYearExpenses->sum('totalExpense');
 
-        // 4. Allocate budget to each category and prepare for saving
+        // 4. Allocate budget to each category and prepare for saving.
+        //    Apply a reduction target (default 10%) relative to last month's expense for each category
+        $reductionPercent = floatval(request()->get('reduction_percent', 0.10));
+
         $projectedExpensesData = [];
         $nextMonth = Carbon::now()->addMonth();
 
@@ -980,17 +1280,77 @@ class HandCashController extends Controller
             ->whereMonth('date', $nextMonth->month)
             ->delete();
 
-        foreach ($allYearExpenses as $expense) {
-            $proportion = ($totalAllYearExpense > 0) ? ($expense->totalExpense / $totalAllYearExpense) : 0;
-            $allocatedAmount = ceil($totalBudgetForExpenses * $proportion);
+        // Last month's totals per category
+        $prev = Carbon::now()->subMonth();
+        $lastMonthRows = ExpenseCalculation::where('types', 'expense')
+            ->whereYear('date', $prev->year)
+            ->whereMonth('date', $prev->month)
+            ->groupBy('category_id')
+            ->select('category_id', DB::raw('SUM(amount) as total'))
+            ->get()
+            ->keyBy('category_id')
+            ->map(function ($r) {
+                return (float) $r->total;
+            })->toArray();
 
-            $projectedExpensesData[] = [
-                'category_id' => $expense->category_id,
-                'date' => $nextMonth,
-                'amount' => $allocatedAmount,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
+        // Build a base amount for each category using last month if available, otherwise use yearly avg
+        $baseAmounts = [];
+        foreach ($allYearExpenses as $expense) {
+            $catId = $expense->category_id;
+            $lastMonthAmt = $lastMonthRows[$catId] ?? null;
+            if ($lastMonthAmt !== null && $lastMonthAmt > 0) {
+                $base = $lastMonthAmt;
+            } else {
+                // fallback to average expense per active month
+                $monthsCount = max($expense->totalMonths ?? 1, 1);
+                $base = ($expense->totalExpense / $monthsCount) ?: 0;
+            }
+            $baseAmounts[$catId] = (float) $base;
+        }
+
+        // If there are categories from last month not in allYearExpenses, include them
+        foreach ($lastMonthRows as $catId => $amt) {
+            if (!array_key_exists($catId, $baseAmounts)) {
+                $baseAmounts[$catId] = (float) $amt;
+            }
+        }
+
+        // Initial projected per-category: try to reduce last-month/base by reductionPercent
+        $initialProjected = [];
+        $initialTotal = 0.0;
+        foreach ($baseAmounts as $catId => $base) {
+            $proj = max(0, $base * (1 - $reductionPercent));
+            $initialProjected[$catId] = $proj;
+            $initialTotal += $proj;
+        }
+
+        // If no data, fallback to proportional allocation like before
+        if ($initialTotal <= 0.0) {
+            foreach ($allYearExpenses as $expense) {
+                $proportion = ($totalAllYearExpense > 0) ? ($expense->totalExpense / $totalAllYearExpense) : 0;
+                $allocatedAmount = ceil($totalBudgetForExpenses * $proportion);
+
+                $projectedExpensesData[] = [
+                    'category_id' => $expense->category_id,
+                    'date' => $nextMonth,
+                    'amount' => $allocatedAmount,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+        } else {
+            // Scale initialProjected to fit total budget
+            $scale = $totalBudgetForExpenses / $initialTotal;
+            foreach ($initialProjected as $catId => $val) {
+                $allocated = (int) ceil($val * $scale);
+                $projectedExpensesData[] = [
+                    'category_id' => $catId,
+                    'date' => $nextMonth,
+                    'amount' => $allocated,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
         }
 
         // 5. Save the new projected budget to the database
