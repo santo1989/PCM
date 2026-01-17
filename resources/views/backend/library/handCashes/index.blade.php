@@ -37,16 +37,17 @@
                             {{-- Date Filter Form --}}
                             <div class="row mb-4">
                                 <div class="col-md-12">
-                                    <form action="{{ route('handCashes.index') }}" method="GET" class="form-inline justify-content-center">
+                                    <form action="{{ route('handCashes.index') }}" method="GET"
+                                        class="form-inline justify-content-center">
                                         <div class="form-group mr-3">
                                             <label for="balance_date_start" class="mr-2">From:</label>
-                                            <input type="date" name="balance_date_start" id="balance_date_start" 
-                                                   class="form-control" value="{{ request('balance_date_start') }}">
+                                            <input type="date" name="balance_date_start" id="balance_date_start"
+                                                class="form-control" value="{{ request('balance_date_start') }}">
                                         </div>
                                         <div class="form-group mr-3">
                                             <label for="balance_date_end" class="mr-2">To:</label>
-                                            <input type="date" name="balance_date_end" id="balance_date_end" 
-                                                   class="form-control" value="{{ request('balance_date_end') }}">
+                                            <input type="date" name="balance_date_end" id="balance_date_end"
+                                                class="form-control" value="{{ request('balance_date_end') }}">
                                         </div>
                                         <button type="submit" class="btn btn-primary mr-2">
                                             <i class="bi bi-filter"></i> Filter
@@ -126,7 +127,7 @@
 
                                                 </tbody>
                                             </table>
-                                             <h4>My Loan</h4>
+                                            <h4>My Loan</h4>
                                             <table class="table table-bordered table-hover">
                                                 <thead>
                                                     <tr>
@@ -154,8 +155,8 @@
 
                                                 </tbody>
                                             </table>
-                                            
-                                            
+
+
                                         </div>
                                         <div class="col-md-3">
                                             <h4>Bank Cash Handlings</h4>
@@ -184,7 +185,7 @@
                                         </div>
 
                                         <div class="col-md-3">
-                                           <h4>Hand Cash</h4>
+                                            <h4>Hand Cash</h4>
                                             <table class="table table-bordered table-hover">
                                                 <thead>
                                                     <tr>

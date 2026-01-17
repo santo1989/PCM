@@ -116,28 +116,34 @@
                                     ->whereMonth('date', date('m'))
                                     ->whereYear('date', date('Y'))
                                     ->sum('amount');
-                            // dd($this_month_expense);
-                            $all_time_income = App\Models\ExpenseCalculation::where('types', 'income')
-                                ->sum('amount');
-                            // dd($all_time_income);
-                            $all_time_expense = App\Models\ExpenseCalculation::where('types', 'expense')
-                                ->sum('amount');
-                            // dd($all_time_expense);
+                                // dd($this_month_expense);
+                                $all_time_income = App\Models\ExpenseCalculation::where('types', 'income')->sum(
+                                    'amount',
+                                );
+                                // dd($all_time_income);
+                                $all_time_expense = App\Models\ExpenseCalculation::where('types', 'expense')->sum(
+                                    'amount',
+                                );
+                                // dd($all_time_expense);
                             @endphp
                         </div>
                         <div class="col-md-2 col-sm-12">
-                            <h5 class="text-center"> 
+                            <h5 class="text-center">
                                 <!--modal trigger button for show categories wise this month income-->
-                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#categoriesWiseIncomeModal">
+                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal"
+                                    data-bs-target="#categoriesWiseIncomeModal">
                                     This Month Income: {{ $this_month_income }}
                                 </button>
                                 <!-- Modal -->
-                                <div class="modal fade" id="categoriesWiseIncomeModal" tabindex="-1" aria-labelledby="categoriesWiseIncomeModalLabel" aria-hidden="true">
+                                <div class="modal fade" id="categoriesWiseIncomeModal" tabindex="-1"
+                                    aria-labelledby="categoriesWiseIncomeModalLabel" aria-hidden="true">
                                     <div class="modal-dialog">
                                         <div class="modal-content">
                                             <div class="modal-header">
-                                                <h5 class="modal-title" id="categoriesWiseIncomeModalLabel">Categories Wise This Month Income</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                <h5 class="modal-title" id="categoriesWiseIncomeModalLabel">Categories
+                                                    Wise This Month Income</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                    aria-label="Close"></button>
                                             </div>
                                             <div class="modal-body">
                                                 <table class="table table-bordered">
@@ -153,17 +159,20 @@
                                                         @endphp
                                                         @foreach ($categories as $category)
                                                             @php
-                                                                $category_income = App\Models\ExpenseCalculation::where('types', 'income')
+                                                                $category_income = App\Models\ExpenseCalculation::where(
+                                                                    'types',
+                                                                    'income',
+                                                                )
                                                                     ->where('category_id', $category->id)
                                                                     ->whereMonth('date', date('m'))
                                                                     ->whereYear('date', date('Y'))
                                                                     ->sum('amount');
                                                             @endphp
                                                             @if ($category_income > 0)
-                                                            <tr>
-                                                                <td>{{ $category->name }}</td>
-                                                                <td>{{ $category_income }}</td>
-                                                            </tr>
+                                                                <tr>
+                                                                    <td>{{ $category->name }}</td>
+                                                                    <td>{{ $category_income }}</td>
+                                                                </tr>
                                                             @endif
                                                         @endforeach
                                                     </tbody>
@@ -180,17 +189,21 @@
                         <div class="col-md-2 col-sm-12">
                             <h5 class="text-center">
                                 <!--modal trigger button for show categories wise this month expense-->
-                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#categoriesWiseExpenseModal">
+                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal"
+                                    data-bs-target="#categoriesWiseExpenseModal">
                                     This Month Expense: {{ $this_month_expense }}
                                 </button>
 
                                 <!-- Modal -->
-                                <div class="modal fade" id="categoriesWiseExpenseModal" tabindex="-1" aria-labelledby="categoriesWiseExpenseModalLabel" aria-hidden="true">
+                                <div class="modal fade" id="categoriesWiseExpenseModal" tabindex="-1"
+                                    aria-labelledby="categoriesWiseExpenseModalLabel" aria-hidden="true">
                                     <div class="modal-dialog">
                                         <div class="modal-content">
                                             <div class="modal-header">
-                                                <h5 class="modal-title" id="categoriesWiseExpenseModalLabel">Categories Wise This Month Expense</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                <h5 class="modal-title" id="categoriesWiseExpenseModalLabel">Categories
+                                                    Wise This Month Expense</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                    aria-label="Close"></button>
                                             </div>
                                             <div class="modal-body">
                                                 <table class="table table-bordered">
@@ -206,7 +219,10 @@
                                                         @endphp
                                                         @foreach ($categories as $category)
                                                             @php
-                                                                $category_expense = App\Models\ExpenseCalculation::where('types', 'expense')
+                                                                $category_expense = App\Models\ExpenseCalculation::where(
+                                                                    'types',
+                                                                    'expense',
+                                                                )
                                                                     ->where('category_id', $category->id)
                                                                     ->whereMonth('date', date('m'))
                                                                     ->whereYear('date', date('Y'))
@@ -228,24 +244,28 @@
                                 </div>
                                 <!-- Modal End -->
 
-                                
+
                             </h5>
 
 
                         </div>
-                         <div class="col-md-2 col-sm-12">
-                            <h5 class="text-center"> 
+                        <div class="col-md-2 col-sm-12">
+                            <h5 class="text-center">
                                 <!--modal trigger button for show categories wise all month income-->
-                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#categoriesWiseAllTimeIncomeModal">
+                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal"
+                                    data-bs-target="#categoriesWiseAllTimeIncomeModal">
                                     Total Income: {{ $all_time_income }}
                                 </button>
                                 <!-- Modal -->
-                                <div class="modal fade" id="categoriesWiseAllTimeIncomeModal" tabindex="-1" aria-labelledby="categoriesWiseAllTimeIncomeModalLabel" aria-hidden="true">
+                                <div class="modal fade" id="categoriesWiseAllTimeIncomeModal" tabindex="-1"
+                                    aria-labelledby="categoriesWiseAllTimeIncomeModalLabel" aria-hidden="true">
                                     <div class="modal-dialog">
                                         <div class="modal-content">
                                             <div class="modal-header">
-                                                <h5 class="modal-title" id="categoriesWiseAllTimeIncomeModalLabel">Categories Wise All Time Income</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                <h5 class="modal-title" id="categoriesWiseAllTimeIncomeModalLabel">
+                                                    Categories Wise All Time Income</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                    aria-label="Close"></button>
                                             </div>
                                             <div class="modal-body">
                                                 <table class="table table-bordered">
@@ -261,15 +281,18 @@
                                                         @endphp
                                                         @foreach ($categories as $category)
                                                             @php
-                                                                $category_all_time_income = App\Models\ExpenseCalculation::where('types', 'income')
+                                                                $category_all_time_income = App\Models\ExpenseCalculation::where(
+                                                                    'types',
+                                                                    'income',
+                                                                )
                                                                     ->where('category_id', $category->id)
                                                                     ->sum('amount');
                                                             @endphp
                                                             @if ($category_all_time_income > 0)
-                                                            <tr>
-                                                                <td>{{ $category->name }}</td>
-                                                                <td>{{ $category_all_time_income }}</td>
-                                                            </tr>
+                                                                <tr>
+                                                                    <td>{{ $category->name }}</td>
+                                                                    <td>{{ $category_all_time_income }}</td>
+                                                                </tr>
                                                             @endif
                                                         @endforeach
                                                     </tbody>
@@ -286,17 +309,21 @@
                         <div class="col-md-2 col-sm-12">
                             <h5 class="text-center">
                                 <!--modal trigger button for show categories wise all time expense-->
-                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#categoriesWiseAllTimeExpenseModal">
+                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal"
+                                    data-bs-target="#categoriesWiseAllTimeExpenseModal">
                                     Total Expense: {{ $all_time_expense }}
                                 </button>
 
                                 <!-- Modal -->
-                                <div class="modal fade" id="categoriesWiseAllTimeExpenseModal" tabindex="-1" aria-labelledby="categoriesWiseAllTimeExpenseModalLabel" aria-hidden="true">
+                                <div class="modal fade" id="categoriesWiseAllTimeExpenseModal" tabindex="-1"
+                                    aria-labelledby="categoriesWiseAllTimeExpenseModalLabel" aria-hidden="true">
                                     <div class="modal-dialog">
                                         <div class="modal-content">
                                             <div class="modal-header">
-                                                <h5 class="modal-title" id="categoriesWiseAllTimeExpenseModalLabel">Categories Wise Total Expense</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                <h5 class="modal-title" id="categoriesWiseAllTimeExpenseModalLabel">
+                                                    Categories Wise Total Expense</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                    aria-label="Close"></button>
                                             </div>
                                             <div class="modal-body">
                                                 <table class="table table-bordered">
@@ -312,9 +339,12 @@
                                                         @endphp
                                                         @foreach ($categories as $category)
                                                             @php
-                                                                $category_all_time_expense = App\Models\ExpenseCalculation::where('types', 'expense')
+                                                                $category_all_time_expense = App\Models\ExpenseCalculation::where(
+                                                                    'types',
+                                                                    'expense',
+                                                                )
                                                                     ->where('category_id', $category->id)
-                                                                   ->sum('amount');
+                                                                    ->sum('amount');
                                                             @endphp
                                                             @if ($category_all_time_expense > 0)
                                                                 <tr>
@@ -332,7 +362,7 @@
                                 </div>
                                 <!-- Modal End -->
 
-                                
+
                             </h5>
 
 
@@ -458,8 +488,8 @@
             <div class="modal-content" style="background-color: rgba(0,0,0,0.5); min-width:90%;">
                 <div class="modal-header" style="background: rgba(0, 0, 0, 0.5); color: #f1f1f1; min-width:90%;">
                     <h5 class="modal-title text-center" id="CashEntryModal"> Data Entry</h5>
-                    <button type="button" class="btn btn-light btn-close" data-bs-dismiss="modal" aria-label="Close"
-                        style="background-color: white; border-color: white; color: black;"
+                    <button type="button" class="btn btn-light btn-close" data-bs-dismiss="modal"
+                        aria-label="Close" style="background-color: white; border-color: white; color: black;"
                         onmouseover="this.classList.add('btn-danger')"
                         onmouseout="this.classList.remove('btn-danger')"></button>
 
