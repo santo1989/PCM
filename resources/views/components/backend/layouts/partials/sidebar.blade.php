@@ -7,15 +7,15 @@
                     <div class="sb-sidenav-menu-heading text-dark">Personal Expense Calculator</div>
 
                     <!-- Main Links (collapsed) -->
-                    <a class="nav-link collapsed text-dark" href="#" data-bs-toggle="collapse" 
-                       data-bs-target="#collapseMainNav" aria-expanded="false" aria-controls="collapseMainNav">
+                    <a class="nav-link collapsed text-dark" href="#" data-bs-toggle="collapse"
+                        data-bs-target="#collapseMainNav" aria-expanded="false" aria-controls="collapseMainNav">
                         <div class="sb-nav-link-icon"><i class="fas fa-home"></i></div>
                         <span class="fw-semibold">Home</span>
                         <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
                     </a>
 
-                    <div class="collapse" id="collapseMainNav" aria-labelledby="headingMain" 
-                         data-bs-parent="#sidenavAccordion">
+                    <div class="collapse" id="collapseMainNav" aria-labelledby="headingMain"
+                        data-bs-parent="#sidenavAccordion">
                         <nav class="sb-sidenav-menu-nested nav">
                             <a class="nav-link" href="{{ route('home') }}">
                                 <div class="sb-nav-link-icon"><i class="fas fa-home"></i></div>
@@ -36,7 +36,7 @@
                         <div class="sb-nav-link-icon"><i class="fas fa-money-bill-wave"></i></div>
                         Expense Management
                     </a>
-                    
+
                     <a class="nav-link text-dark" href="{{ route('handCashes.index') }}">
                         <div class="sb-nav-link-icon"><i class="fas fa-cash-register"></i></div>
                         Cash Management
@@ -44,14 +44,14 @@
 
                     <!-- User Management -->
                     <a class="nav-link collapsed text-dark" href="#" data-bs-toggle="collapse"
-                       data-bs-target="#collapseLayouts" aria-expanded="false" aria-controls="collapseLayouts">
+                        data-bs-target="#collapseLayouts" aria-expanded="false" aria-controls="collapseLayouts">
                         <div class="sb-nav-link-icon"><i class="fas fa-users"></i></div>
                         <span class="fw-semibold">User Management</span>
                         <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
                     </a>
 
                     <div class="collapse" id="collapseLayouts" aria-labelledby="headingOne"
-                         data-bs-parent="#sidenavAccordion">
+                        data-bs-parent="#sidenavAccordion">
                         <nav class="sb-sidenav-menu-nested nav">
                             <a class="nav-link" href="{{ route('roles.index') }}">
                                 <div class="sb-nav-link-icon"><i class="fas fa-user-tag"></i></div>
@@ -73,21 +73,21 @@
                 @php
                     // Moved PHP code here for better organization
                     $categories = App\Models\Category::all();
-                    
+
                     $incomeYears = App\Models\ExpenseCalculation::selectRaw('DISTINCT YEAR(created_at) as year')
                         ->where('types', 'INCOME')
                         ->get()
                         ->pluck('year');
-                    
+
                     $expenseYears = App\Models\ExpenseCalculation::selectRaw('DISTINCT YEAR(created_at) as year')
                         ->where('types', 'EXPENSE')
                         ->get()
                         ->pluck('year');
-                    
+
                     $years = $incomeYears->merge($expenseYears)->unique()->sortDesc();
                 @endphp
 
-                @if($years->count() > 0)
+                @if ($years->count() > 0)
                     <div class="sb-sidenav-menu-heading mt-3 text-dark">Yearly Summary</div>
                     <div class="px-3">
                         <div class="table-responsive">
@@ -105,7 +105,7 @@
                                             $totalIncome = App\Models\ExpenseCalculation::where('types', 'INCOME')
                                                 ->whereYear('created_at', $year)
                                                 ->sum('amount');
-                                            
+
                                             $totalExpense = App\Models\ExpenseCalculation::where('types', 'EXPENSE')
                                                 ->whereYear('created_at', $year)
                                                 ->sum('amount');
@@ -113,9 +113,11 @@
                                         <tr>
                                             <td class="ps-0">{{ $year }}</td>
                                             <td class="text-end">
-                                                @if($totalIncome > 0)
-                                                    <button type="button" class="btn btn-link p-0 text-decoration-none text-primary" 
-                                                            data-bs-toggle="modal" data-bs-target="#incomeDetailsModal{{ $year }}">
+                                                @if ($totalIncome > 0)
+                                                    <button type="button"
+                                                        class="btn btn-link p-0 text-decoration-none text-primary"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#incomeDetailsModal{{ $year }}">
                                                         {{ number_format($totalIncome, 2) }}
                                                     </button>
                                                 @else
@@ -123,9 +125,11 @@
                                                 @endif
                                             </td>
                                             <td class="text-end pe-0">
-                                                @if($totalExpense > 0)
-                                                    <button type="button" class="btn btn-link p-0 text-decoration-none text-primary" 
-                                                            data-bs-toggle="modal" data-bs-target="#expenseDetailsModal{{ $year }}">
+                                                @if ($totalExpense > 0)
+                                                    <button type="button"
+                                                        class="btn btn-link p-0 text-decoration-none text-primary"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#expenseDetailsModal{{ $year }}">
                                                         {{ number_format($totalExpense, 2) }}
                                                     </button>
                                                 @else
@@ -141,7 +145,7 @@
                 @endif
             </div>
         </div>
-        
+
         <!-- Footer -->
         <div class="sb-sidenav-footer" style="color:#0078D7;">
             <div class="small">Logged in as:</div>
@@ -153,16 +157,16 @@
 <!-- Modals - Placed outside the sidebar for proper rendering -->
 @foreach ($years as $year)
     <!-- Income Details Modal -->
-    <div class="modal fade" id="incomeDetailsModal{{ $year }}" tabindex="-1" 
-         aria-labelledby="incomeDetailsModalLabel{{ $year }}" aria-hidden="true">
+    <div class="modal fade" id="incomeDetailsModal{{ $year }}" tabindex="-1"
+        aria-labelledby="incomeDetailsModalLabel{{ $year }}" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title" id="incomeDetailsModalLabel{{ $year }}">
                         <i class="fas fa-money-bill-wave me-2"></i>Income Details for {{ $year }}
                     </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" 
-                            aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="table-responsive">
@@ -174,21 +178,34 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($categories as $category)
-                                    @php
-                                        $category_income = App\Models\ExpenseCalculation::where('types', 'INCOME')
+                                @php
+                                    // Collect category incomes and sort by amount descending
+                                    $categoryIncomes = [];
+                                    foreach ($categories as $category) {
+                                        $amount = App\Models\ExpenseCalculation::where('types', 'INCOME')
                                             ->where('category_id', $category->id)
                                             ->whereYear('date', $year)
                                             ->sum('amount');
-                                    @endphp
-                                    @if ($category_income > 0)
-                                        <tr>
-                                            <td>{{ $category->name }}</td>
-                                            <td class="text-end fw-semibold text-success">
-                                                {{ number_format($category_income, 2) }}
-                                            </td>
-                                        </tr>
-                                    @endif
+                                        if ($amount > 0) {
+                                            $categoryIncomes[] = [
+                                                'name' => $category->name,
+                                                'amount' => $amount,
+                                            ];
+                                        }
+                                    }
+                                    // Sort by amount descending (highest to lowest)
+                                    usort($categoryIncomes, function ($a, $b) {
+                                        return $b['amount'] <=> $a['amount'];
+                                    });
+                                @endphp
+
+                                @foreach ($categoryIncomes as $categoryIncome)
+                                    <tr>
+                                        <td>{{ $categoryIncome['name'] }}</td>
+                                        <td class="text-end fw-semibold text-success">
+                                            {{ number_format($categoryIncome['amount'], 2) }}
+                                        </td>
+                                    </tr>
                                 @endforeach
                             </tbody>
                             <tfoot class="table-primary">
@@ -212,16 +229,15 @@
     </div>
 
     <!-- Expense Details Modal -->
-    <div class="modal fade" id="expenseDetailsModal{{ $year }}" tabindex="-1" 
-         aria-labelledby="expenseDetailsModalLabel{{ $year }}" aria-hidden="true">
+    <div class="modal fade" id="expenseDetailsModal{{ $year }}" tabindex="-1"
+        aria-labelledby="expenseDetailsModalLabel{{ $year }}" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header bg-warning text-dark">
                     <h5 class="modal-title" id="expenseDetailsModalLabel{{ $year }}">
                         <i class="fas fa-shopping-cart me-2"></i>Expense Details for {{ $year }}
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" 
-                            aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="table-responsive">
@@ -233,21 +249,34 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($categories as $category)
-                                    @php
-                                        $category_expense = App\Models\ExpenseCalculation::where('types', 'EXPENSE')
+                                @php
+                                    // Collect category expenses and sort by amount descending
+                                    $categoryExpenses = [];
+                                    foreach ($categories as $category) {
+                                        $amount = App\Models\ExpenseCalculation::where('types', 'EXPENSE')
                                             ->where('category_id', $category->id)
                                             ->whereYear('date', $year)
                                             ->sum('amount');
-                                    @endphp
-                                    @if ($category_expense > 0)
-                                        <tr>
-                                            <td>{{ $category->name }}</td>
-                                            <td class="text-end fw-semibold text-danger">
-                                                {{ number_format($category_expense, 2) }}
-                                            </td>
-                                        </tr>
-                                    @endif
+                                        if ($amount > 0) {
+                                            $categoryExpenses[] = [
+                                                'name' => $category->name,
+                                                'amount' => $amount,
+                                            ];
+                                        }
+                                    }
+                                    // Sort by amount descending (highest to lowest)
+                                    usort($categoryExpenses, function ($a, $b) {
+                                        return $b['amount'] <=> $a['amount'];
+                                    });
+                                @endphp
+
+                                @foreach ($categoryExpenses as $categoryExpense)
+                                    <tr>
+                                        <td>{{ $categoryExpense['name'] }}</td>
+                                        <td class="text-end fw-semibold text-danger">
+                                            {{ number_format($categoryExpense['amount'], 2) }}
+                                        </td>
+                                    </tr>
                                 @endforeach
                             </tbody>
                             <tfoot class="table-warning">
@@ -279,31 +308,32 @@
     .sb-sidenav {
         transition: all 0.3s ease;
     }
-    
+
     .sb-sidenav .nav-link {
         transition: all 0.2s ease;
     }
-    
+
     .sb-sidenav .nav-link:hover {
         background-color: rgba(0, 120, 215, 0.1);
         padding-left: 1.5rem !important;
     }
-    
+
     .sb-sidenav-menu-heading {
         font-size: 0.875rem;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
-    
-    .table-sm th, .table-sm td {
+
+    .table-sm th,
+    .table-sm td {
         padding: 0.25rem 0.5rem;
     }
-    
+
     .btn-link {
         font-weight: 500;
     }
-    
+
     .sb-sidenav-footer {
         border-top: 1px solid rgba(0, 0, 0, 0.1);
         padding-top: 1rem;

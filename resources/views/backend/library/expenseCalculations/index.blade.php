@@ -5,6 +5,9 @@
 
     <x-backend.layouts.elements.errors />
 
+    <!-- Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 
     <section class="content">
         <div class="container-fluid">
@@ -137,7 +140,7 @@
                                 <!-- Modal -->
                                 <div class="modal fade" id="categoriesWiseIncomeModal" tabindex="-1"
                                     aria-labelledby="categoriesWiseIncomeModalLabel" aria-hidden="true">
-                                    <div class="modal-dialog">
+                                    <div class="modal-dialog modal-fullscreen">
                                         <div class="modal-content">
                                             <div class="modal-header">
                                                 <h5 class="modal-title" id="categoriesWiseIncomeModalLabel">Categories
@@ -146,37 +149,149 @@
                                                     aria-label="Close"></button>
                                             </div>
                                             <div class="modal-body">
-                                                <table class="table table-bordered">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Category</th>
-                                                            <th>Income Amount</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @php
-                                                            $categories = App\Models\Category::all();
-                                                        @endphp
-                                                        @foreach ($categories as $category)
-                                                            @php
-                                                                $category_income = App\Models\ExpenseCalculation::where(
-                                                                    'types',
-                                                                    'income',
-                                                                )
-                                                                    ->where('category_id', $category->id)
-                                                                    ->whereMonth('date', date('m'))
-                                                                    ->whereYear('date', date('Y'))
-                                                                    ->sum('amount');
-                                                            @endphp
-                                                            @if ($category_income > 0)
+                                                <div class="row">
+                                                    <div class="col-md-6 col-sm-12">
+                                                        <table class="table table-bordered">
+                                                            <thead>
                                                                 <tr>
-                                                                    <td>{{ $category->name }}</td>
-                                                                    <td>{{ $category_income }}</td>
+                                                                    <th>Category</th>
+                                                                    <th>Income Amount</th>
                                                                 </tr>
-                                                            @endif
-                                                        @endforeach
-                                                    </tbody>
-                                                </table>
+                                                            </thead>
+                                                            <tbody>
+                                                                @php
+                                                                    $categories = App\Models\Category::all();
+                                                                    $categoryIncomes = [];
+                                                                    foreach ($categories as $category) {
+                                                                        $amount = App\Models\ExpenseCalculation::where(
+                                                                            'types',
+                                                                            'income',
+                                                                        )
+                                                                            ->where('category_id', $category->id)
+                                                                            ->whereMonth('date', date('m'))
+                                                                            ->whereYear('date', date('Y'))
+                                                                            ->sum('amount');
+                                                                        if ($amount > 0) {
+                                                                            $categoryIncomes[] = [
+                                                                                'name' => $category->name,
+                                                                                'amount' => $amount,
+                                                                            ];
+                                                                        }
+                                                                    }
+                                                                    usort($categoryIncomes, function ($a, $b) {
+                                                                        return $b['amount'] <=> $a['amount'];
+                                                                    });
+                                                                @endphp
+                                                                @foreach ($categoryIncomes as $categoryIncome)
+                                                                    <tr>
+                                                                        <td>{{ $categoryIncome['name'] }}</td>
+                                                                        <td>{{ $categoryIncome['amount'] }}</td>
+                                                                    </tr>
+                                                                @endforeach
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                    <div class="col-md-6 col-sm-12">
+                                                        <!-- Bar Chart for This Month Income -->
+                                                        <div style="margin-bottom: 30px;">
+                                                            <h6 class="text-center">Category Wise Income</h6>
+                                                            <canvas id="thisMonthIncomeBarChart"></canvas>
+                                                        </div>
+
+                                                        <!-- Pie Chart for This Month Income Distribution -->
+                                                        {{-- <div>
+                                                            <h6 class="text-center">Income Distribution %</h6>
+                                                            <canvas id="thisMonthIncomePieChart"></canvas>
+                                                        </div> --}}
+
+                                                        <script>
+                                                            @php
+                                                                $categories = App\Models\Category::all();
+                                                                $incomeLabels = [];
+                                                                $incomeData = [];
+                                                                $totalIncome = 0;
+
+                                                                foreach ($categories as $category) {
+                                                                    $amount = App\Models\ExpenseCalculation::where('types', 'income')->where('category_id', $category->id)->whereMonth('date', date('m'))->whereYear('date', date('Y'))->sum('amount');
+                                                                    if ($amount > 0) {
+                                                                        $incomeLabels[] = $category->name;
+                                                                        $incomeData[] = $amount;
+                                                                        $totalIncome += $amount;
+                                                                    }
+                                                                }
+                                                            @endphp
+
+                                                            // This Month Income Bar Chart
+                                                            var ctxBar = document.getElementById('thisMonthIncomeBarChart').getContext('2d');
+                                                            var thisMonthIncomeBarChart = new Chart(ctxBar, {
+                                                                type: 'bar',
+                                                                data: {
+                                                                    labels: {!! json_encode($incomeLabels) !!},
+                                                                    datasets: [{
+                                                                        label: 'Income Amount',
+                                                                        data: {!! json_encode($incomeData) !!},
+                                                                        backgroundColor: 'rgba(75, 192, 192, 0.8)',
+                                                                        borderColor: 'rgba(75, 192, 192, 1)',
+                                                                        borderWidth: 1
+                                                                    }]
+                                                                },
+                                                                options: {
+                                                                    responsive: true,
+                                                                    maintainAspectRatio: true,
+                                                                    scales: {
+                                                                        y: {
+                                                                            beginAtZero: true
+                                                                        }
+                                                                    },
+                                                                    plugins: {
+                                                                        legend: {
+                                                                            display: false
+                                                                        }
+                                                                    }
+                                                                }
+                                                            });
+
+                                                            // // This Month Income Pie Chart
+                                                            // var ctxPie = document.getElementById('thisMonthIncomePieChart').getContext('2d');
+                                                            // var thisMonthIncomePieChart = new Chart(ctxPie, {
+                                                            //     type: 'doughnut',
+                                                            //     data: {
+                                                            //         labels: {!! json_encode($incomeLabels) !!},
+                                                            //         datasets: [{
+                                                            //             data: {!! json_encode($incomeData) !!},
+                                                            //             backgroundColor: [
+                                                            //                 'rgba(255, 99, 132, 0.8)',
+                                                            //                 'rgba(54, 162, 235, 0.8)',
+                                                            //                 'rgba(255, 206, 86, 0.8)',
+                                                            //                 'rgba(75, 192, 192, 0.8)',
+                                                            //                 'rgba(153, 102, 255, 0.8)',
+                                                            //                 'rgba(255, 159, 64, 0.8)',
+                                                            //                 'rgba(199, 199, 199, 0.8)',
+                                                            //                 'rgba(83, 102, 255, 0.8)'
+                                                            //             ],
+                                                            //             borderColor: '#fff',
+                                                            //             borderWidth: 2
+                                                            //         }]
+                                                            //     },
+                                                            //     options: {
+                                                            //         responsive: true,
+                                                            //         maintainAspectRatio: true,
+                                                            //         plugins: {
+                                                            //             legend: {
+                                                            //                 position: 'bottom',
+                                                            //                 labels: {
+                                                            //                     font: {
+                                                            //                         size: 10
+                                                            //                     }
+                                                            //                 }
+                                                            //             }
+                                                            //         }
+                                                            //     }
+                                                            // });
+                                                        </script>
+                                                    </div>
+                                                </div>
+
                                             </div>
                                         </div>
                                     </div>
@@ -197,7 +312,7 @@
                                 <!-- Modal -->
                                 <div class="modal fade" id="categoriesWiseExpenseModal" tabindex="-1"
                                     aria-labelledby="categoriesWiseExpenseModalLabel" aria-hidden="true">
-                                    <div class="modal-dialog">
+                                    <div class="modal-dialog modal-fullscreen">
                                         <div class="modal-content">
                                             <div class="modal-header">
                                                 <h5 class="modal-title" id="categoriesWiseExpenseModalLabel">Categories
@@ -206,37 +321,147 @@
                                                     aria-label="Close"></button>
                                             </div>
                                             <div class="modal-body">
-                                                <table class="table table-bordered">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Category</th>
-                                                            <th>Expense Amount</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @php
-                                                            $categories = App\Models\Category::all();
-                                                        @endphp
-                                                        @foreach ($categories as $category)
-                                                            @php
-                                                                $category_expense = App\Models\ExpenseCalculation::where(
-                                                                    'types',
-                                                                    'expense',
-                                                                )
-                                                                    ->where('category_id', $category->id)
-                                                                    ->whereMonth('date', date('m'))
-                                                                    ->whereYear('date', date('Y'))
-                                                                    ->sum('amount');
-                                                            @endphp
-                                                            @if ($category_expense > 0)
+                                                <div class="row">
+                                                    <div class="col-md-6 col-sm-12">
+                                                        <table class="table table-bordered">
+                                                            <thead>
                                                                 <tr>
-                                                                    <td>{{ $category->name }}</td>
-                                                                    <td>{{ $category_expense }}</td>
+                                                                    <th>Category</th>
+                                                                    <th>Expense Amount</th>
                                                                 </tr>
-                                                            @endif
-                                                        @endforeach
-                                                    </tbody>
-                                                </table>
+                                                            </thead>
+                                                            <tbody>
+                                                                @php
+                                                                    $categories = App\Models\Category::all();
+                                                                    $categoryExpenses = [];
+                                                                    foreach ($categories as $category) {
+                                                                        $amount = App\Models\ExpenseCalculation::where(
+                                                                            'types',
+                                                                            'expense',
+                                                                        )
+                                                                            ->where('category_id', $category->id)
+                                                                            ->whereMonth('date', date('m'))
+                                                                            ->whereYear('date', date('Y'))
+                                                                            ->sum('amount');
+                                                                        if ($amount > 0) {
+                                                                            $categoryExpenses[] = [
+                                                                                'name' => $category->name,
+                                                                                'amount' => $amount,
+                                                                            ];
+                                                                        }
+                                                                    }
+                                                                    usort($categoryExpenses, function ($a, $b) {
+                                                                        return $b['amount'] <=> $a['amount'];
+                                                                    });
+                                                                @endphp
+                                                                @foreach ($categoryExpenses as $categoryExpense)
+                                                                    <tr>
+                                                                        <td>{{ $categoryExpense['name'] }}</td>
+                                                                        <td>{{ $categoryExpense['amount'] }}</td>
+                                                                    </tr>
+                                                                @endforeach
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                    <div class="col-md-6 col-sm-12">
+                                                        <!-- Bar Chart for This Month Expense -->
+                                                        <div style="margin-bottom: 30px;">
+                                                            <h6 class="text-center">Category Wise Expense</h6>
+                                                            <canvas id="thisMonthExpenseBarChart"></canvas>
+                                                        </div>
+
+                                                        <!-- Pie Chart for This Month Expense Distribution -->
+                                                        {{-- <div>
+                                                            <h6 class="text-center">Expense Distribution %</h6>
+                                                            <canvas id="thisMonthExpensePieChart"></canvas>
+                                                        </div> --}}
+
+                                                        <script>
+                                                            @php
+                                                                $categories = App\Models\Category::all();
+                                                                $expenseLabels = [];
+                                                                $expenseData = [];
+
+                                                                foreach ($categories as $category) {
+                                                                    $amount = App\Models\ExpenseCalculation::where('types', 'expense')->where('category_id', $category->id)->whereMonth('date', date('m'))->whereYear('date', date('Y'))->sum('amount');
+                                                                    if ($amount > 0) {
+                                                                        $expenseLabels[] = $category->name;
+                                                                        $expenseData[] = $amount;
+                                                                    }
+                                                                }
+                                                            @endphp
+
+                                                            // This Month Expense Bar Chart
+                                                            var ctxExpenseBar = document.getElementById('thisMonthExpenseBarChart').getContext('2d');
+                                                            var thisMonthExpenseBarChart = new Chart(ctxExpenseBar, {
+                                                                type: 'bar',
+                                                                data: {
+                                                                    labels: {!! json_encode($expenseLabels) !!},
+                                                                    datasets: [{
+                                                                        label: 'Expense Amount',
+                                                                        data: {!! json_encode($expenseData) !!},
+                                                                        backgroundColor: 'rgba(255, 99, 132, 0.8)',
+                                                                        borderColor: 'rgba(255, 99, 132, 1)',
+                                                                        borderWidth: 1
+                                                                    }]
+                                                                },
+                                                                options: {
+                                                                    responsive: true,
+                                                                    maintainAspectRatio: true,
+                                                                    scales: {
+                                                                        y: {
+                                                                            beginAtZero: true
+                                                                        }
+                                                                    },
+                                                                    plugins: {
+                                                                        legend: {
+                                                                            display: false
+                                                                        }
+                                                                    }
+                                                                }
+                                                            });
+
+                                                            // // This Month Expense Pie Chart
+                                                            // var ctxExpensePie = document.getElementById('thisMonthExpensePieChart').getContext('2d');
+                                                            // var thisMonthExpensePieChart = new Chart(ctxExpensePie, {
+                                                            //     type: 'doughnut',
+                                                            //     data: {
+                                                            //         labels: {!! json_encode($expenseLabels) !!},
+                                                            //         datasets: [{
+                                                            //             data: {!! json_encode($expenseData) !!},
+                                                            //             backgroundColor: [
+                                                            //                 'rgba(255, 99, 132, 0.8)',
+                                                            //                 'rgba(54, 162, 235, 0.8)',
+                                                            //                 'rgba(255, 206, 86, 0.8)',
+                                                            //                 'rgba(75, 192, 192, 0.8)',
+                                                            //                 'rgba(153, 102, 255, 0.8)',
+                                                            //                 'rgba(255, 159, 64, 0.8)',
+                                                            //                 'rgba(199, 199, 199, 0.8)',
+                                                            //                 'rgba(83, 102, 255, 0.8)'
+                                                            //             ],
+                                                            //             borderColor: '#fff',
+                                                            //             borderWidth: 2
+                                                            //         }]
+                                                            //     },
+                                                            //     options: {
+                                                            //         responsive: true,
+                                                            //         maintainAspectRatio: true,
+                                                            //         plugins: {
+                                                            //             legend: {
+                                                            //                 position: 'bottom',
+                                                            //                 labels: {
+                                                            //                     font: {
+                                                            //                         size: 10
+                                                            //                     }
+                                                            //                 }
+                                                            //             }
+                                                            //         }
+                                                            //     }
+                                                            // });
+                                                        </script>
+                                                    </div>
+                                                </div>
+
                                             </div>
                                             <div class="modal-footer"> </div>
                                         </div>
@@ -259,7 +484,7 @@
                                 <!-- Modal -->
                                 <div class="modal fade" id="categoriesWiseAllTimeIncomeModal" tabindex="-1"
                                     aria-labelledby="categoriesWiseAllTimeIncomeModalLabel" aria-hidden="true">
-                                    <div class="modal-dialog">
+                                    <div class="modal-dialog modal-fullscreen">
                                         <div class="modal-content">
                                             <div class="modal-header">
                                                 <h5 class="modal-title" id="categoriesWiseAllTimeIncomeModalLabel">
@@ -268,35 +493,145 @@
                                                     aria-label="Close"></button>
                                             </div>
                                             <div class="modal-body">
-                                                <table class="table table-bordered">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Category</th>
-                                                            <th>Income Amount</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @php
-                                                            $categories = App\Models\Category::all();
-                                                        @endphp
-                                                        @foreach ($categories as $category)
-                                                            @php
-                                                                $category_all_time_income = App\Models\ExpenseCalculation::where(
-                                                                    'types',
-                                                                    'income',
-                                                                )
-                                                                    ->where('category_id', $category->id)
-                                                                    ->sum('amount');
-                                                            @endphp
-                                                            @if ($category_all_time_income > 0)
+                                                <div class="row">
+                                                    <div class="col-md-6 col-sm-12">
+                                                        <table class="table table-bordered">
+                                                            <thead>
                                                                 <tr>
-                                                                    <td>{{ $category->name }}</td>
-                                                                    <td>{{ $category_all_time_income }}</td>
+                                                                    <th>Category</th>
+                                                                    <th>Income Amount</th>
                                                                 </tr>
-                                                            @endif
-                                                        @endforeach
-                                                    </tbody>
-                                                </table>
+                                                            </thead>
+                                                            <tbody>
+                                                                @php
+                                                                    $categories = App\Models\Category::all();
+                                                                    $allTimeIncomes = [];
+                                                                    foreach ($categories as $category) {
+                                                                        $amount = App\Models\ExpenseCalculation::where(
+                                                                            'types',
+                                                                            'income',
+                                                                        )
+                                                                            ->where('category_id', $category->id)
+                                                                            ->sum('amount');
+                                                                        if ($amount > 0) {
+                                                                            $allTimeIncomes[] = [
+                                                                                'name' => $category->name,
+                                                                                'amount' => $amount,
+                                                                            ];
+                                                                        }
+                                                                    }
+                                                                    usort($allTimeIncomes, function ($a, $b) {
+                                                                        return $b['amount'] <=> $a['amount'];
+                                                                    });
+                                                                @endphp
+                                                                @foreach ($allTimeIncomes as $allTimeIncome)
+                                                                    <tr>
+                                                                        <td>{{ $allTimeIncome['name'] }}</td>
+                                                                        <td>{{ $allTimeIncome['amount'] }}</td>
+                                                                    </tr>
+                                                                @endforeach
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                    <div class="col-md-6 col-sm-12">
+                                                        <!-- Bar Chart for All Time Income -->
+                                                        <div style="margin-bottom: 30px;">
+                                                            <h6 class="text-center">Category Wise Total Income</h6>
+                                                            <canvas id="allTimeIncomeBarChart"></canvas>
+                                                        </div>
+
+                                                        <!-- Pie Chart for All Time Income Distribution -->
+                                                        {{-- <div>
+                                                            <h6 class="text-center">Total Income Distribution %</h6>
+                                                            <canvas id="allTimeIncomePieChart"></canvas>
+                                                        </div> --}}
+
+                                                        <script>
+                                                            @php
+                                                                $categories = App\Models\Category::all();
+                                                                $allTimeIncomeLabels = [];
+                                                                $allTimeIncomeData = [];
+
+                                                                foreach ($categories as $category) {
+                                                                    $amount = App\Models\ExpenseCalculation::where('types', 'income')->where('category_id', $category->id)->sum('amount');
+                                                                    if ($amount > 0) {
+                                                                        $allTimeIncomeLabels[] = $category->name;
+                                                                        $allTimeIncomeData[] = $amount;
+                                                                    }
+                                                                }
+                                                            @endphp
+
+                                                            // All Time Income Bar Chart
+                                                            var ctxAllTimeIncomeBar = document.getElementById('allTimeIncomeBarChart').getContext('2d');
+                                                            var allTimeIncomeBarChart = new Chart(ctxAllTimeIncomeBar, {
+                                                                type: 'bar',
+                                                                data: {
+                                                                    labels: {!! json_encode($allTimeIncomeLabels) !!},
+                                                                    datasets: [{
+                                                                        label: 'Total Income Amount',
+                                                                        data: {!! json_encode($allTimeIncomeData) !!},
+                                                                        backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                                                                        borderColor: 'rgba(54, 162, 235, 1)',
+                                                                        borderWidth: 1
+                                                                    }]
+                                                                },
+                                                                options: {
+                                                                    responsive: true,
+                                                                    maintainAspectRatio: true,
+                                                                    scales: {
+                                                                        y: {
+                                                                            beginAtZero: true
+                                                                        }
+                                                                    },
+                                                                    plugins: {
+                                                                        legend: {
+                                                                            display: false
+                                                                        }
+                                                                    }
+                                                                }
+                                                            });
+
+                                                            // // All Time Income Pie Chart
+                                                            // var ctxAllTimeIncomePie = document.getElementById('allTimeIncomePieChart').getContext('2d');
+                                                            // var allTimeIncomePieChart = new Chart(ctxAllTimeIncomePie, {
+                                                            //     type: 'doughnut',
+                                                            //     data: {
+                                                            //         labels: {!! json_encode($allTimeIncomeLabels) !!},
+                                                            //         datasets: [{
+                                                            //             data: {!! json_encode($allTimeIncomeData) !!},
+                                                            //             backgroundColor: [
+                                                            //                 'rgba(255, 99, 132, 0.8)',
+                                                            //                 'rgba(54, 162, 235, 0.8)',
+                                                            //                 'rgba(255, 206, 86, 0.8)',
+                                                            //                 'rgba(75, 192, 192, 0.8)',
+                                                            //                 'rgba(153, 102, 255, 0.8)',
+                                                            //                 'rgba(255, 159, 64, 0.8)',
+                                                            //                 'rgba(199, 199, 199, 0.8)',
+                                                            //                 'rgba(83, 102, 255, 0.8)'
+                                                            //             ],
+                                                            //             borderColor: '#fff',
+                                                            //             borderWidth: 2
+                                                            //         }]
+                                                            //     },
+                                                            //     options: {
+                                                            //         responsive: true,
+                                                            //         maintainAspectRatio: true,
+                                                            //         plugins: {
+                                                            //             legend: {
+                                                            //                 position: 'bottom',
+                                                            //                 labels: {
+                                                            //                     font: {
+                                                            //                         size: 10
+                                                            //                     }
+                                                            //                 }
+                                                            //             }
+                                                            //         }
+                                                            //     }
+                                                            // });
+                                                        </script>
+                                                    </div>
+                                                </div>
+
                                             </div>
                                         </div>
                                     </div>
@@ -317,7 +652,7 @@
                                 <!-- Modal -->
                                 <div class="modal fade" id="categoriesWiseAllTimeExpenseModal" tabindex="-1"
                                     aria-labelledby="categoriesWiseAllTimeExpenseModalLabel" aria-hidden="true">
-                                    <div class="modal-dialog">
+                                    <div class="modal-dialog modal-fullscreen">
                                         <div class="modal-content">
                                             <div class="modal-header">
                                                 <h5 class="modal-title" id="categoriesWiseAllTimeExpenseModalLabel">
@@ -326,35 +661,145 @@
                                                     aria-label="Close"></button>
                                             </div>
                                             <div class="modal-body">
-                                                <table class="table table-bordered">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Category</th>
-                                                            <th>Expense Amount</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @php
-                                                            $categories = App\Models\Category::all();
-                                                        @endphp
-                                                        @foreach ($categories as $category)
-                                                            @php
-                                                                $category_all_time_expense = App\Models\ExpenseCalculation::where(
-                                                                    'types',
-                                                                    'expense',
-                                                                )
-                                                                    ->where('category_id', $category->id)
-                                                                    ->sum('amount');
-                                                            @endphp
-                                                            @if ($category_all_time_expense > 0)
+                                                <div class="row">
+                                                    <div class="col-md-6 col-sm-12">
+                                                        <table class="table table-bordered">
+                                                            <thead>
                                                                 <tr>
-                                                                    <td>{{ $category->name }}</td>
-                                                                    <td>{{ $category_all_time_expense }}</td>
+                                                                    <th>Category</th>
+                                                                    <th>Expense Amount</th>
                                                                 </tr>
-                                                            @endif
-                                                        @endforeach
-                                                    </tbody>
-                                                </table>
+                                                            </thead>
+                                                            <tbody>
+                                                                @php
+                                                                    $categories = App\Models\Category::all();
+                                                                    $allTimeExpenses = [];
+                                                                    foreach ($categories as $category) {
+                                                                        $amount = App\Models\ExpenseCalculation::where(
+                                                                            'types',
+                                                                            'expense',
+                                                                        )
+                                                                            ->where('category_id', $category->id)
+                                                                            ->sum('amount');
+                                                                        if ($amount > 0) {
+                                                                            $allTimeExpenses[] = [
+                                                                                'name' => $category->name,
+                                                                                'amount' => $amount,
+                                                                            ];
+                                                                        }
+                                                                    }
+                                                                    usort($allTimeExpenses, function ($a, $b) {
+                                                                        return $b['amount'] <=> $a['amount'];
+                                                                    });
+                                                                @endphp
+                                                                @foreach ($allTimeExpenses as $allTimeExpense)
+                                                                    <tr>
+                                                                        <td>{{ $allTimeExpense['name'] }}</td>
+                                                                        <td>{{ $allTimeExpense['amount'] }}</td>
+                                                                    </tr>
+                                                                @endforeach
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                    <div class="col-md-6 col-sm-12">
+                                                        <!-- Bar Chart for All Time Expense -->
+                                                        <div style="margin-bottom: 30px;">
+                                                            <h6 class="text-center">Category Wise Total Expense</h6>
+                                                            <canvas id="allTimeExpenseBarChart"></canvas>
+                                                        </div>
+
+                                                        <!-- Pie Chart for All Time Expense Distribution -->
+                                                        {{-- <div>
+                                                            <h6 class="text-center">Total Expense Distribution %</h6>
+                                                            <canvas id="allTimeExpensePieChart"></canvas>
+                                                        </div> --}}
+
+                                                        <script>
+                                                            @php
+                                                                $categories = App\Models\Category::all();
+                                                                $allTimeExpenseLabels = [];
+                                                                $allTimeExpenseData = [];
+
+                                                                foreach ($categories as $category) {
+                                                                    $amount = App\Models\ExpenseCalculation::where('types', 'expense')->where('category_id', $category->id)->sum('amount');
+                                                                    if ($amount > 0) {
+                                                                        $allTimeExpenseLabels[] = $category->name;
+                                                                        $allTimeExpenseData[] = $amount;
+                                                                    }
+                                                                }
+                                                            @endphp
+
+                                                            // All Time Expense Bar Chart
+                                                            var ctxAllTimeExpenseBar = document.getElementById('allTimeExpenseBarChart').getContext('2d');
+                                                            var allTimeExpenseBarChart = new Chart(ctxAllTimeExpenseBar, {
+                                                                type: 'bar',
+                                                                data: {
+                                                                    labels: {!! json_encode($allTimeExpenseLabels) !!},
+                                                                    datasets: [{
+                                                                        label: 'Total Expense Amount',
+                                                                        data: {!! json_encode($allTimeExpenseData) !!},
+                                                                        backgroundColor: 'rgba(255, 159, 64, 0.8)',
+                                                                        borderColor: 'rgba(255, 159, 64, 1)',
+                                                                        borderWidth: 1
+                                                                    }]
+                                                                },
+                                                                options: {
+                                                                    responsive: true,
+                                                                    maintainAspectRatio: true,
+                                                                    scales: {
+                                                                        y: {
+                                                                            beginAtZero: true
+                                                                        }
+                                                                    },
+                                                                    plugins: {
+                                                                        legend: {
+                                                                            display: false
+                                                                        }
+                                                                    }
+                                                                }
+                                                            });
+
+                                                            // // All Time Expense Pie Chart
+                                                            // var ctxAllTimeExpensePie = document.getElementById('allTimeExpensePieChart').getContext('2d');
+                                                            // var allTimeExpensePieChart = new Chart(ctxAllTimeExpensePie, {
+                                                            //     type: 'doughnut',
+                                                            //     data: {
+                                                            //         labels: {!! json_encode($allTimeExpenseLabels) !!},
+                                                            //         datasets: [{
+                                                            //             data: {!! json_encode($allTimeExpenseData) !!},
+                                                            //             backgroundColor: [
+                                                            //                 'rgba(255, 99, 132, 0.8)',
+                                                            //                 'rgba(54, 162, 235, 0.8)',
+                                                            //                 'rgba(255, 206, 86, 0.8)',
+                                                            //                 'rgba(75, 192, 192, 0.8)',
+                                                            //                 'rgba(153, 102, 255, 0.8)',
+                                                            //                 'rgba(255, 159, 64, 0.8)',
+                                                            //                 'rgba(199, 199, 199, 0.8)',
+                                                            //                 'rgba(83, 102, 255, 0.8)'
+                                                            //             ],
+                                                            //             borderColor: '#fff',
+                                                            //             borderWidth: 2
+                                                            //         }]
+                                                            //     },
+                                                            //     options: {
+                                                            //         responsive: true,
+                                                            //         maintainAspectRatio: true,
+                                                            //         plugins: {
+                                                            //             legend: {
+                                                            //                 position: 'bottom',
+                                                            //                 labels: {
+                                                            //                     font: {
+                                                            //                         size: 10
+                                                            //                     }
+                                                            //                 }
+                                                            //             }
+                                                            //         }
+                                                            //     }
+                                                            // });
+                                                        </script>
+                                                    </div>
+                                                </div>
+
                                             </div>
                                             <div class="modal-footer"> </div>
                                         </div>
