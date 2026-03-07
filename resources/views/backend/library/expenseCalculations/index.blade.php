@@ -1071,6 +1071,7 @@
                                                             <option value="FD">FD</option>
                                                             <option value="DPS">DPS</option>
                                                             <option value="MyLoan">MyLoan</option>
+                                                            <option value="investment">Investment</option>
                                                         </select>
                                                     </div>
                                                 </div>
@@ -1180,6 +1181,7 @@
                                                         <option value="FD">FD</option>
                                                         <option value="DPS">DPS</option>
                                                         <option value="MyLoan">MyLoan</option>
+                                                        <option value="investment">Investment</option>
                     </select>
                 </div>
                 </div>

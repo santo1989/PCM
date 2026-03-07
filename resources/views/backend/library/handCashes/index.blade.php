@@ -242,13 +242,129 @@
                             <h4>All Cash Handlings</h4>
                         </div>
                         <!-- /.card-header -->
+                        {{-- handCash Table filter here --}}
+                        <div class="card-header text-center">
+                            <form action="{{ route('handCashes.index') }}" method="GET"
+                                class="form-inline justify-content-center">
+                                <div class="form-group mr-3">
+                                    <label for="handCashes_date_start" class="mr-2">From:</label>
+                                    <input type="date" name="handCashes_date_start" id="handCashes_date_start"
+                                        class="form-control" value="{{ request('handCashes_date_start') }}">
+                                </div>
+                                <div class="form-group mr-3">
+                                    <label for="handCashes_date_end" class="mr-2">To:</label>
+                                    <input type="date" name="handCashes_date_end" id="handCashes_date_end"
+                                        class="form-control" value="{{ request('handCashes_date_end') }}">
+                                </div>
+                                <!--Name, Types, Rules filter-->
+                                <div class="form-group mr-3">
+                                    <label for="handCashes_name" class="mr-2">Name:</label>
+                                    <input type="text" name="handCashes_name" id="handCashes_name"
+                                        class="form-control" value="{{ request('handCashes_name') }}">
+                                </div>
+                                <div class="form-group mr-3">
+                                    <label for="handCashes_types[]">HandCash Types</label>
+                                    @php
+                                        $selectedHandCashTypes = array_map(
+                                            'strtoupper',
+                                            (array) request('handCashes_type', request('types', [])),
+                                        );
+                                    @endphp
+                                    <select class="form-control" name="handCashes_type[]" id="handCashes_type" multiple>
+                                        <option value="SAVE"
+                                            {{ in_array('SAVE', $selectedHandCashTypes) ? 'selected' : '' }}>
+                                            Savings</option>
+                                        <option value="WIDROWS"
+                                            {{ in_array('WIDROWS', $selectedHandCashTypes) ? 'selected' : '' }}>
+                                            Withdraws</option>
+                                    </select>
+                                </div>
+                                <div class="form-group mr-3">
+                                    <label for="handCashes_rule">Cash Rules</label>
+                                    @php
+                                        $selectedHandCashRules = (array) request(
+                                            'handCashes_rule',
+                                            request('rules', []),
+                                        );
+                                    @endphp
+                                    <select class="form-control" name="handCashes_rule[]" id="handCashes_rule" multiple>
+                                        <option value="Peti"
+                                            {{ in_array('Peti', $selectedHandCashRules) ? 'selected' : '' }}>
+                                            Peti Cash</option>
+                                        <option value="Cash"
+                                            {{ in_array('Cash', $selectedHandCashRules) ? 'selected' : '' }}>
+                                            Cash</option>
+                                        <option value="City_Bank"
+                                            {{ in_array('City_Bank', $selectedHandCashRules) ? 'selected' : '' }}>
+                                            City Bank</option>
+                                        <option value="City_Bank_Islamic"
+                                            {{ in_array('City_Bank_Islamic', $selectedHandCashRules) ? 'selected' : '' }}>
+                                            City Bank Islamic</option>
+                                        <option value="FD"
+                                            {{ in_array('FD', $selectedHandCashRules) ? 'selected' : '' }}>
+                                            FD</option>
+                                        <option value="DPS"
+                                            {{ in_array('DPS', $selectedHandCashRules) ? 'selected' : '' }}>
+                                            DPS</option>
+                                        <option value="Islamic_DPS"
+                                            {{ in_array('Islamic_DPS', $selectedHandCashRules) ? 'selected' : '' }}>
+                                            Islamic DPS</option>
+                                        <option value="MyLoan"
+                                            {{ in_array('MyLoan', $selectedHandCashRules) ? 'selected' : '' }}>
+                                            MyLoan</option>
+                                        <option value="DPSLoan"
+                                            {{ in_array('DPSLoan', $selectedHandCashRules) ? 'selected' : '' }}>
+                                            DPS Loan</option>
+                                        <option value="loan"
+                                            {{ in_array('loan', $selectedHandCashRules) ? 'selected' : '' }}>
+                                            Loan To Other</option>
+                                        <option value="CreditCard"
+                                            {{ in_array('CreditCard', $selectedHandCashRules) ? 'selected' : '' }}>
+                                            Credit Card</option>
+                                        <option value="Sonali_Bank_Gulshan"
+                                            {{ in_array('Sonali_Bank_Gulshan', $selectedHandCashRules) ? 'selected' : '' }}>
+                                            Sonali Bank Gulshan</option>
+                                        <option value="Sonali_Bank_Tongi"
+                                            {{ in_array('Sonali_Bank_Tongi', $selectedHandCashRules) ? 'selected' : '' }}>
+                                            Sonali Bank Tongi</option>
+                                        <option value="DBBL"
+                                            {{ in_array('DBBL', $selectedHandCashRules) ? 'selected' : '' }}>
+                                            Dutch Bangla Bank</option>
+                                        <option value="PBL"
+                                            {{ in_array('PBL', $selectedHandCashRules) ? 'selected' : '' }}>
+                                            Prime Bank Ltd</option>
+                                        <option value="Mobile_Nagad"
+                                            {{ in_array('Mobile_Nagad', $selectedHandCashRules) ? 'selected' : '' }}>
+                                            Nagad</option>
+                                        <option value="Mobile_Bkash"
+                                            {{ in_array('Mobile_Bkash', $selectedHandCashRules) ? 'selected' : '' }}>
+                                            Bkash</option>
+                                        <option value="Mobile_Rocket"
+                                            {{ in_array('Mobile_Rocket', $selectedHandCashRules) ? 'selected' : '' }}>
+                                            Rocket</option>
+                                        <option value="investment"
+                                            {{ in_array('investment', $selectedHandCashRules) ? 'selected' : '' }}>
+                                            Investment</option>
+                                    </select>
+
+                                </div>
+                                <button type="submit" class="btn btn-primary mr-2">
+                                    <i class="bi bi-filter"></i> Filter
+                                </button>
+                                <a href="{{ route('handCashes.index') }}" class="btn btn-secondary">
+                                    <i class="bi bi-x-circle"></i> Clear
+                                </a>
+                            </form>
+
+                        </div>
+                        <!-- /.card-header -->
                         <div class="card-body">
-                            {{-- handCash Table goes here --}}
+
 
                             <div class="row justify-content-center  text-center">
                                 <div class="col-md-12">
 
-                                    <table id="datatablesSimple" class="table table-bordered table-hover">
+                                    <table class="table table-bordered table-hover">
                                         <thead>
                                             <tr>
                                                 <th>Sl#</th>
@@ -262,7 +378,7 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @php $sl=0 @endphp
+                                            @php $sl = ($handCashes->currentPage() - 1) * $handCashes->perPage(); @endphp
                                             @foreach ($handCashes as $handCash)
                                                 <tr>
                                                     <td>{{ ++$sl }}</td>
@@ -303,6 +419,9 @@
 
                                         </tbody>
                                     </table>
+                                    <div class="d-flex justify-content-center mt-3">
+                                        {{ $handCashes->links() }}
+                                    </div>
                                 </div>
 
                             </div>

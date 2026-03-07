@@ -20,35 +20,51 @@ class HandCashController extends Controller
 {
     public function index()
     {
+        $handCashesQuery = HandCash::query()->latest();
+        $search_cashes = null;
 
-        $handCashes = HandCash::latest();
-        $search_cashes = null; // Initialize the variable
+        $hasTableFilters = false;
 
-        // Check if the types field is selected
-        if (request('types')) {
-            $handCashes = $handCashes->where('types', request('types'));
-            $search_cashes = $handCashes->get();
+        $typeInput = request('types', request('handCashes_type'));
+        $typeValues = array_values(array_filter(array_map('strtoupper', (array) $typeInput)));
+        if (!empty($typeValues)) {
+            $handCashesQuery->whereIn('types', $typeValues);
+            $hasTableFilters = true;
+        }
+
+        $ruleInput = request('rules', request('handCashes_rule'));
+        $ruleValues = array_values(array_filter((array) $ruleInput));
+        if (!empty($ruleValues)) {
+            $handCashesQuery->whereIn('rules', $ruleValues);
+            $hasTableFilters = true;
+        }
+
+        $name = request('name') ?: request('handCashes_name');
+        if ($name) {
+            $handCashesQuery->where('name', 'like', '%' . $name . '%');
+            $hasTableFilters = true;
+        }
+
+        $entryDateStart = request('entry_date_start') ?: request('handCashes_date_start');
+        $entryDateEnd = request('entry_date_end') ?: request('handCashes_date_end');
+
+        if ($entryDateStart && $entryDateEnd) {
+            $handCashesQuery->whereBetween('date', [$entryDateStart, $entryDateEnd]);
+            $hasTableFilters = true;
+        } elseif ($entryDateStart) {
+            $handCashesQuery->whereDate('date', '>=', $entryDateStart);
+            $hasTableFilters = true;
+        } elseif ($entryDateEnd) {
+            $handCashesQuery->whereDate('date', '<=', $entryDateEnd);
+            $hasTableFilters = true;
+        }
+
+        if ($hasTableFilters) {
+            $search_cashes = $handCashesQuery->get();
             session(['search_cashes' => $search_cashes]);
         }
 
-        // Check if the types field is selected
-        if (request('types')) {
-            $handCashes = $handCashes->where('types', request('types'));
-            $search_cashes = $handCashes->get();
-            session(['search_cashes' => $search_cashes]);
-        }
-
-        // Check if the entry_date fields are filled
-        if (request('entry_date_start') && request('entry_date_end')) {
-            $handCashes = $handCashes->whereBetween('date', [
-                request('entry_date_start'),
-                request('entry_date_end')
-            ]);
-            $search_cashes = $handCashes->get();
-            session(['search_cashes' => $search_cashes]);
-        }
-
-        $handCashes = $handCashes->get();
+        $handCashes = $handCashesQuery->paginate(20)->appends(request()->query());
 
         // Check if export format is requested
         $format = strtolower(request('export_format'));
