@@ -168,22 +168,35 @@
                     <table class="table table-bordered">
                         <thead>
                             <tr>
-                                <th>Date</th>
-                                <th>Name</th>
+                                {{-- <th>Date</th>
+                                <th>Name</th> --}}
+                                <th>Category</th>
                                 <th>Amount</th>
                             </tr>
                         </thead>
                         <tbody>
 
-                            @foreach ($thisMonthIncome as $item)
+                            @foreach ($MonthlyIncomeCategorieswise as $item)
                                 <tr>
-                                    <td>{{ $item->date }}</td>
-                                    <td>{{ $item->name }}</td>
-                                    <td class="bg-info">{{ $item->amount }}</td>
+                                    {{-- <td>{{ $item->date }}</td>
+                                    <td>{{ $item->name }}</td> --}}
+                                    <td>
+                                        @php
+                                            $category = App\Models\Category::find($item->category_id);
+                                        @endphp
+                                        {{ $category->name }}
+                                    </td>
+                                    
+
+                                    {{-- <td class="bg-info">{{ $item->amount }}</td> --}}
+                                    <td class="bg-info">
+                                        {{ $item->totalIncome }}
+                                        
+                                    </td>
                                 </tr>
                             @endforeach
                             <tr class="bg-success">
-                                <td colspan="3">Total Income: {{ $thisMonthIncome->sum('amount') }}</td>
+                                <td colspan="3">Total Income: {{ $MonthlyIncomeCategorieswise->sum('totalIncome') }}</td>
                             </tr>
                         </tbody>
                     </table>

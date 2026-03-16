@@ -627,11 +627,20 @@ class HandCashController extends Controller
         $currentMonth = now()->format('m');
         $currentYear = now()->format('Y');
 
-        // Income for the period (individual transactions sorted by amount descending)
+        // Income for the month (individual transactions sorted by amount descending)
         $thisMonthIncome = ExpenseCalculation::with('category')
             ->where('types', 'INCOME')
             ->whereBetween('date', [$startDate, $endDate])
             ->orderBy('amount', 'desc')
+            ->get();
+
+        // Income grouped by category (sorted by total amount descending)
+        $MonthlyIncomeCategorieswise = ExpenseCalculation::with('category')
+            ->where('types', 'INCOME')
+            ->whereBetween('date', [$startDate, $endDate])
+            ->groupBy('category_id')
+            ->select('category_id', DB::raw('SUM(amount) as totalIncome'))
+            ->orderBy('totalIncome', 'desc')
             ->get();
 
         // Expenses grouped by category (sorted by total amount descending)
@@ -694,7 +703,8 @@ class HandCashController extends Controller
             'endDate',
             'currentMonth',
             'currentYear',
-            'thisYearIncomecategory'
+            'thisYearIncomecategory',
+            'MonthlyIncomeCategorieswise'
         ));
     }
 
