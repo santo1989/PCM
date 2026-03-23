@@ -90,9 +90,16 @@ class AppServiceProvider extends ServiceProvider
             $currentYear = (int) $currentYear;
 
             // Exports tab data
+            $thisMonthtotalIncome = ExpenseCalculation::where('types', 'income')
+                ->whereMonth('date', $currentMonth)
+                ->whereYear('date', $currentYear)
+                ->sum('amount');
             $thisMonthIncome = ExpenseCalculation::where('types', 'income')
                 ->whereMonth('date', $currentMonth)
                 ->whereYear('date', $currentYear)
+                ->groupBy('category_id')
+                ->select('category_id', DB::raw('SUM(amount) as totalIncome'))
+                ->orderBy('totalIncome', 'desc')
                 ->get();
 
             $thisMonthExpense = ExpenseCalculation::where('types', 'expense')
@@ -118,8 +125,15 @@ class AppServiceProvider extends ServiceProvider
                 ->whereYear('date', $currentYear)
                 ->sum('amount');
 
+            $thisYeartotalIncome = ExpenseCalculation::where('types', 'income')
+                ->whereYear('date', $currentYear)
+                ->sum('amount');
+
             $thisYearIncome = ExpenseCalculation::Where('types', 'income')
                 ->whereYear('date', $currentYear)
+                ->groupBy('category_id')
+                ->select('category_id', DB::raw('SUM(amount) as totalIncomeYear'))
+                ->orderBy('totalIncomeYear', 'desc')
                 ->get();
 
             $thisYearExpense = ExpenseCalculation::Where('types', 'expense')
@@ -141,7 +155,7 @@ class AppServiceProvider extends ServiceProvider
                 })->toArray();
             }
 
-            $view->with(compact('monthlyData', 'thisMonthIncome', 'thisMonthExpense', 'thisMonthneeds', 'thisMonthwants', 'thisMonthsavings', 'thisYearIncome', 'thisYearExpense', 'categoryMap', 'currentMonth', 'currentYear'));
+            $view->with(compact('monthlyData', 'thisMonthIncome', 'thisMonthExpense', 'thisMonthneeds', 'thisMonthwants', 'thisMonthsavings', 'thisYearIncome', 'thisYearExpense', 'categoryMap', 'currentMonth', 'currentYear', 'thisMonthtotalIncome', 'thisYeartotalIncome'));
         });
     }
 }

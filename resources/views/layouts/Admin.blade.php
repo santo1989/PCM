@@ -149,22 +149,22 @@
                             <tbody>
                                 <tr>
                                     <th>Total Income</th>
-                                    <td>{{ $thisMonthIncome->sum('amount') }}</td>
+                                    <td>{{ $thisMonthtotalIncome }}</td>
                                     <td>
                                         @php
-                                            $needs = $thisMonthIncome->sum('amount') * 0.5;
+                                            $needs = $thisMonthtotalIncome * 0.5;
                                         @endphp
                                         {{ $needs }}
                                     </td>
                                     <td>
                                         @php
-                                            $wants = $thisMonthIncome->sum('amount') * 0.3;
+                                            $wants = $thisMonthtotalIncome * 0.3;
                                         @endphp
                                         {{ $wants }}
                                     </td>
                                     <td>
                                         @php
-                                            $savings = $thisMonthIncome->sum('amount') * 0.2;
+                                            $savings = $thisMonthtotalIncome * 0.2;
                                         @endphp
                                         {{ $savings }}
                                     </td>
@@ -178,7 +178,7 @@
                                 </tr>
                                 <tr class="bg-success">
                                     <th>Net Income</th>
-                                    <td> {{ $thisMonthIncome->sum('amount') - $thisMonthExpense->sum('totalExpense') }}
+                                    <td> {{ $thisMonthtotalIncome - $thisMonthExpense->sum('totalExpense') }}
                                     </td>
                                     <td>{{ $needs - $thisMonthneeds }}</td>
                                     <td>{{ $wants - $thisMonthwants }}</td>
@@ -201,12 +201,12 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td>{{ $thisYearIncome->sum('amount') }}</td>
+                                    <td>{{ $thisYeartotalIncome }}</td>
                                     <td>{{ $thisYearExpense->sum('totalExpenseYear') }}</td>
                                 </tr>
                                 <tr class="bg-success">
                                     <td colspan="2">Net Income:
-                                        {{ $thisYearIncome->sum('amount') - $thisYearExpense->sum('totalExpenseYear') }}
+                                        {{ $thisYeartotalIncome - $thisYearExpense->sum('totalExpenseYear') }}
                                     </td>
                                 </tr>
                             </tbody>
@@ -224,7 +224,6 @@
                         <table class="table table-bordered">
                             <thead>
                                 <tr>
-                                    <th>Date</th>
                                     <th>Name</th>
                                     <th>Amount</th>
                                 </tr>
@@ -232,14 +231,20 @@
                             <tbody>
 
                                 @foreach ($thisMonthIncome as $item)
-                                    <tr>
-                                        <td>{{ $item->date }}</td>
-                                        <td>{{ $item->name }}</td>
-                                        <td class="bg-info">{{ $item->amount }}</td>
+                                        <tr>
+                                            @php
+                                                $category = App\Models\Category::find($item->category_id);
+                                            @endphp
+                                            <td>
+                                                {{ $category->name }}
+                                            </td>
+                                            
+                                       
+                                        <td class="bg-info">{{ $item->totalIncome }}</td>
                                     </tr>
                                 @endforeach
                                 <tr class="bg-success">
-                                    <td colspan="3">Total Income: {{ $thisMonthIncome->sum('amount') }}</td>
+                                    <td colspan="3">Total Income: {{ $thisMonthIncome->sum('totalIncome') }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -271,7 +276,7 @@
                     </div>
 
                     <div class="col-md-3">
-                        <h4>{{ date('Y') }} Monthly Income</h4>
+                        <h4>Category ways {{ date('Y') }} Total Income</h4>
                         <table class="table table-bordered">
                             <thead>
                                 <tr>
@@ -290,18 +295,18 @@
                                             @endphp
                                             {{ $category->name }}
                                         </td>
-                                        <td class="bg-info">{{ $item->amount }}</td>
+                                        <td class="bg-info">{{ $item->totalIncomeYear }}</td>
                                     </tr>
                                 @endforeach
                                 <tr class="bg-success">
-                                    <td colspan="3">Total Income: {{ $thisYearIncome->sum('amount') }}
+                                    <td colspan="3">Total Income: {{ $thisYearIncome->sum('totalIncomeYear') }}
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
                     <div class="col-md-3">
-                        <h4>{{ date('Y') }} Monthly Expense</h4>
+                        <h4>Category ways {{ date('Y') }} Total Expense</h4>
                         <table class="table table-bordered">
                             <thead>
                                 <tr>
