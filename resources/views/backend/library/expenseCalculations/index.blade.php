@@ -1338,9 +1338,9 @@
                                                                 class="ml-2 " />
                                                             <div class="row">
                                                                 <div class="col-12">
-                                                                    <input type="number" name="amount"
-                                                                        id="amount" value="{{ $cash->amount }}"
-                                                                        class="form-control">
+                                                                     <input type="number" name="amount"
+                                                                         id="amount" value="{{ $cash->amount }}"
+                                                                         class="form-control" step="0.01">
                                                                 </div>
 
                                                             </div>

@@ -112,7 +112,7 @@
                                             </table>
                                         </div>
                                         <div class="col-md-3">
-                                            <h4>Loan To Other</h4>
+                                            <h4>Loan To Other ( Receivable by Me )</h4>
                                             <table class="table table-bordered table-hover">
                                                 <thead>
                                                     <tr>
@@ -127,7 +127,7 @@
 
                                                 </tbody>
                                             </table>
-                                            <h4>My Loan</h4>
+                                            <h4>My Loan ( Need to Paid by Me )</h4>
                                             <table class="table table-bordered table-hover">
                                                 <thead>
                                                     <tr>
@@ -159,7 +159,7 @@
 
                                         </div>
                                         <div class="col-md-3">
-                                            <h4>Bank Cash Handlings</h4>
+                                            <h6>Bank Savings / Investment in Dhaka Stock Exchanges / DPS / FD Cash Details</h6>
                                             <table class="table table-bordered table-hover">
                                                 <thead>
                                                     <tr>
@@ -185,7 +185,7 @@
                                         </div>
 
                                         <div class="col-md-3">
-                                            <h4>Hand Cash</h4>
+                                            <h4>Cash in Hand</h4>
                                             <table class="table table-bordered table-hover">
                                                 <thead>
                                                     <tr>
@@ -196,7 +196,7 @@
                                                 </thead>
                                                 <tbody>
                                                     <tr>
-                                                        <th>Shanta Hand Cash Balence</th>
+                                                        <th>Locker Cash Balence</th>
                                                         <td>{{ $handCashes_Cash_balence }}</td>
 
                                                     </tr>
