@@ -186,12 +186,12 @@
                                             ->where('category_id', $category->id)
                                             ->whereYear('date', $year)
                                             ->sum('amount');
-                                        if ($amount > 0) {
+                                        if ($amount != 0) {
                                             $categoryIncomes[] = [
-                                                'name' => $category->name,
-                                                'amount' => $amount,
-                                            ];
-                                        }
+                                                    'name' => $category->name,
+                                                    'amount' => $amount,
+                                                ];
+                                            }
                                     }
                                     // Sort by amount descending (highest to lowest)
                                     usort($categoryIncomes, function ($a, $b) {
@@ -257,12 +257,12 @@
                                             ->where('category_id', $category->id)
                                             ->whereYear('date', $year)
                                             ->sum('amount');
-                                        if ($amount > 0) {
+                                        if ($amount != 0) {
                                             $categoryExpenses[] = [
-                                                'name' => $category->name,
-                                                'amount' => $amount,
-                                            ];
-                                        }
+                                                    'name' => $category->name,
+                                                    'amount' => $amount,
+                                                ];
+                                            }
                                     }
                                     // Sort by amount descending (highest to lowest)
                                     usort($categoryExpenses, function ($a, $b) {

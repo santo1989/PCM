@@ -144,7 +144,18 @@
                         <tr>
                             <td rowspan="2">
                                 {{ date('F', mktime(0, 0, 0, $month, 1)) }} </td>
-                            <td>{{ $data['income'] }}</td>
+                            <td>
+                                @if ($data['income'] > 0)
+                                    <button type="button"
+                                        class="btn btn-link p-0 text-decoration-none text-primary"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#monthIncomeDetailsModal_m{{ $month }}">
+                                        {{ $data['income'] }}
+                                    </button>
+                                @else
+                                    {{ $data['income'] }}
+                                @endif
+                            </td>
                             <td rowspan="2" class="bg-info">
                                 {{ $data['income'] - $data['expense'] }}</td>
                             <td>{{ $data['needs'] }}</td>
@@ -158,7 +169,18 @@
                                 {{ $data['savings'] - $data['thisMonthsavings'] }}</td>
                         </tr>
                         <tr>
-                            <td class="bg-danger">{{ $data['expense'] }}</td>
+                            <td class="bg-danger">
+                                @if ($data['expense'] > 0)
+                                    <button type="button"
+                                        class="btn btn-link p-0 text-decoration-none text-primary"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#monthExpenseDetailsModal_m{{ $month }}">
+                                        {{ $data['expense'] }}
+                                    </button>
+                                @else
+                                    {{ $data['expense'] }}
+                                @endif
+                            </td>
                             <td>{{ $data['thisMonthneeds'] }}</td>
                             <td>{{ $data['thisMonthwants'] }}</td>
                             <td>{{ $data['thisMonthsavings'] }}</td>
@@ -190,14 +212,93 @@
                         <td>{{ array_sum(array_column($monthlyData, 'thisMonthsavings')) }}</td>
                     </tr>
                 </tbody>
-            </table>
+            @php
+                $categories = App\Models\Category::all();
+            @endphp
 
+            @foreach ($monthlyData as $month => $data)
+                <div class="modal fade" id="monthIncomeDetailsModal_m{{ $month }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header bg-primary text-white">
+                                <h5 class="modal-title">Income Details for {{ date('F', mktime(0, 0, 0, $month, 1)) }}</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-striped">
+                                        <thead class="table-light">
+                                            <tr><th>Category</th><th class="text-end">Total Income</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            @php
+                                                $categoryIncomes = [];
+                                                foreach ($categories as $category) {
+                                                    $amount = App\Models\ExpenseCalculation::where('types', 'INCOME')->where('category_id', $category->id)->whereMonth('date', $month)->sum('amount');
+                                                    if ($amount != 0) {
+                                                        $categoryIncomes[] = ['name' => $category->name, 'amount' => $amount];
+                                                    }
+                                                }
+                                                usort($categoryIncomes, fn($a, $b) => $b['amount'] <=> $a['amount']);
+                                            @endphp
+                                            @foreach ($categoryIncomes as $categoryIncome)
+                                                <tr>
+                                                    <td>{{ $categoryIncome['name'] }}</td>
+                                                    <td class="text-end fw-semibold text-success">{{ number_format($categoryIncome['amount'], 2) }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                        <tfoot class="table-primary">
+                                            <tr><td class="fw-bold">Total</td><td class="text-end fw-bold">{{ number_format($data['income'], 2) }}</td></tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-
-
-        </div>
-        {{-- Yearly Monthly Data End --}}
-
+                <div class="modal fade" id="monthExpenseDetailsModal_m{{ $month }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header bg-warning text-dark">
+                                <h5 class="modal-title">Expense Details for {{ date('F', mktime(0, 0, 0, $month, 1)) }}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-striped">
+                                        <thead class="table-light">
+                                            <tr><th>Category</th><th class="text-end">Total Expense</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            @php
+                                                $categoryExpenses = [];
+                                                foreach ($categories as $category) {
+                                                    $amount = App\Models\ExpenseCalculation::where('types', 'EXPENSE')->where('category_id', $category->id)->whereMonth('date', $month)->sum('amount');
+                                                    if ($amount != 0) {
+                                                        $categoryExpenses[] = ['name' => $category->name, 'amount' => $amount];
+                                                    }
+                                                }
+                                                usort($categoryExpenses, fn($a, $b) => $b['amount'] <=> $a['amount']);
+                                            @endphp
+                                            @foreach ($categoryExpenses as $categoryExpense)
+                                                <tr>
+                                                    <td>{{ $categoryExpense['name'] }}</td>
+                                                    <td class="text-end fw-semibold text-danger">{{ number_format($categoryExpense['amount'], 2) }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                        <tfoot class="table-warning">
+                                            <tr><td class="fw-bold">Total</td><td class="text-end fw-bold">{{ number_format($data['expense'], 2) }}</td></tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
     </div>
     </div>
 </x-backend.layouts.master>

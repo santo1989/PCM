@@ -169,14 +169,14 @@
                                                                         )
                                                                             ->where('category_id', $category->id)
                                                                             ->whereMonth('date', date('m'))
-                                                                            ->whereYear('date', date('Y'))
-                                                                            ->sum('amount');
-                                                                        if ($amount > 0) {
-                                                                            $categoryIncomes[] = [
-                                                                                'name' => $category->name,
-                                                                                'amount' => $amount,
-                                                                            ];
-                                                                        }
+                                                                             ->whereYear('date', date('Y'))
+                                                                             ->sum('amount');
+                                                                         if ($amount != 0) {
+                                                                             $categoryIncomes[] = [
+                                                                                 'name' => $category->name,
+                                                                                 'amount' => $amount,
+                                                                             ];
+                                                                         }
                                                                     }
                                                                     usort($categoryIncomes, function ($a, $b) {
                                                                         return $b['amount'] <=> $a['amount'];
@@ -207,18 +207,19 @@
                                                         <script>
                                                             @php
                                                                 $categories = App\Models\Category::all();
-                                                                $incomeLabels = [];
-                                                                $incomeData = [];
+                                                                $chartData = [];
                                                                 $totalIncome = 0;
 
                                                                 foreach ($categories as $category) {
-                                                                    $amount = App\Models\ExpenseCalculation::where('types', 'income')->where('category_id', $category->id)->whereMonth('date', date('m'))->whereYear('date', date('Y'))->sum('amount');
-                                                                    if ($amount > 0) {
-                                                                        $incomeLabels[] = $category->name;
-                                                                        $incomeData[] = $amount;
-                                                                        $totalIncome += $amount;
-                                                                    }
+                                                                     $amount = App\Models\ExpenseCalculation::where('types', 'income')->where('category_id', $category->id)->whereMonth('date', date('m'))->whereYear('date', date('Y'))->sum('amount');
+                                                                     if ($amount != 0) {
+                                                                         $chartData[] = ['name' => $category->name, 'amount' => $amount];
+                                                                         $totalIncome += $amount;
+                                                                     }
                                                                 }
+                                                                usort($chartData, fn($a, $b) => $b['amount'] <=> $a['amount']);
+                                                                $incomeLabels = array_column($chartData, 'name');
+                                                                $incomeData = array_column($chartData, 'amount');
                                                             @endphp
 
                                                             // This Month Income Bar Chart
@@ -341,14 +342,14 @@
                                                                         )
                                                                             ->where('category_id', $category->id)
                                                                             ->whereMonth('date', date('m'))
-                                                                            ->whereYear('date', date('Y'))
-                                                                            ->sum('amount');
-                                                                        if ($amount > 0) {
-                                                                            $categoryExpenses[] = [
-                                                                                'name' => $category->name,
-                                                                                'amount' => $amount,
-                                                                            ];
-                                                                        }
+                                                                             ->whereYear('date', date('Y'))
+                                                                             ->sum('amount');
+                                                                         if ($amount != 0) {
+                                                                             $categoryExpenses[] = [
+                                                                                 'name' => $category->name,
+                                                                                 'amount' => $amount,
+                                                                             ];
+                                                                         }
                                                                     }
                                                                     usort($categoryExpenses, function ($a, $b) {
                                                                         return $b['amount'] <=> $a['amount'];
@@ -379,16 +380,17 @@
                                                         <script>
                                                             @php
                                                                 $categories = App\Models\Category::all();
-                                                                $expenseLabels = [];
-                                                                $expenseData = [];
+                                                                $chartData = [];
 
                                                                 foreach ($categories as $category) {
-                                                                    $amount = App\Models\ExpenseCalculation::where('types', 'expense')->where('category_id', $category->id)->whereMonth('date', date('m'))->whereYear('date', date('Y'))->sum('amount');
-                                                                    if ($amount > 0) {
-                                                                        $expenseLabels[] = $category->name;
-                                                                        $expenseData[] = $amount;
-                                                                    }
+                                                                     $amount = App\Models\ExpenseCalculation::where('types', 'expense')->where('category_id', $category->id)->whereMonth('date', date('m'))->whereYear('date', date('Y'))->sum('amount');
+                                                                     if ($amount != 0) {
+                                                                         $chartData[] = ['name' => $category->name, 'amount' => $amount];
+                                                                     }
                                                                 }
+                                                                usort($chartData, fn($a, $b) => $b['amount'] <=> $a['amount']);
+                                                                $expenseLabels = array_column($chartData, 'name');
+                                                                $expenseData = array_column($chartData, 'amount');
                                                             @endphp
 
                                                             // This Month Expense Bar Chart
@@ -512,13 +514,13 @@
                                                                             'income',
                                                                         )
                                                                             ->where('category_id', $category->id)
-                                                                            ->sum('amount');
-                                                                        if ($amount > 0) {
-                                                                            $allTimeIncomes[] = [
-                                                                                'name' => $category->name,
-                                                                                'amount' => $amount,
-                                                                            ];
-                                                                        }
+                                                                             ->sum('amount');
+                                                                         if ($amount != 0) {
+                                                                             $allTimeIncomes[] = [
+                                                                                 'name' => $category->name,
+                                                                                 'amount' => $amount,
+                                                                             ];
+                                                                         }
                                                                     }
                                                                     usort($allTimeIncomes, function ($a, $b) {
                                                                         return $b['amount'] <=> $a['amount'];
@@ -549,16 +551,17 @@
                                                         <script>
                                                             @php
                                                                 $categories = App\Models\Category::all();
-                                                                $allTimeIncomeLabels = [];
-                                                                $allTimeIncomeData = [];
+                                                                $chartData = [];
 
                                                                 foreach ($categories as $category) {
-                                                                    $amount = App\Models\ExpenseCalculation::where('types', 'income')->where('category_id', $category->id)->sum('amount');
-                                                                    if ($amount > 0) {
-                                                                        $allTimeIncomeLabels[] = $category->name;
-                                                                        $allTimeIncomeData[] = $amount;
-                                                                    }
+                                                                     $amount = App\Models\ExpenseCalculation::where('types', 'income')->where('category_id', $category->id)->sum('amount');
+                                                                     if ($amount != 0) {
+                                                                         $chartData[] = ['name' => $category->name, 'amount' => $amount];
+                                                                     }
                                                                 }
+                                                                usort($chartData, fn($a, $b) => $b['amount'] <=> $a['amount']);
+                                                                $allTimeIncomeLabels = array_column($chartData, 'name');
+                                                                $allTimeIncomeData = array_column($chartData, 'amount');
                                                             @endphp
 
                                                             // All Time Income Bar Chart
@@ -680,13 +683,13 @@
                                                                             'expense',
                                                                         )
                                                                             ->where('category_id', $category->id)
-                                                                            ->sum('amount');
-                                                                        if ($amount > 0) {
-                                                                            $allTimeExpenses[] = [
-                                                                                'name' => $category->name,
-                                                                                'amount' => $amount,
-                                                                            ];
-                                                                        }
+                                                                             ->sum('amount');
+                                                                         if ($amount != 0) {
+                                                                             $allTimeExpenses[] = [
+                                                                                 'name' => $category->name,
+                                                                                 'amount' => $amount,
+                                                                             ];
+                                                                         }
                                                                     }
                                                                     usort($allTimeExpenses, function ($a, $b) {
                                                                         return $b['amount'] <=> $a['amount'];
@@ -717,16 +720,17 @@
                                                         <script>
                                                             @php
                                                                 $categories = App\Models\Category::all();
-                                                                $allTimeExpenseLabels = [];
-                                                                $allTimeExpenseData = [];
+                                                                $chartData = [];
 
                                                                 foreach ($categories as $category) {
-                                                                    $amount = App\Models\ExpenseCalculation::where('types', 'expense')->where('category_id', $category->id)->sum('amount');
-                                                                    if ($amount > 0) {
-                                                                        $allTimeExpenseLabels[] = $category->name;
-                                                                        $allTimeExpenseData[] = $amount;
-                                                                    }
+                                                                     $amount = App\Models\ExpenseCalculation::where('types', 'expense')->where('category_id', $category->id)->sum('amount');
+                                                                     if ($amount != 0) {
+                                                                         $chartData[] = ['name' => $category->name, 'amount' => $amount];
+                                                                     }
                                                                 }
+                                                                usort($chartData, fn($a, $b) => $b['amount'] <=> $a['amount']);
+                                                                $allTimeExpenseLabels = array_column($chartData, 'name');
+                                                                $allTimeExpenseData = array_column($chartData, 'amount');
                                                             @endphp
 
                                                             // All Time Expense Bar Chart
