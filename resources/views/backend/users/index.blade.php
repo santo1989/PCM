@@ -14,111 +14,107 @@
     <section class="content">
         <div class="container-fluid">
 
-            @if (session('message'))
-                <div class="alert alert-success">
-                    <span class="close" data-dismiss="alert">&times;</span>
-                    <strong>{{ session('message') }}.</strong>
-                </div>
-            @endif
+            <x-backend.layouts.elements.message :message="session('message')" />
 
             <div class="row">
                 <div class="col-12">
                     <div class="card">
                         <div class="card-header">
-                            {{-- <div class='d-flex justify-content-between '>
-                  <form method="GET" action="{{ route('users.index') }}">
-                      <input type="text" name="search" placeholder="Search" class="form-control" style="width: 200px;">
-                  </form>&nbsp;&nbsp;
-      
-                  <form method="GET" action="{{ route('users.index') }}" >
-                      <select name="role_id" id="role_id" class="form-select">
-                          @foreach ($roles as $role)
-                              <option value="{{ $role->id }}">{{ $role->name }}</option>
-                          @endforeach
-                      
-                      </select>
-                      <button class="btn btn-primary" type="submit">Role Search</button>
-                  </form>
-              </div> --}}
+                            <form method="GET" action="{{ route('users.index') }}" class="d-flex flex-wrap gap-2">
+                                <input type="text" name="search" placeholder="Search by name"
+                                    value="{{ request('search') }}" class="form-control" style="max-width: 220px;">
 
-                        </div>
-                        <!-- /.card-header -->
-                        <div class="card-body">
-                            {{-- role Table goes here --}}
-
-                            <table id="datatablesSimple" class="table table-bordered table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Sl#</th>
-                                        <th>Name</th>
-                                        <th>Email</th>
-                                        <th>Role</th>
-                                        <th>Activity</th>
-                                        <th>Action</th>
-
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @php $sl=0 @endphp
-                                    @foreach ($users as $user)
-                                        <tr>
-                                            <td>{{ ++$sl }}</td>
-                                            <td>{{ $user->name }}</td>
-                                            <td>{{ $user->email }}</td>
-                                            <td>{{ $user->role->name }}</td>
-                                            <td>
-                                                <form action="{{ route('users.active', ['user' => $user->id]) }}" method="POST">
-                                                    @csrf
-                                                    <button
-                                                        onclick="return confirm('Are you sure want to change status ?')"
-                                                        class="btn btn-sm {{ $user->is_active ? 'btn-danger' : 'btn-success' }}"
-                                                        type="submit">{{ $user->is_active ? 'Inactive' : 'Active' }}</button>
-                                                </form>
-                                            </td>
-                                            <td>
-                                                {{-- <a class="btn btn-info btn-sm"
-                                                    href="{{ route('users.show', ['user' => $user->id]) }}" style="background-image: linear-gradient(#40c47c,#40c47c,#40c47c);display:inline;">Profile</a>
-
-                                                <a class="btn btn-warning btn-sm"
-                                                    href="{{ route('users.edit', ['user' => $user->id]) }}"style="display:inline">Edit</a> --}}
-
-                                                <x-backend.form.anchor :href="route('users.show', ['user' => $user->id])" type="show" />
-
-
-
-                                                <x-backend.form.anchor :href="route('users.edit', ['user' => $user->id])" type="edit" />
-
-                                                <form style="display:inline"
-                                                    action="{{ route('users.destroy', ['user' => $user->id]) }}"
-                                                    method="post">
-                                                    @csrf
-                                                    @method('delete')
-
-                                                    <button onclick="return confirm('Are you sure want to delete ?')"
-                                                        class="btn btn-sm btn-outline-danger" type="submit"><i
-                                                            class="bi bi-trash"></i> Delete</button>
-                                                </form>
-
-                                            </td>
-                                        </tr>
+                                <select name="role_id" class="form-select" style="max-width: 200px;">
+                                    <option value="">All Roles</option>
+                                    @foreach ($roles as $role)
+                                        <option value="{{ $role->id }}" {{ (string) request('role_id') === (string) $role->id ? 'selected' : '' }}>
+                                            {{ $role->name }}
+                                        </option>
                                     @endforeach
+                                </select>
 
-                                </tbody>
-                            </table>
+                                <button class="btn btn-sm btn-outline-secondary" type="submit">
+                                    <i class="bi bi-search"></i> Filter
+                                </button>
+                                <a href="{{ route('users.index') }}" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-x-circle"></i> Clear
+                                </a>
+                            </form>
                         </div>
-                        <!-- /.card-body -->
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table id="datatablesSimple" class="table table-bordered table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Sl#</th>
+                                            <th>Name</th>
+                                            <th>Email</th>
+                                            <th>Role</th>
+                                            <th>Activity</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @php $sl = 0 @endphp
+                                        @foreach ($users as $user)
+                                            <tr>
+                                                <td>{{ ++$sl }}</td>
+                                                <td>{{ $user->name }}</td>
+                                                <td>{{ $user->email }}</td>
+                                                <td>{{ $user->role->name ?? 'N/A' }}</td>
+                                                <td>
+                                                    <form action="{{ route('users.active', ['user' => $user->id]) }}"
+                                                        method="POST">
+                                                        @csrf
+                                                        <button
+                                                            onclick="return confirm('Are you sure want to change status ?')"
+                                                            class="btn btn-sm {{ $user->is_active ? 'btn-danger' : 'btn-success' }}"
+                                                            type="submit">{{ $user->is_active ? 'Inactive' : 'Active' }}</button>
+                                                    </form>
+                                                </td>
+                                                <td>
+                                                    <x-backend.form.anchor :href="route('users.show', ['user' => $user->id])" type="show" />
+                                                    <x-backend.form.anchor :href="route('users.edit', ['user' => $user->id])" type="edit" />
+
+                                                    <button type="button"
+                                                        onclick="confirmDelete('{{ route('users.destroy', ['user' => $user->id]) }}')"
+                                                        class="btn btn-sm btn-outline-danger">
+                                                        <i class="bi bi-trash"></i> Delete
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
-                    <!-- /.card -->
-
-
-                    <!-- /.card -->
                 </div>
-                <!-- /.col -->
             </div>
-            <!-- /.row -->
         </div>
-        <!-- /.container-fluid -->
     </section>
 
+    <script>
+        function confirmDelete(url) {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: 'This action cannot be undone.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = url;
+                    form.innerHTML = `@csrf @method('delete')`;
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+        }
+    </script>
 
 </x-backend.layouts.master>

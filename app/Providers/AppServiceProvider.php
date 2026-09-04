@@ -31,26 +31,26 @@ class AppServiceProvider extends ServiceProvider
     public function boot()
     {
         Paginator::useBootstrap();
-        // Move heavy DB queries out of Blade by composing data for the admin layout
-        View::composer('layouts.Admin', function ($view) {
+        // Move heavy DB queries out of Blade by composing data for the dashboard
+        View::composer('backend.home', function ($view) {
             $currentYear = request('year') ?? date('Y');
             $currentMonth = request('month') ?? date('m');
 
             // Last 12 months summary (by month)
             $monthlyData = [];
             for ($month = 1; $month <= 12; $month++) {
-                $thisMonthIncomeSum = ExpenseCalculation::where('types', 'income')
+                $thisMonthIncomeSum = ExpenseCalculation::where('types', 'INCOME')
                     ->whereMonth('date', $month)
                     ->whereYear('date', $currentYear)
                     ->sum('amount');
 
-                $thisMonthSalaryIncomeSum = ExpenseCalculation::where('types', 'income')
+                $thisMonthSalaryIncomeSum = ExpenseCalculation::where('types', 'INCOME')
                     ->where('category_id', 1)
                     ->whereMonth('date', $month)
                     ->whereYear('date', $currentYear)
                     ->sum('amount');
 
-                $thisMonthExpenseSum = ExpenseCalculation::where('types', 'expense')
+                $thisMonthExpenseSum = ExpenseCalculation::where('types', 'EXPENSE')
                     ->whereMonth('date', $month)
                     ->whereYear('date', $currentYear)
                     ->groupBy('category_id')
@@ -58,17 +58,17 @@ class AppServiceProvider extends ServiceProvider
                     ->get()
                     ->sum('totalExpense');
 
-                $thisMonthneeds = ExpenseCalculation::where('rules', 'needs')
+                $thisMonthneeds = ExpenseCalculation::where('rules', 'NEEDS')
                     ->whereMonth('date', $month)
                     ->whereYear('date', $currentYear)
                     ->sum('amount');
 
-                $thisMonthwants = ExpenseCalculation::where('rules', 'wants')
+                $thisMonthwants = ExpenseCalculation::where('rules', 'WANTS')
                     ->whereMonth('date', $month)
                     ->whereYear('date', $currentYear)
                     ->sum('amount');
 
-                $thisMonthsavings = ExpenseCalculation::where('rules', 'savings')
+                $thisMonthsavings = ExpenseCalculation::where('rules', 'SAVINGS')
                     ->whereMonth('date', $month)
                     ->whereYear('date', $currentYear)
                     ->sum('amount');
@@ -90,11 +90,11 @@ class AppServiceProvider extends ServiceProvider
             $currentYear = (int) $currentYear;
 
             // Exports tab data
-            $thisMonthtotalIncome = ExpenseCalculation::where('types', 'income')
+            $thisMonthtotalIncome = ExpenseCalculation::where('types', 'INCOME')
                 ->whereMonth('date', $currentMonth)
                 ->whereYear('date', $currentYear)
                 ->sum('amount');
-            $thisMonthIncome = ExpenseCalculation::where('types', 'income')
+            $thisMonthIncome = ExpenseCalculation::where('types', 'INCOME')
                 ->whereMonth('date', $currentMonth)
                 ->whereYear('date', $currentYear)
                 ->groupBy('category_id')
@@ -102,7 +102,7 @@ class AppServiceProvider extends ServiceProvider
                 ->orderBy('totalIncome', 'desc')
                 ->get();
 
-            $thisMonthExpense = ExpenseCalculation::where('types', 'expense')
+            $thisMonthExpense = ExpenseCalculation::where('types', 'EXPENSE')
                 ->whereMonth('date', $currentMonth)
                 ->whereYear('date', $currentYear)
                 ->groupBy('category_id')
@@ -110,33 +110,33 @@ class AppServiceProvider extends ServiceProvider
                 ->orderBy('totalExpense', 'desc')
                 ->get();
 
-            $thisMonthneeds = ExpenseCalculation::Where('rules', 'needs')
+            $thisMonthneeds = ExpenseCalculation::Where('rules', 'NEEDS')
                 ->whereMonth('date', $currentMonth)
                 ->whereYear('date', $currentYear)
                 ->sum('amount');
 
-            $thisMonthwants = ExpenseCalculation::Where('rules', 'wants')
+            $thisMonthwants = ExpenseCalculation::Where('rules', 'WANTS')
                 ->whereMonth('date', $currentMonth)
                 ->whereYear('date', $currentYear)
                 ->sum('amount');
 
-            $thisMonthsavings = ExpenseCalculation::Where('rules', 'savings')
+            $thisMonthsavings = ExpenseCalculation::Where('rules', 'SAVINGS')
                 ->whereMonth('date', $currentMonth)
                 ->whereYear('date', $currentYear)
                 ->sum('amount');
 
-            $thisYeartotalIncome = ExpenseCalculation::where('types', 'income')
+            $thisYeartotalIncome = ExpenseCalculation::where('types', 'INCOME')
                 ->whereYear('date', $currentYear)
                 ->sum('amount');
 
-            $thisYearIncome = ExpenseCalculation::Where('types', 'income')
+            $thisYearIncome = ExpenseCalculation::Where('types', 'INCOME')
                 ->whereYear('date', $currentYear)
                 ->groupBy('category_id')
                 ->select('category_id', DB::raw('SUM(amount) as totalIncomeYear'))
                 ->orderBy('totalIncomeYear', 'desc')
                 ->get();
 
-            $thisYearExpense = ExpenseCalculation::Where('types', 'expense')
+            $thisYearExpense = ExpenseCalculation::Where('types', 'EXPENSE')
                 ->whereYear('date', $currentYear)
                 ->groupBy('category_id')
                 ->select('category_id', DB::raw('SUM(amount) as totalExpenseYear'))
@@ -155,7 +155,9 @@ class AppServiceProvider extends ServiceProvider
                 })->toArray();
             }
 
-            $view->with(compact('monthlyData', 'thisMonthIncome', 'thisMonthExpense', 'thisMonthneeds', 'thisMonthwants', 'thisMonthsavings', 'thisYearIncome', 'thisYearExpense', 'categoryMap', 'currentMonth', 'currentYear', 'thisMonthtotalIncome', 'thisYeartotalIncome'));
+            $insights = \App\Services\InsightEngine::dashboardSummary();
+
+            $view->with(compact('monthlyData', 'thisMonthIncome', 'thisMonthExpense', 'thisMonthneeds', 'thisMonthwants', 'thisMonthsavings', 'thisYearIncome', 'thisYearExpense', 'categoryMap', 'currentMonth', 'currentYear', 'thisMonthtotalIncome', 'thisYeartotalIncome', 'insights'));
         });
     }
 }

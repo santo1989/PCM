@@ -1,8 +1,8 @@
 @props(['message'])
 
 @if ($message)
-<div class="alert alert-success">
-    <span class="close" data-dismiss="alert">&times;</span>
+<div class="alert alert-success alert-dismissible fade show" role="alert">
     <strong>{{ $message }}.</strong>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
 @endif

@@ -2,9 +2,12 @@
     <x-slot name="pageTitle">Interactive Dashboard</x-slot>
 
     <div class="container mt-4">
+
+        @include('backend.reports.partials.report_nav')
+
         <h3>Interactive Financial Dashboard</h3>
 
-        <div class="row mb-3">
+        <div class="row mb-3 no-print">
             <div class="col-md-3">
                 <label for="yearSelect">Year</label>
                 <select id="yearSelect" class="form-control"></select>
@@ -15,9 +18,21 @@
                     <option value="">All Year</option>
                 </select>
             </div>
-            <div class="col-md-3 d-flex align-items-end">
+            <div class="col-md-3 d-flex align-items-end gap-2">
                 <button id="refreshBtn" class="btn btn-primary">Refresh</button>
+                <a id="exportExcelBtn" class="btn btn-outline-success" href="{{ route('interactive.dashboard.export_excel') }}">
+                    <i class="bi bi-file-earmark-excel"></i> Excel
+                </a>
+                <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+                    <i class="bi bi-printer"></i> Print
+                </button>
             </div>
+        </div>
+
+        <div id="budgetAlerts"></div>
+
+        <div class="row mb-3" id="insightCards">
+            <!-- Insight/analysis cards will be injected here -->
         </div>
 
         <div class="row" id="summaryCards">
@@ -30,8 +45,34 @@
             </div>
             <div class="col-md-4">
                 <canvas id="categoryChart" height="200"></canvas>
+                <div class="small text-muted text-center">Click a slice to filter Recent Transactions below</div>
                 <h5 class="mt-3">Cash Balances</h5>
                 <table class="table table-sm table-striped" id="cashBalancesTable"></table>
+            </div>
+        </div>
+
+        <!-- What-if scenario builder: pure client-side arithmetic on already-fetched category data -->
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header"><i class="bi bi-question-diamond"></i> What-If Scenario Builder</div>
+                    <div class="card-body">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label small">Category</label>
+                                <select id="whatIfCategory" class="form-select"></select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small">Reduce spending by: <span id="whatIfReduceLabel">20%</span></label>
+                                <input type="range" class="form-range" id="whatIfReduce" min="0" max="100" value="20" step="5">
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <div class="small text-muted">Estimated Annual Saving</div>
+                                <div class="fs-5 fw-bold text-success" id="whatIfResult">—</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -133,6 +174,16 @@
             return res.json();
         }
 
+        async function fetchBudgetAlerts() {
+            const year = yearSelect.value;
+            const month = monthSelect.value || new Date().getMonth() + 1;
+            const res = await fetch(`/interactive-dashboard/data/budget-alerts?year=${year}&month=${month}`);
+            return res.json();
+        }
+
+        let allRecentTransactions = [];
+        let categoryChartData = [];
+
         function renderSummaryCards(data) {
             const container = document.getElementById('summaryCards');
             container.innerHTML = '';
@@ -207,6 +258,7 @@
         }
 
         function renderCategoryChart(items) {
+            categoryChartData = items;
             const ctx = document.getElementById('categoryChart').getContext('2d');
             if (categoryChart) categoryChart.destroy();
             const labels = items.map(i => i.category);
@@ -223,23 +275,129 @@
                     }]
                 },
                 options: {
-                    responsive: true
+                    responsive: true,
+                    onClick: (evt, elements) => {
+                        if (!elements.length) return;
+                        const category = labels[elements[0].index];
+                        renderRecentTransactions(allRecentTransactions, category);
+                    }
                 }
             });
+
+            populateWhatIfCategories(items);
+        }
+
+        function populateWhatIfCategories(items) {
+            const select = document.getElementById('whatIfCategory');
+            const previousValue = select.value;
+            select.innerHTML = items.map(i => `<option value="${i.category}" data-total="${i.total}">${i.category}</option>`).join('');
+            if (previousValue && items.some(i => i.category === previousValue)) {
+                select.value = previousValue;
+            }
+            recalcWhatIf();
+        }
+
+        function recalcWhatIf() {
+            const select = document.getElementById('whatIfCategory');
+            const reduceSlider = document.getElementById('whatIfReduce');
+            const selected = select.options[select.selectedIndex];
+            const resultEl = document.getElementById('whatIfResult');
+
+            document.getElementById('whatIfReduceLabel').textContent = reduceSlider.value + '%';
+
+            if (!selected) {
+                resultEl.textContent = '—';
+                return;
+            }
+
+            // categoryChart data is year-to-date (or year+month) spend for that category;
+            // treat it as a monthly-equivalent rate scaled to a year for a simple estimate.
+            const yearlyTotal = parseFloat(selected.dataset.total) || 0;
+            const reducePct = parseFloat(reduceSlider.value) / 100;
+            const annualSaving = yearlyTotal * reducePct;
+
+            resultEl.textContent = annualSaving.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        document.getElementById('whatIfCategory').addEventListener('change', recalcWhatIf);
+        document.getElementById('whatIfReduce').addEventListener('input', recalcWhatIf);
+
+        function renderBudgetAlerts(rows) {
+            const container = document.getElementById('budgetAlerts');
+            if (!rows || !rows.length) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <strong>Budget exceeded this month:</strong>
+                    ${rows.map(r => `${r.category_name} (${r.utilization_percent.toFixed(0)}%)`).join(', ')}
+                </div>
+            `;
+        }
+
+        function updateExportLink() {
+            const year = yearSelect.value;
+            const month = monthSelect.value;
+            const btn = document.getElementById('exportExcelBtn');
+            let url = `{{ route('interactive.dashboard.export_excel') }}?year=${year}`;
+            if (month) url += `&month=${month}`;
+            btn.href = url;
+        }
+
+        function renderInsightCards(summary, trend) {
+            const container = document.getElementById('insightCards');
+            container.innerHTML = '';
+
+            const savingsRate = summary.totalIncome > 0 ? ((summary.net / summary.totalIncome) * 100) : 0;
+            const expenseRatio = summary.totalIncome > 0 ? ((summary.totalExpense / summary.totalIncome) * 100) : 0;
+
+            let momIncomeChange = null, momExpenseChange = null;
+            if (trend && trend.income && trend.income.length >= 2) {
+                const lastIncome = trend.income[trend.income.length - 1];
+                const prevIncome = trend.income[trend.income.length - 2];
+                const lastExpense = trend.expense[trend.expense.length - 1];
+                const prevExpense = trend.expense[trend.expense.length - 2];
+                momIncomeChange = prevIncome > 0 ? (((lastIncome - prevIncome) / prevIncome) * 100) : null;
+                momExpenseChange = prevExpense > 0 ? (((lastExpense - prevExpense) / prevExpense) * 100) : null;
+            }
+
+            const fmtPct = (v) => v === null || isNaN(v) ? 'N/A' : (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
+
+            const cards = [
+                { title: 'Savings Rate (Year)', value: savingsRate.toFixed(1) + '%' },
+                { title: 'Expense Ratio (Year)', value: expenseRatio.toFixed(1) + '%' },
+                { title: 'Income vs Last Month', value: fmtPct(momIncomeChange) },
+                { title: 'Expense vs Last Month', value: fmtPct(momExpenseChange) },
+            ];
+
+            for (const c of cards) {
+                const col = document.createElement('div');
+                col.className = 'col-md-3 col-6 mb-2';
+                col.innerHTML =
+                    `<div class="card text-center h-100"><div class="card-body p-2"><div class="text-muted small">${c.title}</div><div class="fw-bold">${c.value}</div></div></div>`;
+                container.appendChild(col);
+            }
         }
 
         async function refreshAll() {
-            const [summary, trend, categories, savings, topCategories, running, recent] = await Promise.all([
+            updateExportLink();
+            const [summary, trend, categories, savings, topCategories, running, recent, alerts] = await Promise.all([
                 fetchSummary(), fetchTrend(), fetchCategory(), fetchSavingsLoans(), fetchTopCategories(),
-                fetchRunningBalance(), fetchRecentTransactions()
+                fetchRunningBalance(), fetchRecentTransactions(), fetchBudgetAlerts()
             ]);
             renderSummaryCards(summary);
+            renderInsightCards(summary, trend);
             renderTrendChart(trend);
             renderCategoryChart(categories);
             renderSavingsChart(savings);
             renderTopCategoriesChart(topCategories);
             renderRunningBalance(running);
+            allRecentTransactions = recent;
             renderRecentTransactions(recent);
+            renderBudgetAlerts(alerts);
         }
 
         function renderSavingsChart(data) {
@@ -295,10 +453,29 @@
             }
         }
 
-        function renderRecentTransactions(items) {
+        function renderRecentTransactions(items, filterCategory) {
             const div = document.getElementById('recentTransactions');
             div.innerHTML = '';
-            for (const r of items) {
+
+            const filtered = filterCategory ? items.filter(r => r.category === filterCategory) : items;
+
+            if (filterCategory) {
+                const banner = document.createElement('div');
+                banner.className = 'small mb-2';
+                banner.innerHTML = `Filtered to <strong>${filterCategory}</strong> — <a href="#" id="clearFilterLink">clear</a>`;
+                div.appendChild(banner);
+                document.getElementById('clearFilterLink').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    renderRecentTransactions(allRecentTransactions);
+                });
+            }
+
+            if (!filtered.length) {
+                div.innerHTML += '<div class="text-muted small">No transactions in this category recently.</div>';
+                return;
+            }
+
+            for (const r of filtered) {
                 const el = document.createElement('div');
                 el.className = 'p-2 border-bottom';
                 el.innerHTML =
@@ -310,5 +487,10 @@
         // initial load
         refreshAll();
         refreshBtn.addEventListener('click', refreshAll);
+
+        // near-real-time: re-poll every 30s (matches the app-wide AJAX-polling
+        // approach chosen over WebSockets, since no Pusher/Echo/websocket
+        // infrastructure is set up in this environment)
+        setInterval(refreshAll, 30000);
     </script>
 </x-backend.layouts.master>

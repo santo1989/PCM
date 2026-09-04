@@ -3,30 +3,13 @@
         Projection Report
     </x-slot>
     <div class="container">
-        <div class="row justify-content-center pt-4">
-            <div class="col-md-2">
-                <a href="{{ route('Budge_Projection') }}" class="btn btn-sm btn-outline-danger">Budge Projection</a>
-            </div>
 
-            <div class="col-md-2">
-                <a href="{{ route('Yearly_report') }}" class="btn btn-sm btn-outline-danger">Yearly Report</a>
+        @include('backend.reports.partials.report_nav')
 
-            </div>
-            <div class="col-md-2">
-                <a href="{{ route('Monthly_report') }}" class="btn btn-sm btn-outline-danger">Monthly Report</a>
-            </div>
-            <div class="col-md-2">
-                <a href="{{ route('Monthly_invest') }}" class="btn btn-sm btn-outline-danger">Monthly Investment</a>
-            </div>
-            <div class="col-md-2">
-                <a href="{{ route('power_bi_report') }}" class="btn btn-sm btn-outline-danger">BI Report</a>
-            </div>
-
-        </div>
         <h2 class="text-center mb-4">Monthly Financial Analysis</h2>
 
         <!-- Date Filter Form -->
-        <div class="row mb-4">
+        <div class="row mb-4 no-print">
             <form method="GET" class="col-md-12">
                 <div class="form-row">
                     <div class="col-md-3">
@@ -40,6 +23,58 @@
                     </div>
                 </div>
             </form>
+        </div>
+
+        @include('backend.reports.partials.export_toolbar', [
+            'excelRoute' => 'Monthly_invest.export_excel',
+            'excelParams' => ['start_date' => $startDate, 'end_date' => $endDate],
+        ])
+
+        <!-- Detailed Analysis Section -->
+        <div class="row mb-4">
+            <div class="col-md-2 col-6 mb-2">
+                <div class="card text-center h-100">
+                    <div class="card-body p-2">
+                        <div class="text-muted small">Net Position</div>
+                        <div class="fw-bold {{ $analysis['netPosition'] >= 0 ? 'text-success' : 'text-danger' }}">
+                            {{ number_format($analysis['netPosition'], 2) }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 col-6 mb-2">
+                <div class="card text-center h-100">
+                    <div class="card-body p-2">
+                        <div class="text-muted small">Actual Savings Rate</div>
+                        <div class="fw-bold">{{ number_format($analysis['actualSavingsRatePercent'], 1) }}%</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 col-6 mb-2">
+                <div class="card text-center h-100">
+                    <div class="card-body p-2">
+                        <div class="text-muted small">Current Investment Rate</div>
+                        <div class="fw-bold">{{ number_format($analysis['investmentRatePercent'], 1) }}%</div>
+                        <div class="small text-muted">{{ $analysis['yearsInvesting'] }} yrs active</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-2">
+                <div class="card text-center h-100">
+                    <div class="card-body p-2">
+                        <div class="text-muted small">Total Invested (Period)</div>
+                        <div class="fw-bold text-success">{{ number_format($analysis['totalInvestment'], 2) }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-2">
+                <div class="card text-center h-100">
+                    <div class="card-body p-2">
+                        <div class="text-muted small">Biggest Expense Bucket</div>
+                        <div class="fw-bold">{{ $analysis['topExpenseRule'] ?? 'N/A' }}</div>
+                        <div class="small text-danger">{{ number_format($analysis['topExpenseRuleAmount'] ?? 0, 2) }}</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Summary Section -->
@@ -197,8 +232,86 @@
             </div>
         </div>
 
+        <!-- Asset Allocation + Compound Growth + 4% Rule -->
+        <div class="row mt-4 g-3">
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-header"><i class="bi bi-pie-chart"></i> Asset Allocation</div>
+                    <div class="card-body">
+                        @if (empty($analysis['assetAllocation']))
+                            <div class="alert alert-info mb-0">No DPS/FD/Investment balances recorded yet.</div>
+                        @else
+                            <canvas id="assetAllocationChart"></canvas>
+                        @endif
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-header"><i class="bi bi-graph-up-arrow"></i> Compound Growth Projection</div>
+                    <div class="card-body">
+                        <p class="small text-muted">
+                            Assumes your current pace of investment continues and grows at
+                            {{ number_format($analysis['assumedAnnualReturn'] * 100, 0) }}%/year — a common long-run
+                            market-average <strong>assumption</strong>, not a guarantee (this app has no real market
+                            valuation data to base it on).
+                        </p>
+                        <table class="table table-sm table-borderless mb-0">
+                            @foreach ($analysis['compoundProjection'] as $years => $value)
+                                <tr>
+                                    <td>In {{ $years }} years</td>
+                                    <td class="text-end fw-bold">{{ number_format($value, 2) }}</td>
+                                </tr>
+                            @endforeach
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-header"><i class="bi bi-hourglass-split"></i> Early Retirement (4% Rule)</div>
+                    <div class="card-body">
+                        <p class="small text-muted mb-2">
+                            Target: 25x your current average annual expense — the portfolio size the "4% rule"
+                            considers sustainable to live off indefinitely.
+                        </p>
+                        <div class="text-center">
+                            <div class="small text-muted">Target Portfolio</div>
+                            <div class="fs-5 fw-bold">{{ number_format($analysis['fourPercentTarget'], 2) }}</div>
+                        </div>
+                        <hr>
+                        <div class="text-center">
+                            <div class="small text-muted">Estimated Time to Reach It</div>
+                            <div class="fs-5 fw-bold">
+                                @if ($analysis['yearsToFourPercentTarget'] !== null)
+                                    {{ $analysis['yearsToFourPercentTarget'] }} years
+                                @else
+                                    <span class="text-muted">Not on pace within 100 years — increase investment rate</span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Chart.js Script -->
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        @if (!empty($analysis['assetAllocation']))
+            <script>
+                new Chart(document.getElementById('assetAllocationChart').getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: @json(array_keys($analysis['assetAllocation'])),
+                        datasets: [{
+                            data: @json(array_values($analysis['assetAllocation'])),
+                            backgroundColor: ['#667eea', '#f5576c', '#4facfe', '#fee140', '#fa709a'],
+                        }],
+                    },
+                    options: { responsive: true, plugins: { legend: { position: 'bottom' } } },
+                });
+            </script>
+        @endif
         @if (!empty($investmentGrowth['years']))
             <script>
                 const ctx = document.getElementById('investmentChart').getContext('2d');

@@ -2,10 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Company;
-use App\Models\Department;
-use App\Models\Designation;
-use App\Models\Division;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\QueryException;
@@ -42,34 +38,21 @@ class UserController extends Controller
     public function edit(User $user)
     {
         $roles = Role::latest()->get();
-        $divisions = Division::all();
-        $companies = Company::all();
-        $departments  = Department::all();
-        $designations  = Designation::all();
+
         return view('backend.users.edit', [
             'user' => $user,
             'roles' => $roles,
-            'divisions' => $divisions,
-            'companies' => $companies, 
-            'departments' => $departments, 
-            'designations' => $designations
         ]);
     }
 
     public function update(Request $request, User $user)
     {
         try {
-
-            // dd($request->all());
-
             $requestData = [
                 'name' => $request->name,
-                // 'password' => $request->password ? Hash::make($request->password) : $user->password,
                 'mobile' => $request->mobile,
-                'division_id' => $request->division_id,
                 'dob' => $request->dob,
-                'joining_date' => $request->joining_date,
-
+                'role_id' => $request->role_id ?: $user->role_id,
             ];
 
             if ($request->hasFile('picture')) {
@@ -79,41 +62,12 @@ class UserController extends Controller
                 $file->move('images/users', $filename);
                 $requestData['picture'] = $filename;
             }
-            
-            if($request->role_id)
-            {
-                $requestData['role_id'] = $request->role_id;
-            }else{
-                $requestData['role_id'] = $user->role_id;
-            }
-
-            if($request->company_id)
-            {
-                $requestData['company_id'] = $request->company_id;
-            }else{
-                $requestData['company_id'] = $user->company_id;
-            }
-
-            if($request->department_id)
-            {
-                $requestData['department_id'] = $request->department_id;
-            }else{
-                $requestData['department_id'] = $user->department_id;
-            }
-
-            if($request->designation_id)
-            {
-                $requestData['designation_id'] = $request->designation_id;
-            }else{
-                $requestData['designation_id'] = $user->designation_id;
-            }
 
             if ($request->input('change_password')) {
-                $user->password = bcrypt($request->input('password'));
+                $requestData['password'] = bcrypt($request->input('password'));
             }
 
             $user->update($requestData);
-
 
             return redirect()->route('users.index')->withMessage('Successfully Updated!');
         } catch (QueryException $e) {
@@ -133,11 +87,7 @@ class UserController extends Controller
 
     public function show(User $user)
     {
-        $user = User::find($user->id);
-        $companies = Company::all();
-        $departments  = Department::all();
-        $designations  = Designation::all();
-        return view('backend.users.profiles', ['user' => $user, 'companies' => $companies, 'departments' => $departments, 'designations' => $designations]);
+        return view('backend.users.profiles', ['user' => $user]);
     }
 
     public function onlineuserlist(Request $request)

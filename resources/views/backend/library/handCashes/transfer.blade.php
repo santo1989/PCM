@@ -12,108 +12,66 @@
         </x-backend.layouts.elements.breadcrumb>
     </x-slot>
 
-
     <x-backend.layouts.elements.errors />
-    <form action="{{ route('handCashes_transfer') }}" method="post" enctype="multipart/form-data">
-        <div class="pb-3">
-            @csrf
-            <br>
-            <!-- Add a wrapper to contain the dynamic inputs -->
-            <div id="dynamic-inputs">
-                <!-- Initial input fields -->
-                <div class="row form-group">
-                    <div class="col-md-1">
-                        <x-backend.form.input name="date" type="date" label="Date"
-                            value="{{ date('Y-m-d') }}" />
+
+    <div class="card">
+        <div class="card-body">
+            <form action="{{ route('handCashes_transfer') }}" method="post">
+                @csrf
+
+                <div class="row">
+                    <div class="col-md-2">
+                        <x-backend.form.input name="date" type="date" label="Date" value="{{ date('Y-m-d') }}" />
+                    </div>
+                    <div class="col-md-3">
+                        <x-backend.form.autocomplete-input name="name" label="Transfer Description"
+                            model="App\Models\HandCash" column="name" />
                     </div>
                     <div class="col-md-2">
-                        <x-backend.form.input name="name" type="text" label="HandCash Name" />
+                        <x-backend.form.input name="amount" type="number" step="0.01" label="Amount" />
                     </div>
-                    <div class="col-md-2">
-                        <x-backend.form.input name="amount" type="number" label="amount" />
-                    </div>
-                    <div class="col-md-1">
-                        <label for="types2">Types1</label>
-                        <select class="form-control" name="types1">
-                            <option value="Save">Savings</option>
-                            <option value="Widrows">Withdraws</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label for="rules1">Rules</label>
-                        <select class="form-control" name="rules1">
-                            <option value="Mobile_Bkash">Bkash</option>
-                            <option value="Mobile_Rocket">Rocket</option>
-                            <option value="City_Bank">City Bank</option>
-                            <option value="City_Bank_Islamic">City Bank Islamic</option>
-                            <option value="Sonali_Bank_Gulshan">Sonali Bank Gulshan</option>
-                            <option value="Sonali_Bank_Tongi">Sonali Bank Tongi</option>
-                            <option value="DBBL">Dutch Bangla Bank</option>
-                            <option value="PBL">Prime Bank Ltd</option>
-                            <option value="Mobile_Nagad">Nagad</option>
-                            <option value="Cash">Cash</option>
-                            <option value="Peti">Peti Cash</option>
-                            <option value="loan">Loan To Other </option>
-                            <option value="CreditCard">Credit Card</option>
-                            <option value="FD">FD</option>
-                            <option value="DPS">DPS</option>
-                            <option value="Islamic_DPS">Islamic DPS</option>
-                            <option value="MyLoan">MyLoan</option>
-                            <option value="DPSLoan">DPS Loan</option>
-                            <option value="investment">Investment</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-1">
-                        <label for="types2">Types2</label>
-                        <select class="form-control" name="types2">
-                            <option value="Save">Savings</option>
-                            <option value="Widrows">Withdraws</option>
-                        </select>
-                        <script>
-                            var types1 = document.getElementsByName('types1');
-                            var types2 = document.getElementsByName('types2');
-                            if (types1 = 'Save') {
-                                types2 = 'Widrows';
-                            } else {
-                                types2 = 'Save';
-
-                            }
-                        </script>
-                    </div>
-                    <div class="col-md-2">
-                        <label for="rules2">Rules</label>
-                        <select class="form-control" name="rules2">
-                            <option value="Mobile_Bkash">Bkash</option>
-                            <option value="Mobile_Rocket">Rocket</option>
-                            <option value="City_Bank">City Bank</option>
-                            <option value="City_Bank_Islamic">City Bank Islamic</option>
-                            <option value="Sonali_Bank_Gulshan">Sonali Bank Gulshan</option>
-                            <option value="Sonali_Bank_Tongi">Sonali Bank Tongi</option>
-                            <option value="DBBL">Dutch Bangla Bank</option>
-                            <option value="PBL">Prime Bank Ltd</option>
-                            <option value="Mobile_Nagad">Nagad</option>
-                            <option value="Cash">Cash</option>
-                            <option value="Peti">Peti Cash</option>
-                            <option value="loan">Loan To Other </option>
-                            <option value="CreditCard">Credit Card</option>
-                            <option value="FD">FD</option>
-                            <option value="DPS">DPS</option>
-                            <option value="Islamic_DPS">Islamic DPS</option>
-                            <option value="MyLoan">MyLoan</option>
-                            <option value="DPSLoan">DPS Loan</option>
-                            <option value="investment">Investment</option>
-                        </select>
-                    </div>
-
-
-
                 </div>
-            </div>
-            <a href="{{ route('handCashes.index') }}" class="btn btn-danger">Cancel</a>
-            <x-backend.form.saveButton>Save</x-backend.form.saveButton>
-        </div>
-    </form>
 
+                <div class="row">
+                    <div class="col-md-2">
+                        <x-backend.form.select name="types1" label="From: Type"
+                            :options="config('finance.handcash_types')" selected="WIDROWS" />
+                    </div>
+                    <div class="col-md-3">
+                        <x-backend.form.select name="rules1" label="From: Account"
+                            :options="config('finance.handcash_rules')" />
+                    </div>
+                    <div class="col-md-2">
+                        <x-backend.form.select name="types2" label="To: Type"
+                            :options="config('finance.handcash_types')" selected="SAVE" />
+                    </div>
+                    <div class="col-md-3">
+                        <x-backend.form.select name="rules2" label="To: Account"
+                            :options="config('finance.handcash_rules')" />
+                    </div>
+                </div>
+
+                <a href="{{ route('handCashes.index') }}" class="btn btn-outline-secondary">Cancel</a>
+                <x-backend.form.saveButton>Save</x-backend.form.saveButton>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Keep the "From"/"To" type selects as opposites of each other: money leaving one
+        // account (Withdraws) always means it's landing in the other (Savings), and vice versa.
+        document.addEventListener('DOMContentLoaded', function () {
+            var types1 = document.getElementById('types1');
+            var types2 = document.getElementById('types2');
+            if (!types1 || !types2) return;
+
+            function sync(source, target) {
+                target.value = source.value === 'SAVE' ? 'WIDROWS' : 'SAVE';
+            }
+
+            types1.addEventListener('change', function () { sync(types1, types2); });
+            types2.addEventListener('change', function () { sync(types2, types1); });
+        });
+    </script>
 
 </x-backend.layouts.master>

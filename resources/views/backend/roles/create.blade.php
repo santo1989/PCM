@@ -1,43 +1,29 @@
 <x-backend.layouts.master>
     <x-slot name="pageTitle">
-       Create Role
+        Create Role
     </x-slot>
 
     <x-slot name='breadCrumb'>
-      <x-backend.layouts.elements.breadcrumb>
-          <x-slot name="pageHeader"> Role </x-slot>
-          <li class="breadcrumb-item"><a href="{{ route('roles.index') }}">Role</a></li>
-          <li class="breadcrumb-item active">Create Role</li>
-      </x-backend.layouts.elements.breadcrumb>
-  </x-slot>
+        <x-backend.layouts.elements.breadcrumb>
+            <x-slot name="pageHeader"> Role </x-slot>
+            <li class="breadcrumb-item"><a href="{{ route('roles.index') }}">Role</a></li>
+            <li class="breadcrumb-item active">Create Role</li>
+        </x-backend.layouts.elements.breadcrumb>
+    </x-slot>
 
+    <x-backend.layouts.elements.errors />
 
-  @if ($errors->any())
-        <div class="alert alert-danger">
-            <ul>
-                @foreach ($errors->all() as $error)
-                <li>{{ $error }}</li>
-                @endforeach
-            </ul>
+    <div class="card">
+        <div class="card-body">
+            <form action="{{ route('roles.store') }}" method="post">
+                @csrf
+
+                <x-backend.form.input name="name" type="text" label="Role Name" placeholder="Enter role name"
+                    required />
+
+                <x-backend.form.saveButton>Save</x-backend.form.saveButton>
+            </form>
         </div>
-  @endif
-  <form action="{{ route('roles.store') }}"  method="post">
-      <div>
-         @csrf
-          <div class="row m-4">
-              <div class="col-sm-6">
-              <!-- text input -->
-              <div class="form-group">
-                  <label>Role Name</label>
-                  <input type="text" class="form-control" placeholder="Enter role Name" name="name">
-              </div>
-              </div>
-          </div>
-          <button type="submit" class="btn btn-primary" style="margin-left: 33px">Save</button>
-      </div>
-    </form>
-
+    </div>
 
 </x-backend.layouts.master>
-
-

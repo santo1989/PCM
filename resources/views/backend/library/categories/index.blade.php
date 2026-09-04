@@ -21,88 +21,84 @@
                     </div>
                 </div>
             @else
-                @if (session('message'))
-                    <div class="alert alert-success">
-                        <span class="close" data-dismiss="alert">&times;</span>
-                        <strong>{{ session('message') }}.</strong>
-                    </div>
-                @endif
-
+                <x-backend.layouts.elements.message :message="session('message')" />
                 <x-backend.layouts.elements.errors />
+
+                <div class="gradient-header mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <h4 class="mb-1 text-white">Categories</h4>
+                        <div class="small">Income, expense and 50/30/20 rule categories used across every entry.</div>
+                    </div>
+                    <a href="{{ route('categories.create') }}" class="btn btn-light">
+                        <i class="bi bi-plus-circle"></i> Create Category
+                    </a>
+                </div>
+
+                <x-backend.insights-panel :insights="\App\Services\InsightEngine::dashboardSummary()" />
 
                 <div class="row">
                     <div class="col-12">
                         <div class="card">
-                            <div class="card-header">
-
-                                <x-backend.form.anchor :href="route('categories.create')" type="create" />
-                            </div>
-                            <!-- /.card-header -->
                             <div class="card-body">
-                                {{-- category Table goes here --}}
-
-                                <table id="datatablesSimple" class="table table-bordered table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Sl#</th>
-                                            <th>Name</th>
-                                            <th>Types</th>
-                                            <th>Rules</th>
-                                            <th>Actions</th>
-
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @php $sl=0 @endphp
-                                        @foreach ($categories as $category)
+                                <div class="table-responsive">
+                                    @php
+                                        // Client-side-only icon lookup keyed on the category's existing "types"
+                                        // value — categories has no icon column, so nothing is persisted here.
+                                        $categoryTypeIcon = [
+                                            'INCOME' => 'bi-cash-coin text-success',
+                                            'EXPENSE' => 'bi-cart-fill text-danger',
+                                            'LOAN' => 'bi-arrow-left-right text-warning',
+                                            'RETURN' => 'bi-arrow-left-right text-info',
+                                        ];
+                                    @endphp
+                                    <table id="datatablesSimple" class="table table-bordered table-hover table-responsive-cards">
+                                        <thead>
                                             <tr>
-                                                <td>{{ ++$sl }}</td>
-                                                <td>{{ $category->name }}</td>
-                                                <td>{{ $category->types }}</td>
-                                                <td>{{ $category->rules }}</td>
-                                                <td>
-
-                                                    <x-backend.form.anchor :href="route('categories.edit', ['category' => $category->id])" type="edit" />
-
-
-
-                                                    <x-backend.form.anchor :href="route('categories.show', ['category' => $category->id])" type="show" />
-
-                                                    <form style="display:inline"
-                                                        action="{{ route('categories.destroy', ['category' => $category->id]) }}"
-                                                        method="POST">
-                                                        @csrf
-                                                        @method('delete')
-
-                                                        <button
-                                                            onclick="return confirm('Are you sure want to delete ?')"
-                                                            class="btn btn-outline-danger my-1 mx-1 inline btn-sm"
-                                                            type="submit"><i class="bi bi-trash"></i> Delete</button>
-                                                    </form>
-
-                                                </td>
+                                                <th>Sl#</th>
+                                                <th>Name</th>
+                                                <th>Types</th>
+                                                <th>Rules</th>
+                                                <th>Actions</th>
                                             </tr>
-                                        @endforeach
+                                        </thead>
+                                        <tbody>
+                                            @php $sl = 0 @endphp
+                                            @foreach ($categories as $category)
+                                                <tr>
+                                                    <td data-label="Sl#">{{ ++$sl }}</td>
+                                                    <td data-label="Name">
+                                                        <i class="bi {{ $categoryTypeIcon[$category->types] ?? 'bi-tag-fill text-secondary' }} me-1"></i>
+                                                        {{ $category->name }}
+                                                    </td>
+                                                    <td data-label="Types">{{ $category->types }}</td>
+                                                    <td data-label="Rules">{{ $category->rules }}</td>
+                                                    <td data-label="Actions">
+                                                        <x-backend.form.anchor
+                                                            :href="route('categories.edit', ['category' => $category->id])"
+                                                            type="edit" />
 
-                                    </tbody>
-                                </table>
+                                                        <x-backend.form.anchor
+                                                            :href="route('categories.show', ['category' => $category->id])"
+                                                            type="show" />
+
+                                                        <button type="button"
+                                                            onclick="confirmDelete('{{ route('categories.destroy', ['category' => $category->id]) }}')"
+                                                            class="btn btn-outline-danger my-1 mx-1 inline btn-sm">
+                                                            <i class="bi bi-trash"></i> Delete
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
-                            <!-- /.card-body -->
                         </div>
-                        <!-- /.card -->
-
-
-                        <!-- /.card -->
                     </div>
-                    <!-- /.col -->
                 </div>
-                <!-- /.row -->
         </div>
-        <!-- /.container-fluid -->
     </section>
     @endif
-
-    <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
         function confirmDelete(url) {
@@ -116,7 +112,6 @@
                 confirmButtonText: 'Yes, delete it!'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // Submit the form if the user confirms
                     let form = document.createElement('form');
                     form.method = 'POST';
                     form.action = url;

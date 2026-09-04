@@ -14,14 +14,10 @@
 
     <section class="content">
         <div class="container-fluid">
-            @if (session('message'))
-                <div class="alert alert-success">
-                    <span class="close" data-dismiss="alert">&times;</span>
-                    <strong>{{ session('message') }}.</strong>
-                </div>
-            @endif
-
+            <x-backend.layouts.elements.message :message="session('message')" />
             <x-backend.layouts.elements.errors />
+
+            <x-backend.insights-panel :insights="\App\Services\InsightEngine::dashboardSummary()" />
 
             <div class="row">
                 <div class="col-12">
@@ -288,63 +284,11 @@
                                         );
                                     @endphp
                                     <select class="form-control" name="handCashes_rule[]" id="handCashes_rule" multiple>
-                                        <option value="Peti"
-                                            {{ in_array('Peti', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            Peti Cash</option>
-                                        <option value="Cash"
-                                            {{ in_array('Cash', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            Cash</option>
-                                        <option value="City_Bank"
-                                            {{ in_array('City_Bank', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            City Bank</option>
-                                        <option value="City_Bank_Islamic"
-                                            {{ in_array('City_Bank_Islamic', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            City Bank Islamic</option>
-                                        <option value="FD"
-                                            {{ in_array('FD', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            FD</option>
-                                        <option value="DPS"
-                                            {{ in_array('DPS', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            DPS</option>
-                                        <option value="Islamic_DPS"
-                                            {{ in_array('Islamic_DPS', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            Islamic DPS</option>
-                                        <option value="MyLoan"
-                                            {{ in_array('MyLoan', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            MyLoan</option>
-                                        <option value="DPSLoan"
-                                            {{ in_array('DPSLoan', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            DPS Loan</option>
-                                        <option value="loan"
-                                            {{ in_array('loan', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            Loan To Other</option>
-                                        <option value="CreditCard"
-                                            {{ in_array('CreditCard', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            Credit Card</option>
-                                        <option value="Sonali_Bank_Gulshan"
-                                            {{ in_array('Sonali_Bank_Gulshan', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            Sonali Bank Gulshan</option>
-                                        <option value="Sonali_Bank_Tongi"
-                                            {{ in_array('Sonali_Bank_Tongi', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            Sonali Bank Tongi</option>
-                                        <option value="DBBL"
-                                            {{ in_array('DBBL', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            Dutch Bangla Bank</option>
-                                        <option value="PBL"
-                                            {{ in_array('PBL', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            Prime Bank Ltd</option>
-                                        <option value="Mobile_Nagad"
-                                            {{ in_array('Mobile_Nagad', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            Nagad</option>
-                                        <option value="Mobile_Bkash"
-                                            {{ in_array('Mobile_Bkash', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            Bkash</option>
-                                        <option value="Mobile_Rocket"
-                                            {{ in_array('Mobile_Rocket', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            Rocket</option>
-                                        <option value="investment"
-                                            {{ in_array('investment', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            Investment</option>
+                                        @foreach (config('finance.handcash_rules') as $ruleKey => $ruleLabel)
+                                            <option value="{{ $ruleKey }}"
+                                                {{ in_array($ruleKey, array_map('strtoupper', $selectedHandCashRules)) ? 'selected' : '' }}>
+                                                {{ $ruleLabel }}</option>
+                                        @endforeach
                                     </select>
 
                                 </div>
@@ -400,18 +344,11 @@
                                                             'handCash' => $handCash->id,
                                                         ])" type="show" />
 
-                                                        <form style="display:inline"
-                                                            action="{{ route('handCashes.destroy', ['handCash' => $handCash->id]) }}"
-                                                            method="POST">
-                                                            @csrf
-                                                            @method('delete')
-
-                                                            <button
-                                                                onclick="return confirm('Are you sure want to delete ?')"
-                                                                class="btn btn-outline-danger my-1 mx-1 inline btn-sm"
-                                                                type="submit"><i class="bi bi-trash"></i>
-                                                                Delete</button>
-                                                        </form>
+                                                        <button type="button"
+                                                            onclick="confirmDelete('{{ route('handCashes.destroy', ['handCash' => $handCash->id]) }}')"
+                                                            class="btn btn-outline-danger my-1 mx-1 inline btn-sm">
+                                                            <i class="bi bi-trash"></i> Delete
+                                                        </button>
 
                                                     </td>
                                                 </tr>
@@ -439,8 +376,6 @@
         </div>
         <!-- /.container-fluid -->
     </section>
-
-    <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
         function confirmDelete(url) {

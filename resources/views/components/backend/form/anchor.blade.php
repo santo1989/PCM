@@ -27,5 +27,5 @@
 
 <a href="{{ $href }}" class="btn {{ $buttonClass }}">
     <span class="{{ $iconClass }} me-1"></span>
-    {{ $type }}
+    {{ ucfirst($type) }}
 </a>

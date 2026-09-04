@@ -1,0 +1,283 @@
+/*
+ * App theme overrides.
+ * Loaded AFTER styles.css (vendor Bootstrap 5 + SB Admin bundle) so these rules win
+ * on cascade order alone, without needing !important. Do not edit styles.css directly.
+ */
+
+:root {
+  /* Vibrant gradient palette */
+  --grad-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --grad-pink: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  --grad-teal: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  --grad-sunset: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+
+  /* Bootstrap primary derived from the primary gradient's start color, for anywhere
+     a flat color is unavoidable (form focus rings, text links, etc.) */
+  --bs-primary: #667eea;
+  --bs-primary-rgb: 102, 126, 234;
+
+  /* Sidebar/topbar chrome */
+  --brand-chrome-bg: #1b1f27;
+  --brand-chrome-bg-2: #20242c;
+  --brand-chrome-border: #2a2f3a;
+  --brand-chrome-text: #c9cdd6;
+  --brand-chrome-text-active: #ffffff;
+
+  --bs-font-sans-serif: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+body {
+  font-family: var(--bs-font-sans-serif);
+  background-color: #f4f6fb;
+  font-size: 0.925rem;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+}
+
+a {
+  color: var(--bs-primary);
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: #5568d3;
+}
+
+/* Buttons */
+.btn {
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background: var(--grad-primary) !important;
+  border: none !important;
+  color: #fff !important;
+  box-shadow: 0 4px 14px rgba(102, 126, 234, 0.35);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  filter: brightness(1.08);
+  box-shadow: 0 6px 18px rgba(102, 126, 234, 0.45);
+  transform: translateY(-1px);
+}
+
+.btn-outline-primary {
+  color: #667eea !important;
+  border-color: #667eea !important;
+}
+
+.btn-outline-primary:hover {
+  background: var(--grad-primary) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+}
+
+/* Cards */
+.card {
+  border: none;
+  border-radius: 0.9rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.card-header {
+  background-color: #fff;
+  border-bottom: 1px solid #eef0f6;
+  font-weight: 600;
+  border-radius: 0.9rem 0.9rem 0 0 !important;
+}
+
+/* Gradient page header band, used on the pages this pass redesigned bespoke */
+.gradient-header {
+  background: var(--grad-primary);
+  color: #fff;
+  border-radius: 0.9rem;
+  padding: 1.5rem 1.75rem;
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.25);
+}
+
+.gradient-header .text-muted,
+.gradient-header small {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Stat cards */
+.stat-card {
+  border-radius: 0.9rem;
+  color: #fff;
+  padding: 1.25rem;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  transition: transform 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-3px);
+}
+
+.stat-card .stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+}
+
+.stat-card.grad-1 { background: var(--grad-primary); }
+.stat-card.grad-2 { background: var(--grad-pink); }
+.stat-card.grad-3 { background: var(--grad-teal); }
+.stat-card.grad-4 { background: var(--grad-sunset); }
+
+/* Top bar */
+.sb-topnav {
+  background: var(--brand-chrome-bg-2) !important;
+  border-bottom: 1px solid var(--brand-chrome-border);
+}
+
+.sb-topnav .navbar-brand,
+.sb-topnav h3 {
+  color: #fff !important;
+}
+
+.sb-topnav .nav-link,
+.sb-topnav .text-light {
+  color: var(--brand-chrome-text) !important;
+}
+
+.sb-topnav .nav-link:hover {
+  color: var(--brand-chrome-text-active) !important;
+}
+
+/* Sidebar (now an .offcanvas.offcanvas-lg — see sidebar.blade.php) */
+.sb-sidenav {
+  background-color: var(--brand-chrome-bg) !important;
+}
+
+.sb-sidenav .sb-sidenav-menu-heading {
+  color: #7d8494 !important;
+}
+
+.sb-sidenav .nav-link,
+.sb-sidenav a {
+  color: var(--brand-chrome-text) !important;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.sb-sidenav .nav-link:hover {
+  color: var(--brand-chrome-text-active) !important;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sb-sidenav .nav-link.active {
+  color: #fff !important;
+  background: var(--grad-primary) !important;
+  box-shadow: 0 4px 14px rgba(102, 126, 234, 0.4);
+}
+
+.sb-sidenav .nav-link .sb-nav-link-icon,
+.sb-sidenav .sb-sidenav-collapse-arrow {
+  color: #a78bfa;
+}
+
+.sb-sidenav .nav-link.active .sb-nav-link-icon {
+  color: #fff;
+}
+
+.sb-sidenav-footer {
+  background-color: var(--brand-chrome-bg-2) !important;
+  color: var(--brand-chrome-text) !important;
+  border-top: 1px solid var(--brand-chrome-border);
+}
+
+/* Alerts / insight cards reuse Bootstrap's alert-* palette, just softened corners */
+.alert {
+  border-radius: 0.6rem;
+}
+
+/* Insights panel */
+.insights-panel .insight-card {
+  border-left: 4px solid var(--bs-secondary);
+  border-radius: 0.5rem;
+}
+
+.insights-panel .insight-card.insight-success { border-left-color: var(--bs-success); }
+.insights-panel .insight-card.insight-warning { border-left-color: var(--bs-warning); }
+.insights-panel .insight-card.insight-danger  { border-left-color: var(--bs-danger); }
+.insights-panel .insight-card.insight-info    { border-left-color: var(--bs-info); }
+
+/* Select2 (bootstrap-5 theme) height/radius parity with our .form-control */
+.select2-container--bootstrap-5 .select2-selection {
+  border-radius: 0.5rem !important;
+}
+
+/* SweetAlert2 gradient re-skin */
+.swal2-popup {
+  border-radius: 1rem !important;
+  font-family: var(--bs-font-sans-serif);
+}
+
+.swal2-confirm {
+  background: var(--grad-primary) !important;
+  border-radius: 0.5rem !important;
+  box-shadow: none !important;
+}
+
+.swal2-cancel {
+  border-radius: 0.5rem !important;
+}
+
+.swal2-icon.swal2-warning {
+  border-color: #fee140;
+  color: #fa709a;
+}
+
+/*
+ * Responsive "table as cards": below md, table rows visually reflow into stacked
+ * label/value blocks. Opt-in via .table-responsive-cards on the <table>; each <td>
+ * that should show a label needs a data-label="..." attribute. Header row hides.
+ */
+@media (max-width: 767.98px) {
+  table.table-responsive-cards,
+  table.table-responsive-cards tbody,
+  table.table-responsive-cards tr,
+  table.table-responsive-cards td {
+    display: block;
+    width: 100%;
+  }
+
+  table.table-responsive-cards thead {
+    display: none;
+  }
+
+  table.table-responsive-cards tr {
+    margin-bottom: 1rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
+    padding: 0.5rem 0.75rem;
+    background: #fff;
+  }
+
+  table.table-responsive-cards td {
+    border: none;
+    padding: 0.4rem 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    text-align: right;
+  }
+
+  table.table-responsive-cards td[data-label]::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #6b7280;
+    text-align: left;
+  }
+}

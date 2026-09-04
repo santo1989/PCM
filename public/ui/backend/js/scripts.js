@@ -23,4 +23,20 @@ window.addEventListener('DOMContentLoaded', event => {
         });
     }
 
+    // On mobile, the toggled-open sidebar shows a dark backdrop over the content area
+    // (see styles.css .sb-sidenav-toggled #layoutSidenav_content:before) but nothing
+    // closed it on click. Tapping that backdrop now closes the sidebar, matching the
+    // usual off-canvas/drawer convention.
+    const sidenavContent = document.getElementById('layoutSidenav_content');
+    if (sidenavContent) {
+        sidenavContent.addEventListener('click', event => {
+            const isMobile = window.innerWidth < 992;
+            const isOpen = document.body.classList.contains('sb-sidenav-toggled');
+            if (isMobile && isOpen && event.target === sidenavContent) {
+                document.body.classList.remove('sb-sidenav-toggled');
+                localStorage.setItem('sb|sidebar-toggle', 'false');
+            }
+        });
+    }
+
 });

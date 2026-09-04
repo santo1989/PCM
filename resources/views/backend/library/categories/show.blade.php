@@ -15,12 +15,7 @@
     <section class="content">
         <div class="container-fluid">
 
-            @if (session('message'))
-                <div class="alert alert-success">
-                    <span class="close" data-dismiss="alert">&times;</span>
-                    <strong>{{ session('message') }}.</strong>
-                </div>
-            @endif
+            <x-backend.layouts.elements.message :message="session('message')" />
 
             <div class="row">
                 <div class="col-12">

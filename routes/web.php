@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ExpenseCalculationController;
 use App\Http\Controllers\HandCashController;
@@ -52,8 +53,6 @@ Route::middleware('auth')->group(function () {
     //user
 
     Route::get('/users', [UserController::class, 'index'])->name('users.index');
-    Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
-    Route::post('/users', [UserController::class, 'store'])->name('users.store');
     Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show');
     Route::get(
         '/users/{user}/edit',
@@ -109,6 +108,22 @@ Route::middleware('auth')->group(function () {
     Route::post('/handCashes_transfer', [HandCashController::class, 'handCashes_transfer'])->name('handCashes_transfer');
 
     Route::post('/calculate-and-save-budget', [HandCashController::class, 'calculateAndSaveBudget'])->name('calculate_and_save_budget');
+
+    // report Excel exports
+    Route::get('/Yearly_report/export-excel', [HandCashController::class, 'exportYearlyReport'])->name('Yearly_report.export_excel');
+    Route::get('/Monthly_report/export-excel', [HandCashController::class, 'exportMonthlyReport'])->name('Monthly_report.export_excel');
+    Route::get('/Monthly_invest/export-excel', [HandCashController::class, 'exportMonthlyInvest'])->name('Monthly_invest.export_excel');
+    Route::get('/Budge_Projection/export-excel', [HandCashController::class, 'exportBudgeProjection'])->name('Budge_Projection.export_excel');
+    Route::get('/interactive-dashboard/export-excel', [HandCashController::class, 'exportInteractiveDashboard'])->name('interactive.dashboard.export_excel');
+
+    // Financial analytics: AJAX data endpoints + new pages
+    Route::get('/home/data/kpis', [AnalyticsController::class, 'homeKpis'])->name('home.data.kpis');
+    Route::get('/Budge_Projection/data/forecast', [AnalyticsController::class, 'budgetForecast'])->name('Budge_Projection.data.forecast');
+    Route::get('/Budge_Projection/data/compare-actual', [AnalyticsController::class, 'compareActual'])->name('Budge_Projection.data.compare_actual');
+    Route::get('/interactive-dashboard/data/budget-alerts', [AnalyticsController::class, 'budgetAlerts'])->name('interactive.dashboard.data.budget_alerts');
+    Route::get('/cost-optimisation', [AnalyticsController::class, 'costOptimisation'])->name('cost_optimisation');
+    Route::get('/cost-optimisation/data', [AnalyticsController::class, 'costOptimisationData'])->name('cost_optimisation.data');
+    Route::get('/predictive-budget', [AnalyticsController::class, 'predictiveBudget'])->name('predictive_budget');
 });
 
 

@@ -12,68 +12,30 @@
         </x-backend.layouts.elements.breadcrumb>
     </x-slot>
 
-
     <x-backend.layouts.elements.errors />
-    <form action="{{ route('handCashes.update', ['handCash' => $handCashes->id]) }}" method="post"
-        enctype="multipart/form-data">
-        <div class="pb-3">
-            @csrf
-            @method('put')
 
-            <x-backend.form.input name="date" type="date" label="Date" :value="$handCashes->date" />
-            <br>
-            <x-backend.form.input name="name" type="text" label="Name" :value="$handCashes->name" />
-            <br>
-            <x-backend.form.input name="amount" type="number" label="Amount" :value="$handCashes->amount" />
-            <br>
-            <div class="form-group">
-                <label for="types">HandCash Types</label>
-                <select class="form-control" name="types" id="types">
-                    <option value="Save" {{ $handCashes->types == 'Save' ? 'selected' : '' }}>Savings</option>
-                    <option value="Widrows" {{ $handCashes->types == 'Widrows' ? 'selected' : '' }}>Widrows</option>
-                </select>
-            </div>
-            <br>
+    <div class="card">
+        <div class="card-body">
+            <form action="{{ route('handCashes.update', ['handCash' => $handCashes->id]) }}" method="post">
+                @csrf
+                @method('put')
 
-            <div class="form-group">
-                <label for="rules">Cash Rules</label>
-                <select class="form-control" name="rules" id="rules">
-                    <option value="Peti" {{ $handCashes->rules == 'Peti' ? 'selected' : '' }}>Peti Cash</option>
-                    <option value="Cash" {{ $handCashes->rules == 'Cash' ? 'selected' : '' }}>Cash</option>
-                    <option value="City_Bank" {{ $handCashes->rules == 'City_Bank' ? 'selected' : '' }}>City Bank
-                    </option>
-                    <option value="City_Bank_Islamic" {{ $handCashes->rules == 'City_Bank_Islamic' ? 'selected' : '' }}>City Bank Islamic</option>
-                    <option value="FD" {{ $handCashes->rules == 'FD' ? 'selected' : '' }}>FD</option>
-                    <option value="DPS" {{ $handCashes->rules == 'DPS' ? 'selected' : '' }}>DPS</option>
-                    <option value="Islamic_DPS" {{ $handCashes->rules == 'Islamic_DPS' ? 'selected' : '' }}>Islamic DPS</option>
-                    <option value="MyLoan" {{ $handCashes->rules == 'MyLoan' ? 'selected' : '' }}>MyLoan</option>
-                    <option value="DPSLoan" {{ $handCashes->rules == 'DPSLoan' ? 'selected' : '' }}>DPS Loan</option>
-                    <option value="loan" {{ $handCashes->rules == 'loan' ? 'selected' : '' }}>Loan To Other </option>
-                    <option value="CreditCard" {{ $handCashes->rules == 'CreditCard' ? 'selected' : '' }}>Credit Card
-                    </option>
-                    <option value="Sonali_Bank_Gulshan"
-                        {{ $handCashes->rules == 'Sonali_Bank_Gulshan' ? 'selected' : '' }}>Sonali Bank Gulshan
-                    </option>
-                    <option value="Sonali_Bank_Tongi"
-                        {{ $handCashes->rules == 'Sonali_Bank_Tongi' ? 'selected' : '' }}>Sonali Bank Tongi</option>
-                    <option value="DBBL" {{ $handCashes->rules == 'DBBL' ? 'selected' : '' }}>Dutch Bangla Bank
-                    </option>
-                    <option value="PBL" {{ $handCashes->rules == 'PBL' ? 'selected' : '' }}>Prime Bank Ltd</option>
-                    <option value="Mobile_Nagad" {{ $handCashes->rules == 'Mobile_Nagad' ? 'selected' : '' }}>Nagad
-                    </option>
-                    <option value="Mobile_Bkash" {{ $handCashes->rules == 'Mobile_Bkash' ? 'selected' : '' }}>Bkash
-                    </option>
-                    <option value="Mobile_Rocket" {{ $handCashes->rules == 'Mobile_Rocket' ? 'selected' : '' }}>Rocket
-                    </option>
-                    <option value="investment" {{ $handCashes->rules == 'investment' ? 'selected' : '' }}>Investment
-                    </option>
-                </select>
-            </div>
-            <br>
+                <x-backend.form.input name="date" type="date" label="Date" :value="$handCashes->date" />
 
-            <x-backend.form.saveButton>Save</x-backend.form.saveButton>
+                <x-backend.form.autocomplete-input name="name" label="Name" model="App\Models\HandCash" column="name"
+                    :value="$handCashes->name" />
+
+                <x-backend.form.input name="amount" type="number" step="0.01" label="Amount" :value="$handCashes->amount" />
+
+                <x-backend.form.select name="types" label="HandCash Types"
+                    :options="config('finance.handcash_types')" :selected="$handCashes->types" />
+
+                <x-backend.form.select name="rules" label="Cash Rules"
+                    :options="config('finance.handcash_rules')" :selected="$handCashes->rules" />
+
+                <x-backend.form.saveButton>Save</x-backend.form.saveButton>
+            </form>
         </div>
-    </form>
-
+    </div>
 
 </x-backend.layouts.master>

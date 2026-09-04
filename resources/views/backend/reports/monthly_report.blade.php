@@ -3,35 +3,12 @@
     <x-slot name="pageTitle">
         Month Dashboard
     </x-slot>
-    {{-- <x-slot name='breadCrumb'>
-                <x-backend.layouts.elements.breadcrumb>
-                    <x-slot name="pageHeader"> Monthly Report Search </x-slot>
-                    <li class="breadcrumb-item active">Dashboard</li>
-                </x-backend.layouts.elements.breadcrumb>
-            </x-slot> --}}
 
     <div class="container">
-        <div class="row justify-content-center pt-4">
-            <div class="col-md-2">
-                <a href="{{ route('Budge_Projection') }}" class="btn btn-sm btn-outline-danger">Budge Projection</a>
-            </div>
 
-            <div class="col-md-2">
-                <a href="{{ route('Yearly_report') }}" class="btn btn-sm btn-outline-danger">Yearly Report</a>
+        @include('backend.reports.partials.report_nav')
 
-            </div>
-            <div class="col-md-2">
-                <a href="{{ route('Monthly_report') }}" class="btn btn-sm btn-outline-danger">Monthly Report</a>
-            </div>
-            <div class="col-md-2">
-                <a href="{{ route('Monthly_invest') }}" class="btn btn-sm btn-outline-danger">Monthly Investment</a>
-            </div>
-            <div class="col-md-2">
-                <a href="{{ route('power_bi_report') }}" class="btn btn-sm btn-outline-danger">BI Report</a>
-            </div>
-
-        </div>
-        <div class="row text-center p-2">
+        <div class="row text-center p-2 no-print">
             <form action="{{ route('Monthly_report') }}" method="get" id="Monthly_report">
                 @csrf
                 <table class="table table-borderless table-responsive text-center text-dark font-weight-bold">
@@ -58,30 +35,146 @@
                                 <a href="{{ route('Monthly_report') }}" class="btn btn-outline-danger">
                                     <i class="fas fa-sync-alt"></i> Refresh
                                 </a>
-                                <button type="button" class="btn btn-outline-success"
-                                    id="download_excel"
-                                    onclick="excelDownloadReport()">
-                                    <i class="fas fa-file-excel"></i> Excel Download 
-                                </button>
                             </td>
                         </div>
                     </tr>
                 </table>
             </form>
         </div>
+
+        @include('backend.reports.partials.export_toolbar', [
+            'excelRoute' => 'Monthly_report.export_excel',
+            'excelParams' => ['start_date' => $startDate, 'end_date' => $endDate],
+        ])
+
         <div id="printable" class="row justify-content-center">
             <div class="col-md-12 text-center">
                 <h2>Monthly Report</h2>
                 <h3>{{ $startDate }} - {{ $endDate }}</h3>
             </div>
 
-            <div class="row justify-content-center pt-4">
-                @php
+            {{-- Detailed analysis / insights --}}
+            <div class="row justify-content-center pt-2 pb-2">
+                <div class="col-md-2 col-6 mb-2">
+                    <div class="card text-center h-100">
+                        <div class="card-body p-2">
+                            <div class="text-muted small">Savings Rate</div>
+                            <div class="fw-bold">{{ number_format($analysis['savingsRate'], 1) }}%</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2 col-6 mb-2">
+                    <div class="card text-center h-100">
+                        <div class="card-body p-2">
+                            <div class="text-muted small">Income vs Previous {{ $analysis['periodDays'] }} Days</div>
+                            <div class="fw-bold">
+                                @if (is_null($analysis['incomeChange']))
+                                    <span class="text-muted">N/A</span>
+                                @else
+                                    <span class="{{ $analysis['incomeChange'] >= 0 ? 'text-success' : 'text-danger' }}">
+                                        {{ $analysis['incomeChange'] >= 0 ? '+' : '' }}{{ number_format($analysis['incomeChange'], 1) }}%
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2 col-6 mb-2">
+                    <div class="card text-center h-100">
+                        <div class="card-body p-2">
+                            <div class="text-muted small">Expense vs Previous {{ $analysis['periodDays'] }} Days</div>
+                            <div class="fw-bold">
+                                @if (is_null($analysis['expenseChange']))
+                                    <span class="text-muted">N/A</span>
+                                @else
+                                    <span class="{{ $analysis['expenseChange'] <= 0 ? 'text-success' : 'text-danger' }}">
+                                        {{ $analysis['expenseChange'] >= 0 ? '+' : '' }}{{ number_format($analysis['expenseChange'], 1) }}%
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-2">
+                    <div class="card text-center h-100">
+                        <div class="card-body p-2">
+                            <div class="text-muted small">Top Expense Category</div>
+                            <div class="fw-bold">
+                                @if ($analysis['topExpenseCategory'])
+                                    {{ optional(App\Models\Category::find($analysis['topExpenseCategory']->category_id))->name }}
+                                    <div class="small text-danger">{{ number_format($analysis['topExpenseCategory']->totalExpense, 2) }}</div>
+                                @else
+                                    <span class="text-muted">N/A</span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-2">
+                    <div class="card text-center h-100">
+                        <div class="card-body p-2">
+                            <div class="text-muted small">Top Income Category</div>
+                            <div class="fw-bold">
+                                @if ($analysis['topIncomeCategory'])
+                                    {{ optional(App\Models\Category::find($analysis['topIncomeCategory']->category_id))->name }}
+                                    <div class="small text-success">{{ number_format($analysis['topIncomeCategory']->totalIncome, 2) }}</div>
+                                @else
+                                    <span class="text-muted">N/A</span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-2">
+                    <div class="card text-center h-100 border-success">
+                        <div class="card-body p-2">
+                            <div class="text-muted small"><i class="bi bi-piggy-bank"></i> Top Saving Category</div>
+                            <div class="fw-bold">
+                                @if ($analysis['topSavingCategory'])
+                                    {{ $analysis['topSavingCategory'] }}
+                                    <div class="small text-success">-{{ number_format($analysis['topSavingAmount'], 2) }} vs. previous period</div>
+                                @else
+                                    <span class="text-muted">No category decreased this period</span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-2">
+                    <div class="card text-center h-100">
+                        <div class="card-body p-2">
+                            <div class="text-muted small">Same Period Last Year</div>
+                            <div class="fw-bold small">
+                                Income: {{ number_format($analysis['lastYearPeriodIncome'], 2) }}<br>
+                                Expense: {{ number_format($analysis['lastYearPeriodExpense'], 2) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                @endphp
+            <div class="row justify-content-center pt-2 pb-2">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header"><i class="bi bi-bar-chart-line"></i> Daily Spending Pattern (by Day of Week)</div>
+                        <div class="card-body">
+                            <canvas id="dayOfWeekChart" height="100"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header"><i class="bi bi-arrow-left-right"></i> vs. Same Period Last Year</div>
+                        <div class="card-body">
+                            <canvas id="yoyChart" height="150"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row justify-content-center pt-4">
                 <div class="col-md-6">
-                    {{-- <h4>{{ date('F', mktime(0, 0, 0, $currentMonth, 1)) }} Net Income</h4> --}}
-                    <h4>{{ $startDate }} - {{ $endDate }} Net Income</h4>
+                    <h4>{{ $startDate }} - {{ $endDate }} (Selected Period)</h4>
                     <table class="table table-bordered">
                         <thead>
                             <tr>
@@ -95,49 +188,46 @@
                         <tbody>
                             <tr>
                                 <th>Total Income</th>
-                                <td>{{ $thisMonthIncome->sum('amount') }}</td>
+                                <td>{{ number_format($thisMonthIncome->sum('amount'), 2) }}</td>
                                 <td>
                                     @php
                                         $needs = $thisMonthIncome->sum('amount') * 0.5;
                                     @endphp
-                                    {{ $needs }}
+                                    {{ number_format($needs, 2) }}
                                 </td>
                                 <td>
                                     @php
                                         $wants = $thisMonthIncome->sum('amount') * 0.3;
                                     @endphp
-                                    {{ $wants }}
+                                    {{ number_format($wants, 2) }}
                                 </td>
                                 <td>
                                     @php
                                         $savings = $thisMonthIncome->sum('amount') * 0.2;
                                     @endphp
-                                    {{ $savings }}
+                                    {{ number_format($savings, 2) }}
                                 </td>
                             </tr>
                             <tr>
                                 <th>Total Expense</th>
-                                <td> {{ $thisMonthExpense->sum('totalExpense') }}</td>
-                                <td>{{ $thisMonthneeds }}</td>
-                                <td>{{ $thisMonthwants }}</td>
-                                <td>{{ $thisMonthsavings }}</td>
+                                <td> {{ number_format($thisMonthExpense->sum('totalExpense'), 2) }}</td>
+                                <td>{{ number_format($thisMonthneeds, 2) }}</td>
+                                <td>{{ number_format($thisMonthwants, 2) }}</td>
+                                <td>{{ number_format($thisMonthsavings, 2) }}</td>
                             </tr>
                             <tr class="bg-success">
                                 <th>Net Income</th>
-                                <td> {{ $thisMonthIncome->sum('amount') - $thisMonthExpense->sum('totalExpense') }}
+                                <td> {{ number_format($thisMonthIncome->sum('amount') - $thisMonthExpense->sum('totalExpense'), 2) }}
                                 </td>
-                                <td>{{ $needs - $thisMonthneeds }}</td>
-                                <td>{{ $wants - $thisMonthwants }}</td>
-                                <td>{{ $savings - $thisMonthsavings }}</td>
+                                <td>{{ number_format($needs - $thisMonthneeds, 2) }}</td>
+                                <td>{{ number_format($wants - $thisMonthwants, 2) }}</td>
+                                <td>{{ number_format($savings - $thisMonthsavings, 2) }}</td>
                             </tr>
                         </tbody>
                     </table>
-
-
-
                 </div>
                 <div class="col-md-6">
-                    <h4> Net Income</h4>
+                    <h4>{{ $currentYear }} Year-to-Date</h4>
                     <table class="table table-bordered">
                         <thead>
                             <tr>
@@ -147,62 +237,51 @@
                         </thead>
                         <tbody>
                             <tr>
-                                <td>{{ $thisYearIncome->sum('amount') }}</td>
-                                <td>{{ $thisYearExpense->sum('totalExpenseYear') }}</td>
+                                <td>{{ number_format($thisYearIncome->sum('amount'), 2) }}</td>
+                                <td>{{ number_format($thisYearExpense->sum('totalExpenseYear'), 2) }}</td>
                             </tr>
                             <tr class="bg-success">
                                 <td colspan="2">Net Income:
-                                    {{ $thisYearIncome->sum('amount') - $thisYearExpense->sum('totalExpenseYear') }}
+                                    {{ number_format($thisYearIncome->sum('amount') - $thisYearExpense->sum('totalExpenseYear'), 2) }}
                                 </td>
                             </tr>
                         </tbody>
                     </table>
-
                 </div>
             </div>
             <div class="row justify-content-center mt-5">
 
-
                 <div class="col-md-3">
-                    <h4>Category ways Monthly Income</h4>
+                    <h4>Income by Category (Selected Period)</h4>
                     <table class="table table-bordered">
                         <thead>
                             <tr>
-                                {{-- <th>Date</th>
-                                <th>Name</th> --}}
                                 <th>Category</th>
                                 <th>Amount</th>
                             </tr>
                         </thead>
                         <tbody>
-
                             @foreach ($MonthlyIncomeCategorieswise as $item)
                                 <tr>
-                                    {{-- <td>{{ $item->date }}</td>
-                                    <td>{{ $item->name }}</td> --}}
                                     <td>
                                         @php
                                             $category = App\Models\Category::find($item->category_id);
                                         @endphp
-                                        {{ $category->name }}
+                                        {{ $category->name ?? 'Unknown' }}
                                     </td>
-                                    
-
-                                    {{-- <td class="bg-info">{{ $item->amount }}</td> --}}
                                     <td class="bg-info">
-                                        {{ $item->totalIncome }}
-                                        
+                                        {{ number_format($item->totalIncome, 2) }}
                                     </td>
                                 </tr>
                             @endforeach
                             <tr class="bg-success">
-                                <td colspan="3">Total Income: {{ $MonthlyIncomeCategorieswise->sum('totalIncome') }}</td>
+                                <td colspan="3">Total Income: {{ number_format($MonthlyIncomeCategorieswise->sum('totalIncome'), 2) }}</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
                 <div class="col-md-3">
-                    <h4>Category ways Monthly Expense</h4>
+                    <h4>Expense by Category (Selected Period)</h4>
                     <table class="table table-bordered">
                         <thead>
                             <tr>
@@ -217,22 +296,21 @@
                                         @php
                                             $category = App\Models\Category::find($item->category_id);
                                         @endphp
-                                        {{ $category->name }}
+                                        {{ $category->name ?? 'Unknown' }}
                                     </td>
-                                    <td class="bg-info">{{ $item->totalExpense }}</td>
+                                    <td class="bg-info">{{ number_format($item->totalExpense, 2) }}</td>
                                 </tr>
                             @endforeach
                             <tr class="bg-success">
                                 <td colspan="3">Total Expense:
-                                    {{ $thisMonthExpense->sum('totalExpense') }}</td>
+                                    {{ number_format($thisMonthExpense->sum('totalExpense'), 2) }}</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
 
-
                 <div class="col-md-3">
-                    <h4>{{ date('F', mktime(0, 0, 0, $currentMonth, 1)) }}, {{ $currentYear }} Monthly Income</h4>
+                    <h4>{{ $currentYear }} Income by Category (Year)</h4>
                     <table class="table table-bordered">
                         <thead>
                             <tr>
@@ -241,27 +319,26 @@
                             </tr>
                         </thead>
                         <tbody>
-
                             @foreach ($thisYearIncomecategory as $item)
                                 <tr>
                                     <td>
                                         @php
                                             $category = App\Models\Category::find($item->category_id);
                                         @endphp
-                                        {{ $category->name }}
+                                        {{ $category->name ?? 'Unknown' }}
                                     </td>
-                                    <td class="bg-info">{{ $item->totalIncomeYear }}</td>
+                                    <td class="bg-info">{{ number_format($item->totalIncomeYear, 2) }}</td>
                                 </tr>
                             @endforeach
                             <tr class="bg-success">
-                                <td colspan="3">Total Income: {{ $thisYearIncomecategory->sum('totalIncomeYear') }}
+                                <td colspan="3">Total Income: {{ number_format($thisYearIncomecategory->sum('totalIncomeYear'), 2) }}
                                 </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
                 <div class="col-md-3">
-                    <h4>{{ $currentYear }} Monthly Expense</h4>
+                    <h4>{{ $currentYear }} Expense by Category (Year)</h4>
                     <table class="table table-bordered">
                         <thead>
                             <tr>
@@ -276,40 +353,66 @@
                                         @php
                                             $category = App\Models\Category::find($item->category_id);
                                         @endphp
-                                        {{ $category->name }}
+                                        {{ $category->name ?? 'Unknown' }}
                                     </td>
-                                    <td class="bg-info">{{ $item->totalExpenseYear }}</td>
+                                    <td class="bg-info">{{ number_format($item->totalExpenseYear, 2) }}</td>
                                 </tr>
                             @endforeach
                             <tr class="bg-success">
                                 <td colspan="3">Total Expense:
-                                    {{ $thisYearExpense->sum('totalExpenseYear') }}</td>
+                                    {{ number_format($thisYearExpense->sum('totalExpenseYear'), 2) }}</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
-            
+
         </div>
 
     </div>
-    </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        //download_excel from the printable div
-        function excelDownloadReport() {
-            var printableContent = document.getElementById("printable").innerHTML;
-            var blob = new Blob([printableContent], {
-                type: "application/vnd.ms-excel"
-            });
-            var url = URL.createObjectURL(blob);
-            var a = document.createElement("a");
-            a.href = url;
-            a.download = "monthly_report.xls";
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }
+        new Chart(document.getElementById('dayOfWeekChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: @json($analysis['dayOfWeekLabels']),
+                datasets: [{
+                    label: 'Expense',
+                    data: @json($analysis['dayOfWeekData']),
+                    backgroundColor: '#f5576c',
+                }],
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } },
+            },
+        });
+
+        new Chart(document.getElementById('yoyChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: ['Income', 'Expense'],
+                datasets: [
+                    {
+                        label: '{{ $startDate }} – {{ $endDate }}',
+                        data: [{{ $thisMonthIncome->sum('amount') }}, {{ $thisMonthExpense->sum('totalExpense') }}],
+                        backgroundColor: '#667eea',
+                    },
+                    {
+                        label: 'Same period last year',
+                        data: [{{ $analysis['lastYearPeriodIncome'] }}, {{ $analysis['lastYearPeriodExpense'] }}],
+                        backgroundColor: '#4facfe',
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom' } },
+                scales: { y: { beginAtZero: true } },
+            },
+        });
     </script>
 
 </x-backend.layouts.master>

@@ -77,10 +77,8 @@ class ExpenseCalculationController extends Controller
 
     public function create()
     {
-
-        $expenseCalculations = ExpenseCalculation::all();
-        $categories = Category::all();
-        return view('backend.library.expenseCalculations.create', compact('expenseCalculations', 'categories'));
+        // Create happens via the modal on the index page, not a standalone form.
+        return redirect()->route('expenseCalculations.index');
     }
 
 
@@ -187,6 +185,7 @@ class ExpenseCalculationController extends Controller
             }
             // forget common keys
             Cache::forget('dashboard:monthly_trend:last12');
+            \App\Services\FinancialAnalyticsService::forgetAll();
             foreach (array_keys($years) as $y) {
                 Cache::forget("dashboard:category_breakdown:{$y}:all");
                 Cache::forget("dashboard:top_categories:{$y}");
@@ -200,7 +199,7 @@ class ExpenseCalculationController extends Controller
             // don't block workflow if cache clearing fails
         }
 
-        return redirect()->route('expenseCalculations.index')->withMessages('ExpenseCalculation and related data are added successfully!');
+        return redirect()->route('expenseCalculations.index')->withMessage('ExpenseCalculation and related data are added successfully!');
     }
 
 
@@ -215,9 +214,8 @@ class ExpenseCalculationController extends Controller
 
     public function edit($id)
     {
-        $expenseCalculations = ExpenseCalculation::findOrFail($id);
-        $categories = Category::all();
-        return view('backend.library.expenseCalculations.edit', compact('expenseCalculations', 'categories'));
+        // Edit happens via the per-row modal on the index page, not a standalone form.
+        return redirect()->route('expenseCalculations.index');
     }
 
 
@@ -246,6 +244,7 @@ class ExpenseCalculationController extends Controller
                 $y = date('Y', strtotime($expenseCalculations->date));
                 $m = date('m', strtotime($expenseCalculations->date));
                 Cache::forget('dashboard:monthly_trend:last12');
+            \App\Services\FinancialAnalyticsService::forgetAll();
                 Cache::forget("dashboard:summary:{$y}:{$m}");
                 Cache::forget("dashboard:category_breakdown:{$y}:all");
                 Cache::forget("dashboard:category_breakdown:{$y}:{$m}");
@@ -254,7 +253,7 @@ class ExpenseCalculationController extends Controller
         }
 
         // Redirect
-        return redirect()->route('expenseCalculations.index')->withMessages('ExpenseCalculation and related data are updated successfully!');
+        return redirect()->route('expenseCalculations.index')->withMessage('ExpenseCalculation and related data are updated successfully!');
     }
 
 
@@ -269,6 +268,7 @@ class ExpenseCalculationController extends Controller
                 $y = date('Y', strtotime($date));
                 $m = date('m', strtotime($date));
                 Cache::forget('dashboard:monthly_trend:last12');
+            \App\Services\FinancialAnalyticsService::forgetAll();
                 Cache::forget("dashboard:summary:{$y}:{$m}");
                 Cache::forget("dashboard:category_breakdown:{$y}:all");
                 Cache::forget("dashboard:category_breakdown:{$y}:{$m}");

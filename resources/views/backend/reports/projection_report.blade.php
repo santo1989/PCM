@@ -1,274 +1,52 @@
-{{-- <x-backend.layouts.master>
-    <x-slot name="title">
-        Projection Report
+<x-backend.layouts.master>
+    <x-slot name="pageTitle">
+        Budget Projection Report
     </x-slot>
 
-    <h3 class="text-center">Projected Monthly Budget</h3>
-    <form action="{{ route('calculate_and_save_budget') }}" method="post" id="projectionForm">
-        @csrf
-        <div class="row">
-            <div class="mb-3 row">
-                <label for="reduction_percent" class="col-sm-2 col-form-label">Reduction target (%)</label>
-                <div class="col-sm-4">
-                    <div class="input-group">
-                        <input type="number" step="0.01" min="0" max="0.9" class="form-control"
-                            name="reduction_percent" id="reduction_percent" value="0.10">
-                        <span class="input-group-text">(0.10 = 10%)</span>
-                    </div>
-                </div>
-                <div class="col-sm-6 d-flex gap-2">
-                    <button type="button" id="previewBtn" class="btn btn-secondary">Preview</button>
-                    <button type="submit" class="btn btn-primary">Calculate &amp; Save Next Month's Budget</button>
-                </div>
+    <div class="container">
+
+        @include('backend.reports.partials.report_nav')
+
+        @include('backend.reports.partials.export_toolbar', [
+            'excelRoute' => 'Budge_Projection.export_excel',
+        ])
+
+        <!-- Forecasted budget (linear regression on the last 6 completed months) -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-graph-up"></i> Forecasted Total Expense (Linear Regression)</span>
+                <button type="button" id="compareActualBtn" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-clipboard-data"></i> Compare with Actual
+                </button>
             </div>
-            <input type="hidden" name="date" value="{{ date('Y-m-d') }}">
-            <table class="table table-bordered">
-                <thead>
-                    <tr>
-                        <th>Category</th>
-                        <th>Avg Expense (This Year)</th>
-                        <th>Last Month Expensed</th>
-                        <th>This Month Projected Expense</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($categories as $category)
-                        @php
-                            $thisYearExpenseCategory = collect($thisYearExpense)->firstWhere(
-                                'category_id',
-                                $category->id,
-                            );
-                            $lastMonthExpenseCategory = $lastMonthExpense->firstWhere('category_id', $category->id);
-
-                            // Get the projected expense for this category from the database
-                            $projectedAmount = $thisMonthProjectedExpenses->get($category->id)->amount ?? 0;
-                            $avg = floatval($thisYearExpenseCategory['averageExpense'] ?? 0);
-                            $last = floatval($lastMonthExpenseCategory->totalExpense ?? 0);
-                        @endphp
-
-                        @if (
-                            (!empty($thisYearExpenseCategory) && $thisYearExpenseCategory['averageExpense'] > 0) ||
-                                (!empty($lastMonthExpenseCategory) && $lastMonthExpenseCategory->totalExpense > 0))
-                            <tr>
-                                <td>{{ $category->name }}<input type="hidden" name="category_id[]"
-                                        value="{{ $category->id }}"></td>
-                                <td>{{ number_format($avg, 2) }}</td>
-                                <td>{{ number_format($last, 2) }}</td>
-                                <td>
-                                    <input type="text" name="projectedExpense[{{ $category->id }}]"
-                                        id="projectedExpense{{ $category->id }}"
-                                        class="form-control projectedExpenseInput"
-                                        value="{{ number_format($projectedAmount, 2) }}" readonly
-                                        data-avg="{{ $avg }}" data-last="{{ $last }}"
-                                        data-cat="{{ $category->id }}" data-catname="{{ $category->name }}">
-                                </td>
-                            </tr>
-                        @endif
-                    @endforeach
-                    <tr>
-                        <td class="text-right"><strong>Monthly Income:</strong> <strong
-                                id="monthlyIncomeOutput">{{ number_format($totalMonthlyIncome, 2) }}</strong></td>
-                        <td class="text-right"><strong>Budget Limit (90%):</strong> <strong
-                                id="monthlyLimitOutput">{{ number_format($MonthlyactualLimitExpense, 2) }}</strong>
-                        </td>
-                        <td class="text-right"><strong>Total Last Month:</strong> <strong
-                                id="lastMonthExpenseOutput">{{ number_format($totallastMonthExpense, 2) }}</strong>
-                        </td>
-                        <td class="text-right"><strong>Total Projected:</strong> <strong
-                                id="totalProjectedOutput">0.00</strong></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </form>
-
-    <!-- Preview & edit modal -->
-    <div class="modal fade" id="previewModal" tabindex="-1" role="dialog" aria-labelledby="previewModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="previewModalLabel">Preview & Edit Projected Expenses</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+            <div class="card-body">
+                <canvas id="forecastChart" height="90"></canvas>
+                <div class="small text-muted mt-2">
+                    Shaded band is a naive +/- one residual-standard-error range around the trend line, not a
+                    rigorous statistical confidence interval — treat it as "plausible range," not a guarantee.
                 </div>
-                <div class="modal-body">
-                    <p class="small text-muted">You can tweak per-category projected amounts here before saving.</p>
+
+                <div id="compareActualPanel" class="mt-4" style="display: none;">
+                    <h6>Actual vs. Projected — most recent month with a saved projection</h6>
                     <div class="table-responsive">
-                        <table class="table table-bordered" id="previewTable">
+                        <table class="table table-sm table-bordered">
                             <thead>
                                 <tr>
                                     <th>Category</th>
-                                    <th>Base (last / avg)</th>
                                     <th>Projected</th>
+                                    <th>Actual</th>
+                                    <th>Utilization</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <!-- populated dynamically -->
+                            <tbody id="compareActualBody">
+                                <tr><td colspan="4" class="text-center text-muted">Loading…</td></tr>
                             </tbody>
-                            <tfoot>
-                                <tr>
-                                    <td colspan="2" class="text-right"><strong>Total</strong></td>
-                                    <td><strong id="modalTotal">0.00</strong></td>
-                                </tr>
-                            </tfoot>
                         </table>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    <button type="button" id="applyModalBtn" class="btn btn-primary">Apply & Close</button>
                 </div>
             </div>
         </div>
     </div>
-
-    <script>
-        function calculateTotal() {
-            var total = 0;
-            var projectedExpenseInputs = document.getElementsByClassName('projectedExpenseInput');
-            for (var i = 0; i < projectedExpenseInputs.length; i++) {
-                var value = parseFloat(projectedExpenseInputs[i].value);
-                total += isNaN(value) ? 0 : value;
-            }
-            document.getElementById('totalProjectedOutput').innerText = total.toFixed(2);
-        }
-
-        function previewProjection() {
-            var reduction = parseFloat(document.getElementById('reduction_percent').value) || 0.10;
-            var monthlyLimit = parseFloat(document.getElementById('monthlyLimitOutput').innerText.replace(/,/g, '')) || 0;
-
-            var inputs = document.getElementsByClassName('projectedExpenseInput');
-            var bases = [];
-            var baseSum = 0;
-            for (var i = 0; i < inputs.length; i++) {
-                var avg = parseFloat(inputs[i].dataset.avg) || 0;
-                var last = parseFloat(inputs[i].dataset.last) || 0;
-                var base = (last > 0) ? last : avg;
-                bases.push({
-                    el: inputs[i],
-                    base: base
-                });
-                baseSum += base * (1 - reduction);
-            }
-
-            if (baseSum <= 0) {
-                // fallback proportional allocation using avg values
-                var avgSum = 0;
-                for (var i = 0; i < inputs.length; i++) {
-                    avgSum += parseFloat(inputs[i].dataset.avg) || 0;
-                }
-                if (avgSum <= 0) {
-                    // nothing to project
-                    for (var i = 0; i < inputs.length; i++) {
-                        inputs[i].value = (0).toFixed(2);
-                    }
-                } else {
-                    for (var i = 0; i < inputs.length; i++) {
-                        var share = (parseFloat(inputs[i].dataset.avg) || 0) / avgSum;
-                        inputs[i].value = (monthlyLimit * share).toFixed(2);
-                    }
-                }
-            } else {
-                var scale = monthlyLimit / baseSum;
-                for (var i = 0; i < bases.length; i++) {
-                    var projected = Math.max(0, bases[i].base * (1 - reduction)) * scale;
-                    bases[i].el.value = projected.toFixed(2);
-                }
-            }
-
-            // Populate modal table for editing
-            var tbody = document.querySelector('#previewTable tbody');
-            tbody.innerHTML = '';
-            var modalTotal = 0;
-            for (var i = 0; i < bases.length; i++) {
-                var inp = bases[i].el;
-                var cat = inp.dataset.cat;
-                var catname = inp.dataset.catname || ('Category ' + cat);
-                var baseVal = bases[i].base;
-                var projVal = parseFloat(inp.value) || 0;
-
-                var tr = document.createElement('tr');
-                var tdName = document.createElement('td');
-                tdName.textContent = catname;
-                var tdBase = document.createElement('td');
-                tdBase.textContent = baseVal.toFixed(2);
-                var tdProj = document.createElement('td');
-                var modalInput = document.createElement('input');
-                modalInput.type = 'number';
-                modalInput.step = '0.01';
-                modalInput.min = '0';
-                modalInput.className = 'form-control modalProjectedInput';
-                modalInput.value = projVal.toFixed(2);
-                modalInput.dataset.cat = cat;
-                tdProj.appendChild(modalInput);
-
-                tr.appendChild(tdName);
-                tr.appendChild(tdBase);
-                tr.appendChild(tdProj);
-                tbody.appendChild(tr);
-
-                modalTotal += projVal;
-            }
-            document.getElementById('modalTotal').innerText = modalTotal.toFixed(2);
-
-            // show modal (support Bootstrap 4 & 5)
-            try {
-                if (window.jQuery && typeof jQuery('#previewModal').modal === 'function') {
-                    jQuery('#previewModal').modal('show');
-                } else if (typeof bootstrap !== 'undefined' && typeof bootstrap.Modal === 'function') {
-                    var m = new bootstrap.Modal(document.getElementById('previewModal'));
-                    m.show();
-                }
-            } catch (e) {
-                console.warn('Could not show modal', e);
-            }
-
-            calculateTotal();
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            calculateTotal();
-            document.getElementById('previewBtn').addEventListener('click', function(e) {
-                e.preventDefault();
-                previewProjection();
-            });
-
-            // Apply modal edits back to main inputs
-            document.getElementById('applyModalBtn').addEventListener('click', function() {
-                var modalInputs = document.getElementsByClassName('modalProjectedInput');
-                var modalSum = 0;
-                for (var i = 0; i < modalInputs.length; i++) {
-                    var m = modalInputs[i];
-                    var cat = m.dataset.cat;
-                    var val = parseFloat(m.value) || 0;
-                    modalSum += val;
-                    var mainInp = document.querySelector('input.projectedExpenseInput[data-cat="' + cat +
-                        '"]');
-                    if (mainInp) mainInp.value = val.toFixed(2);
-                }
-                document.getElementById('modalTotal').innerText = modalSum.toFixed(2);
-                calculateTotal();
-                // hide modal
-                try {
-                    if (window.jQuery && typeof jQuery('#previewModal').modal === 'function') {
-                        jQuery('#previewModal').modal('hide');
-                    } else if (typeof bootstrap !== 'undefined' && typeof bootstrap.Modal === 'function') {
-                        var m = bootstrap.Modal.getInstance(document.getElementById('previewModal'));
-                        if (m) m.hide();
-                    }
-                } catch (e) {
-                    console.warn('Could not hide modal', e);
-                }
-            });
-        });
-    </script>
-</x-backend.layouts.master> --}}
-<x-backend.layouts.master>
-    <x-slot name="title">
-        Projection Report
-    </x-slot>
 
     <h3 class="text-center">Projected Monthly Budget</h3>
     <form action="{{ route('calculate_and_save_budget') }}" method="post" id="projectionForm">
@@ -356,7 +134,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="previewModalLabel">Preview & Edit Projected Expenses</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
@@ -384,7 +162,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button type="button" id="applyModalBtn" class="btn btn-primary">Apply & Close</button>
                 </div>
             </div>
@@ -896,5 +674,92 @@ Total: {{ number_format($categoryAverages[$month]['total_amount'], 0) }}">
                 }
             });
         }
+
+        async function initializeForecastChart() {
+            const res = await fetch('{{ route('Budge_Projection.data.forecast') }}');
+            const data = await res.json();
+
+            const historyLabels = data.history.map(h => h.label);
+            const historyValues = data.history.map(h => h.total);
+            const labels = historyLabels.concat(data.forecast_labels);
+
+            // Align forecast/band series so they only have values from where history ends.
+            const pad = (arr) => Array(historyValues.length - 1).fill(null).concat([historyValues[historyValues.length - 1]], arr);
+
+            new Chart(document.getElementById('forecastChart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Actual',
+                            data: historyValues.concat(Array(data.forecast_labels.length).fill(null)),
+                            borderColor: '#667eea',
+                            backgroundColor: '#667eea',
+                            tension: 0.3,
+                        },
+                        {
+                            label: 'Forecast',
+                            data: pad(data.forecast.forecast),
+                            borderColor: '#f5576c',
+                            borderDash: [6, 4],
+                            backgroundColor: 'transparent',
+                            tension: 0.3,
+                        },
+                        {
+                            label: 'Upper bound',
+                            data: pad(data.forecast.upper),
+                            borderColor: 'rgba(245, 87, 108, 0.25)',
+                            backgroundColor: 'rgba(245, 87, 108, 0.1)',
+                            fill: '+1',
+                            pointRadius: 0,
+                        },
+                        {
+                            label: 'Lower bound',
+                            data: pad(data.forecast.lower),
+                            borderColor: 'rgba(245, 87, 108, 0.25)',
+                            backgroundColor: 'rgba(245, 87, 108, 0.1)',
+                            fill: false,
+                            pointRadius: 0,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'bottom' } },
+                    scales: { y: { beginAtZero: true } },
+                },
+            });
+        }
+
+        document.getElementById('compareActualBtn').addEventListener('click', async function () {
+            const panel = document.getElementById('compareActualPanel');
+            const body = document.getElementById('compareActualBody');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            if (panel.style.display === 'none') return;
+
+            const res = await fetch('{{ route('Budge_Projection.data.compare_actual') }}');
+            const data = await res.json();
+
+            if (!data.rows.length) {
+                body.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No saved budget projection found for the current month yet — use "Calculate &amp; Save Next Month\'s Budget" above first.</td></tr>';
+                return;
+            }
+
+            body.innerHTML = data.rows.map(r => `
+                <tr>
+                    <td>${r.category_name}</td>
+                    <td>${r.projected.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                    <td>${r.actual.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                    <td>
+                        <span class="badge ${r.utilization_percent > 100 ? 'bg-danger' : 'bg-success'}">
+                            ${r.utilization_percent.toFixed(0)}%
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        });
+
+        initializeForecastChart();
     </script>
 </x-backend.layouts.master>

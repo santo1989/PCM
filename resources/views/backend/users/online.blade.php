@@ -1,79 +1,54 @@
 <x-backend.layouts.master>
-    <meta http-equiv="refresh" content="05; url={{ route('online_user') }}">
-    {{-- // refresh page every 10 seconds --}}
+    <x-slot name="pageTitle">
+        Online Users
+    </x-slot>
 
-    <div class="container">
-        <h1>Online Users - List</h1>
+    <meta http-equiv="refresh" content="15; url={{ route('online_user') }}">
 
-        <table class="table table-bordered data-table" id="users_table">
-            <thead>
-                <tr>
-                    <th>No</th>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Last Seen</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-
-                @foreach ($users as $user)
-                    {{-- @dd(Cache::has('user-is-online-' . $user->id)) --}}
-                    <tr>
-                        <td>{{ $user->id }}</td>
-                        <td>{{ $user->name }}</td>
-                        <td>{{ $user->email }}</td>
-                        <td>
-                            {{ Carbon\Carbon::parse($user->last_seen)->diffForHumans() }}
-                        </td>
-                        <td>
-                            @if (Cache::has('user-is-online-' . $user->id))
-                                <span class="text-success">Online</span>
-                            @else
-                                <span class="text-secondary">Offline</span>
-                            @endif
-                        </td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
+    <div class="container-fluid">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Online Users</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Last Seen</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($users as $user)
+                                <tr>
+                                    <td>{{ $user->id }}</td>
+                                    <td>{{ $user->name }}</td>
+                                    <td>{{ $user->email }}</td>
+                                    <td>{{ \Carbon\Carbon::parse($user->last_seen)->diffForHumans() }}</td>
+                                    <td>
+                                        @if (\Illuminate\Support\Facades\Cache::has('user-is-online-' . $user->id))
+                                            <span class="badge bg-success">Online</span>
+                                        @else
+                                            <span class="badge bg-secondary">Offline</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">No users found.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+                <div class="d-flex justify-content-center mt-3">
+                    {{ $users->links() }}
+                </div>
+            </div>
+        </div>
     </div>
-    {{-- @push('js')
-<script>
-$(document).ready(function() {
-        $('.users_table').DataTable({
-            processing: true,
-            serverSide: true,
-            ajax: "{{ route('online_user') }}",
-            columns: [{
-                    data: 'DT_RowIndex',
-                    name: 'DT_RowIndex'
-                },
-                {
-                    data: 'name',
-                    name: 'name'
-                },
-                {
-                    data: 'email',
-                    name: 'email'
-                },
-                {
-                    data: 'last_seen',
-                    name: 'last_seen'
-                },
-                {
-                    data: 'status',
-                    name: 'status'
-                },
-            ]
-        });
-
-        setInterval(function() {
-            $('.users_table').DataTable().ajax.reload();
-        }, 5000);
-
-
-    });
-</script> 
-@endpush --}}
 </x-backend.layouts.master>

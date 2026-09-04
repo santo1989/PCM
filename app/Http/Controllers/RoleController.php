@@ -32,7 +32,7 @@ class RoleController extends Controller
             'name' => $request->name,
         ]);
 
-        return redirect()->route('roles.index');
+        return redirect()->route('roles.index')->withMessage('Role created successfully!');
     }
 
     public function edit(Role $role)
@@ -44,7 +44,6 @@ class RoleController extends Controller
 
     public function update(Request $request, Role $role)
     {
-        // dd($request->all());
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
         ]);
@@ -53,13 +52,13 @@ class RoleController extends Controller
             'name' => $request->name,
         ]);
 
-        return redirect()->route('roles.index');
+        return redirect()->route('roles.index')->withMessage('Role updated successfully!');
     }
 
     public function destroy(Role $role)
     {
         $role->delete();
 
-        return redirect()->route('roles.index');
+        return redirect()->route('roles.index')->withMessage('Role deleted successfully!');
     }
 }

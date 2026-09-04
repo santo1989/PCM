@@ -34,10 +34,8 @@ class CategoryController extends Controller
         $categories = new Category;
         $categories->name = $request->name;
         $categories->types = $request->types;
-        if ($request->types == 'expense') // if types is 'expense
-        {
-            $categories->rules = $request->rules;
-        } elseif ($request->types == 'Loan' || $request->types == 'Return') { // if types is 'income
+        $types = strtoupper((string) $request->types);
+        if (in_array($types, ['EXPENSE', 'LOAN', 'RETURN'], true)) {
             $categories->rules = $request->rules;
         } else {
             $categories->rules = '0';
@@ -77,10 +75,8 @@ class CategoryController extends Controller
         $categories = Category::findOrFail($id);
         $categories->name = $request->name;
         $categories->types = $request->types;
-        if ($request->types == 'expense') // if types is 'expense
-        {
-            $categories->rules = $request->rules;
-        } elseif ($request->types == 'Loan' || $request->types == 'Return') { // if types is 'income
+        $types = strtoupper((string) $request->types);
+        if (in_array($types, ['EXPENSE', 'LOAN', 'RETURN'], true)) {
             $categories->rules = $request->rules;
         } else {
             $categories->rules = '0';

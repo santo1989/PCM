@@ -1,5 +1,5 @@
 <div id="layoutSidenav_nav">
-    <nav class="sb-sidenav accordion sb-sidenav-light" id="sidenavAccordion" style="color:#0078D7;">
+    <nav class="sb-sidenav accordion sb-sidenav-dark" id="sidenavAccordion">
         <div class="sb-sidenav-menu">
             <div class="nav">
                 <!-- Admin Only Sections -->
@@ -147,7 +147,7 @@
         </div>
 
         <!-- Footer -->
-        <div class="sb-sidenav-footer" style="color:#0078D7;">
+        <div class="sb-sidenav-footer">
             <div class="small">Logged in as:</div>
             <span class="fw-semibold">{{ auth()->user()->role->name ?? 'User' }}</span>
         </div>
@@ -300,10 +300,7 @@
     </div>
 @endforeach
 
-<!-- Include Font Awesome for icons -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-<!-- Optional: Add custom CSS for better sidebar styling -->
+<!-- Sidebar-specific micro-interactions (colors/palette live in app-theme.css) -->
 <style>
     .sb-sidenav {
         transition: all 0.3s ease;
@@ -314,7 +311,6 @@
     }
 
     .sb-sidenav .nav-link:hover {
-        background-color: rgba(0, 120, 215, 0.1);
         padding-left: 1.5rem !important;
     }
 
@@ -335,7 +331,6 @@
     }
 
     .sb-sidenav-footer {
-        border-top: 1px solid rgba(0, 0, 0, 0.1);
         padding-top: 1rem;
         padding-bottom: 1rem;
     }

@@ -10,3 +10,6 @@ yarn-error.log
 /.idea
 /.vscode
 .qodo
+
+# Local DB dumps - contain real personal financial data, never commit
+*.sql

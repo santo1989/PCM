@@ -11,65 +11,50 @@
          $time_of_day = 'Evening';
      }
      $wishMessage = "Good $time_of_day";
-     
+
  @endphp
- <nav class="sb-topnav navbar navbar-expand navbar-light bg-light text-white"
-     style="background-image: linear-gradient(#0078D7,#0078D7,#0078D7); text-color:white;">
-     <!-- Navbar Brand-->
-    
-     <h3 class="text-center m-3">Expence</h3>
-   
-     <a class="navbar-brand ps-3 pl-3" href="{{ route('home') }}"></a>
-     <!-- Sidebar Toggle-->
-     <button class="mr-3 btn btn-link btn-sm order-1 order-lg-0 me-4 me-lg-0" id="sidebarToggle" href="#!"><span class="bg-light"><i
-             class="fas fa-bars"></i></span></button>
-     <!-- Navbar Search-->
-     <form class="d-none d-md-inline-block form-inline ms-auto me-0 me-md-3 my-2 my-md-0">
-         <div class="input-group">
+<nav class="sb-topnav navbar navbar-expand navbar-dark">
+    <!-- Sidebar Toggle-->
+    <button class="btn btn-link btn-sm order-1 order-lg-0 me-3" id="sidebarToggle" href="#!">
+        <span><i class="fas fa-bars"></i></span>
+    </button>
 
-             <marquee behavior="0.05" direction="">{{ $wishMessage }} </marquee>
-         </div>
-     </form>
-     {{-- notification bell icon with dropdown board for notifications --}}
-     <ul class="navbar-nav ms-auto ms-md-0 me-3 me-lg-4">
-         <li class="nav-item dropdown">
-             <a class="nav-link dropdown-toggle" id="navbarDropdown" href="#" role="button"
-                 data-bs-toggle="dropdown" aria-expanded="false">
-                 <i class="fa fa-bell"></i>
-                 <span class="badge rounded-pill">
-                     
-                 </span>
-             </a>
-             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+    <!-- Navbar Brand-->
+    <a class="navbar-brand ps-1" href="{{ route('home') }}">
+        <i class="bi bi-wallet2 me-2"></i>Personal Cost Management
+    </a>
 
-                
-             </ul>
-         </li>
-         <!-- Navbar-->
+    <span class="d-none d-md-inline-block ms-3 small text-white-50">{{ $wishMessage }}, {{ auth()->user()->name ?? '' }}</span>
 
-         <ul class="navbar-nav ms-auto ms-md-0 me-3 me-lg-4 ">
-             <li class="nav-item dropdown">
-                 <a class="nav-link dropdown-toggle" id="navbarDropdown" href="#" role="button"
-                     data-bs-toggle="dropdown" aria-expanded="false"><img
-                         src="{{ asset('images/users/' . auth()->user()->picture) }}" class="rounded-circle"
-                         width="50px" height="50px" alt="{{ auth()->user()->name }}"> <span class="text-light">
-                         {{ auth()->user()->name ?? '' }} </span>
-                 </a>
-                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+    {{-- notification bell icon with dropdown board for notifications --}}
+    <ul class="navbar-nav ms-auto ms-md-0 me-3 me-lg-4">
+        <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" id="notificationsDropdown" href="#" role="button"
+                data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fa fa-bell"></i>
+                <span class="badge rounded-pill"></span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationsDropdown">
+            </ul>
+        </li>
 
-                     <li>
-                         <form method="POST" action="{{ route('logout') }}">
-                             @csrf
-                             <a class="dropdown-item"
-                                 onclick="event.preventDefault();
-                                        this.closest('form').submit();">Logout</a>
-
-                         </form>
-                     </li>
-                 </ul>
-             </li>
-         </ul>
-         {{-- {{ Auth::user()->id }} --}}
- </nav>
-
- <script></script>
+        <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle d-flex align-items-center" id="userMenuDropdown" href="#" role="button"
+                data-bs-toggle="dropdown" aria-expanded="false">
+                <img src="{{ asset('images/users/' . auth()->user()->picture) }}" class="rounded-circle me-2"
+                    width="36" height="36" alt="{{ auth()->user()->name }}">
+                <span class="text-light">{{ auth()->user()->name ?? '' }}</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
+                <li>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <a class="dropdown-item" href="#" onclick="event.preventDefault(); this.closest('form').submit();">
+                            <i class="bi bi-box-arrow-right me-1"></i> Logout
+                        </a>
+                    </form>
+                </li>
+            </ul>
+        </li>
+    </ul>
+</nav>

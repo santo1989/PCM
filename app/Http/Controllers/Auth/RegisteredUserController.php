@@ -25,52 +25,37 @@ class RegisteredUserController extends Controller
 
     public function store(Request $request)
     {
-        // dd($request);
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'emp_id' => ['required', 'string', 'max:255', 'unique:users'],
             'mobile' => ['required', 'string', 'max:255', 'unique:users'],
-            'dob' => ['required'],
-            'joining_date' => ['required'],
-            'division_id' => ['required'],
-            'company_id' => ['required', 'string', 'max:255'],
-            'department_id' => ['required', 'string', 'max:255'],
-            'designation_id' => ['required', 'string', 'max:255'],
-            'picture' => ['required', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:2048'],
-
+            'dob' => ['required', 'date'],
+            'picture' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:2048'],
         ]);
-        // dd($request);
+
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'emp_id' => $request->emp_id,
             'password' => Hash::make($request->password),
             'mobile' => $request->mobile,
             'dob' => $request->dob,
-            'division_id' => $request->division_id,
-            'company_id' => $request->company_id,
-            'department_id' => $request->department_id,
-            'designation_id' => $request->designation_id,
             'role_id' => 2,
             'email_verified_at' => now(),
             'remember_token' => Str::random(10),
-            'joining_date' => $request->joining_date,
         ]);
 
-        // image upload code
         if ($request->hasFile('picture')) {
             $image = $request->file('picture');
-            $name = $user->emp_id . '.' . $image->getClientOriginalExtension();
+            $name = $user->id . '.' . $image->getClientOriginalExtension();
             $destinationPath = public_path('/images/users');
             $image->move($destinationPath, $name);
             $user->picture = $name;
-            $user->update();
-        }else{
+        } else {
             $user->picture = 'avatar.png';
-            $user->update();
         }
+        $user->save();
+
         event(new Registered($user));
 
         Auth::login($user);
