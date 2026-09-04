@@ -22,29 +22,36 @@ class ExpenseCalculationController extends Controller
         // Build base query and apply filters in a single place to avoid repeated queries and session misuse
         $query = ExpenseCalculation::with('category')->orderBy('date', 'desc');
 
-        $search_category_id = request('category_id');
-        $search_types = request('types');
+        $search_category_id = array_values(array_filter((array) request('category_id', [])));
+        $search_types = array_values(array_filter(array_map('strtoupper', (array) request('types', []))));
         $search_entry_date_start = request('entry_date_start');
         $search_entry_date_end = request('entry_date_end');
 
-        if ($search_category_id) {
-            $query->where('category_id', $search_category_id);
+        if (!empty($search_category_id)) {
+            $query->whereIn('category_id', $search_category_id);
         }
 
-        if ($search_types) {
-            $query->where('types', strtoupper($search_types));
+        if (!empty($search_types)) {
+            $query->whereIn('types', $search_types);
         }
 
         if ($search_entry_date_start && $search_entry_date_end) {
             $query->whereBetween('date', [$search_entry_date_start, $search_entry_date_end]);
         }
 
-        // If export requested, run query once and stream the export view
+        // If export requested, run query once and stream the export view. If no date
+        // filter was applied, default the export to the current calendar month rather
+        // than dumping the entire all-time history (the on-screen table still shows
+        // everything by default — this default only applies to the export).
         $format = strtolower(request('export_format', ''));
         if ($format === 'xlsx') {
+            if (!$search_entry_date_start && !$search_entry_date_end) {
+                $query->whereBetween('date', [now()->startOfMonth()->toDateString(), now()->toDateString()]);
+            }
+
             $search_cashes = $query->get();
             if ($search_cashes->isEmpty()) {
-                return redirect()->route('expenseCalculations.index')->withErrors('First search the data then export');
+                return redirect()->route('expenseCalculations.index')->withErrors('No transactions found for the selected filters to export.');
             }
 
             $viewContent = View::make('backend.library.expenseCalculations.export', compact('search_cashes'))->render();
@@ -69,7 +76,10 @@ class ExpenseCalculationController extends Controller
         // No session-based search_cashes by default (we only use it for export above)
         $search_cashes = null;
 
-        return view('backend.library.expenseCalculations.index', compact('expenseCalculations', 'search_cashes', 'categories', 'search_category_id', 'search_types', 'search_entry_date_start', 'search_entry_date_end'));
+        // Bounds for the date filter inputs: earliest transaction on record through today.
+        $minDataDate = ExpenseCalculation::min('date');
+
+        return view('backend.library.expenseCalculations.index', compact('expenseCalculations', 'search_cashes', 'categories', 'search_category_id', 'search_types', 'search_entry_date_start', 'search_entry_date_end', 'minDataDate'));
     }
 
 
@@ -186,6 +196,7 @@ class ExpenseCalculationController extends Controller
             // forget common keys
             Cache::forget('dashboard:monthly_trend:last12');
             \App\Services\FinancialAnalyticsService::forgetAll();
+            \App\Services\FinancialAnalysisService::forgetAll();
             foreach (array_keys($years) as $y) {
                 Cache::forget("dashboard:category_breakdown:{$y}:all");
                 Cache::forget("dashboard:top_categories:{$y}");
@@ -245,6 +256,7 @@ class ExpenseCalculationController extends Controller
                 $m = date('m', strtotime($expenseCalculations->date));
                 Cache::forget('dashboard:monthly_trend:last12');
             \App\Services\FinancialAnalyticsService::forgetAll();
+            \App\Services\FinancialAnalysisService::forgetAll();
                 Cache::forget("dashboard:summary:{$y}:{$m}");
                 Cache::forget("dashboard:category_breakdown:{$y}:all");
                 Cache::forget("dashboard:category_breakdown:{$y}:{$m}");
@@ -269,6 +281,7 @@ class ExpenseCalculationController extends Controller
                 $m = date('m', strtotime($date));
                 Cache::forget('dashboard:monthly_trend:last12');
             \App\Services\FinancialAnalyticsService::forgetAll();
+            \App\Services\FinancialAnalysisService::forgetAll();
                 Cache::forget("dashboard:summary:{$y}:{$m}");
                 Cache::forget("dashboard:category_breakdown:{$y}:all");
                 Cache::forget("dashboard:category_breakdown:{$y}:{$m}");

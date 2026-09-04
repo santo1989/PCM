@@ -8,27 +8,33 @@
 
         <h2 class="text-center mb-4">Monthly Financial Analysis</h2>
 
-        <!-- Date Filter Form -->
-        <div class="row mb-4 no-print">
-            <form method="GET" class="col-md-12">
-                <div class="form-row">
+        <div class="card mb-4 no-print">
+            <div class="card-body">
+                <form method="GET" class="row g-2 align-items-end">
                     <div class="col-md-3">
-                        <input type="date" name="start_date" class="form-control" value="{{ $startDate }}">
+                        <label class="form-label small mb-1">Start Date</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ $startDate }}"
+                            min="{{ $minDate }}" max="{{ now()->toDateString() }}">
                     </div>
                     <div class="col-md-3">
-                        <input type="date" name="end_date" class="form-control" value="{{ $endDate }}">
+                        <label class="form-label small mb-1">End Date</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ $endDate }}"
+                            min="{{ $minDate }}" max="{{ now()->toDateString() }}">
                     </div>
-                    <div class="col-md-3">
-                        <button type="submit" class="btn btn-primary">Filter</button>
+                    <div class="col-md-6 d-flex flex-wrap gap-2 justify-content-md-end">
+                        <button type="submit" class="btn btn-outline-secondary">
+                            <i class="bi bi-filter"></i> Filter
+                        </button>
+                        <a href="{{ route('Monthly_invest.export_excel', ['start_date' => $startDate, 'end_date' => $endDate]) }}" class="btn btn-outline-success">
+                            <i class="bi bi-file-earmark-excel"></i> Download Excel
+                        </a>
+                        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+                            <i class="bi bi-printer"></i> Print / Save as PDF
+                        </button>
                     </div>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
-
-        @include('backend.reports.partials.export_toolbar', [
-            'excelRoute' => 'Monthly_invest.export_excel',
-            'excelParams' => ['start_date' => $startDate, 'end_date' => $endDate],
-        ])
 
         <!-- Detailed Analysis Section -->
         <div class="row mb-4">
@@ -296,7 +302,7 @@
         </div>
 
         <!-- Chart.js Script -->
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
         @if (!empty($analysis['assetAllocation']))
             <script>
                 new Chart(document.getElementById('assetAllocationChart').getContext('2d'), {
@@ -363,6 +369,50 @@
                 });
             </script>
         @endif
+
+        <div class="card mt-4 border-success">
+            <div class="card-header bg-success text-white">
+                <i class="bi bi-graph-up-arrow"></i> AI Investment Advisor
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Your Current Allocation</h6>
+                        <ul>
+                            @forelse ($analysis['assetAllocation'] as $rule => $value)
+                                <li>{{ $rule }}: {{ number_format($value, 2) }}</li>
+                            @empty
+                                <li class="text-muted">No investment-like balances recorded yet.</li>
+                            @endforelse
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>AI Recommendations</h6>
+                        <ul>
+                            @if (($analysis['assetAllocation']['INVESTMENT'] ?? 0) < ($analysis['assetAllocation']['FD'] ?? 0) * 0.5)
+                                <li>Consider shifting some FD to higher-growth investments (e.g., equity funds) to boost long-term returns.</li>
+                            @endif
+                            @if (($analysis['assetAllocation']['DPS'] ?? 0) > ($analysis['assetAllocation']['ISLAMIC_DPS'] ?? 0) * 1.5)
+                                <li>Your DPS allocation is significantly higher than Islamic DPS — you may want to balance for risk diversification.</li>
+                            @endif
+                            @if ($analysis['actualSavingsRatePercent'] > 20)
+                                <li>Great savings rate! Consider increasing your investment contribution to accelerate wealth building.</li>
+                            @endif
+                            @if (empty($analysis['assetAllocation']))
+                                <li class="text-muted">Once you have investment-like balances (DPS, Islamic DPS, FD, Investment), allocation advice will appear here.</li>
+                            @endif
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @include('backend.reports.partials._ai_insights_panel', [
+            'aiInsights' => $aiInsights,
+            'title' => 'AI Insights for This Period',
+            'icon' => 'bi-graph-up-arrow',
+            'headerClass' => 'bg-success text-white',
+        ])
     </div>
 
 

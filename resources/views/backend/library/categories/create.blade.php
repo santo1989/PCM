@@ -24,10 +24,10 @@
 
                 <x-backend.form.input name="name" type="text" label="Category Name" required />
 
-                <x-backend.form.select name="types" label="Category Types"
+                <x-backend.form.select name="types" label="Category Types" class="select2"
                     :options="config('finance.category_types')" />
 
-                <x-backend.form.select name="rules" label="50/30/20 rules"
+                <x-backend.form.select name="rules" label="50/30/20 rules" class="select2"
                     :options="config('finance.budget_rules')" />
 
                 <x-backend.form.saveButton>Save</x-backend.form.saveButton>

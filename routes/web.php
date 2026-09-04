@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Controllers\AnalyticsController;
+use App\Http\Controllers\BackupController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ExpenseCalculationController;
+use App\Http\Controllers\FinancialAnalysisDashboardController;
 use App\Http\Controllers\HandCashController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\RoleController;
@@ -25,6 +27,7 @@ Route::get('/interactive-dashboard/data/savings-loans', [App\Http\Controllers\Ha
 Route::get('/interactive-dashboard/data/top-categories', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardTopCategories']);
 Route::get('/interactive-dashboard/data/running-balance', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardRunningBalance']);
 Route::get('/interactive-dashboard/data/recent-transactions', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardRecentTransactions']);
+Route::get('/interactive-dashboard/data/ai-insights', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardAI']);
 
 Route::get('/filter', [ExpenseCalculationController::class, 'filter'])->name('expenseCalculations.filter');
 
@@ -102,7 +105,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/Monthly_report', [HandCashController::class, 'Monthly_report'])->name('Monthly_report');
     Route::get('/Monthly_invest', [HandCashController::class, 'Monthly_invest'])->name('Monthly_invest');
 
-    Route::get('/filter', [HandCashController::class, 'Monthly_report_filter'])->name('Monthly_report_filter');
     Route::get('/Budge_Projection', [HandCashController::class, 'Budge_Projection'])->name('Budge_Projection');
     Route::get('/handCashes_transfer_create', [HandCashController::class, 'handCashes_transfer_create'])->name('handCashes_transfer_create');
     Route::post('/handCashes_transfer', [HandCashController::class, 'handCashes_transfer'])->name('handCashes_transfer');
@@ -124,6 +126,18 @@ Route::middleware('auth')->group(function () {
     Route::get('/cost-optimisation', [AnalyticsController::class, 'costOptimisation'])->name('cost_optimisation');
     Route::get('/cost-optimisation/data', [AnalyticsController::class, 'costOptimisationData'])->name('cost_optimisation.data');
     Route::get('/predictive-budget', [AnalyticsController::class, 'predictiveBudget'])->name('predictive_budget');
+
+    // Financial Analysis Dashboard: consolidated, drillable view over all the reports above
+    Route::get('/financial-analysis', [FinancialAnalysisDashboardController::class, 'index'])->name('financial_analysis.index');
+    Route::get('/financial-analysis/data', [FinancialAnalysisDashboardController::class, 'data'])->name('financial_analysis.data');
+    Route::get('/financial-analysis/export', [FinancialAnalysisDashboardController::class, 'export'])->name('financial_analysis.export');
+    Route::get('/financial-analysis/kpi/{type}', [FinancialAnalysisDashboardController::class, 'kpi'])->name('financial_analysis.kpi');
+    Route::post('/financial-analysis/analyze', [FinancialAnalysisDashboardController::class, 'analyze'])->name('financial_analysis.analyze');
+    Route::get('/financial-analysis/insights', [FinancialAnalysisDashboardController::class, 'insights'])->name('financial_analysis.insights');
+
+    // Database backup
+    Route::get('/backup/status', [BackupController::class, 'status'])->name('backup.status');
+    Route::post('/backup/run', [BackupController::class, 'run'])->name('backup.run');
 });
 
 

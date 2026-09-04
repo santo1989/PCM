@@ -10,10 +10,44 @@
         <div class="gradient-header mb-4">
             <h2 class="mb-1">Predictive Budget</h2>
             <div class="small">
-                Next month's budget per category, projected from a linear trend over each category's last 6
-                completed months — an automatic alternative to
+                Next month's budget per category, projected from a linear trend over the selected history window —
+                an automatic alternative to
                 <a href="{{ route('Budge_Projection') }}" class="text-white text-decoration-underline">Budget Projection</a>'s
                 manual reduction-percent approach. Shown side by side so you can compare the two, not as a replacement.
+            </div>
+        </div>
+
+        <div class="card mb-4 no-print">
+            <div class="card-body">
+                <form method="GET" action="{{ route('predictive_budget') }}" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label small mb-1">Start Date</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ $startDate }}"
+                            min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small mb-1">End Date</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ $endDate }}"
+                            min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
+                    </div>
+                    <div class="col-md-6 d-flex flex-wrap gap-2 justify-content-md-end">
+                        <button type="submit" class="btn btn-outline-info">
+                            <i class="fas fa-search"></i> Apply
+                        </button>
+                        <a href="{{ route('predictive_budget') }}" class="btn btn-outline-danger">
+                            <i class="fas fa-rotate-right"></i> Reset
+                        </a>
+                        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+                            <i class="bi bi-printer"></i> Print / Save as PDF
+                        </button>
+                    </div>
+                    <div class="col-12">
+                        <div class="small text-muted">
+                            History window used for the regression; the forecast predicts the month right after End
+                            Date.
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
 
@@ -36,7 +70,7 @@
                             <thead>
                                 <tr>
                                     <th>Category</th>
-                                    <th>Last 6 Months (oldest → newest)</th>
+                                    <th>History (oldest → newest)</th>
                                     <th>Predicted Next Month</th>
                                     <th>Range</th>
                                 </tr>
@@ -45,7 +79,7 @@
                                 @foreach ($rows as $row)
                                     <tr>
                                         <td data-label="Category">{{ $row['category'] }}</td>
-                                        <td data-label="Last 6 Months">
+                                        <td data-label="History">
                                             <span class="small text-muted">
                                                 {{ implode(' → ', array_map(fn($v) => number_format($v, 0), $row['last_6_months'])) }}
                                             </span>
@@ -62,6 +96,13 @@
                 </div>
             </div>
         @endif
+
+        @include('backend.reports.partials._ai_insights_panel', [
+            'aiInsights' => $aiInsights,
+            'title' => 'AI Trend Explanation (' . $startDate . ' to ' . $endDate . ')',
+            'icon' => 'bi-bar-chart-line',
+            'headerClass' => 'bg-primary text-white',
+        ])
 
     </div>
 </x-backend.layouts.master>

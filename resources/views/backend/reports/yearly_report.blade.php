@@ -8,25 +8,40 @@
 
         @include('backend.reports.partials.report_nav')
 
-        <div class="row justify-content-between align-items-center mb-3 no-print">
-            <div class="col-md-6">
-                <form method="GET" action="{{ route('Yearly_report') }}" class="d-flex align-items-center gap-2">
-                    <label for="year" class="mb-0 fw-semibold">Year</label>
-                    <select name="year" id="year" class="form-control form-select" style="max-width: 150px;"
-                        onchange="this.form.submit()">
-                        @forelse ($availableYears as $y)
-                            <option value="{{ $y }}" {{ (int) $y === (int) $year ? 'selected' : '' }}>{{ $y }}</option>
-                        @empty
-                            <option value="{{ $year }}" selected>{{ $year }}</option>
-                        @endforelse
-                    </select>
+        <div class="card mb-4 no-print">
+            <div class="card-body">
+                <form method="GET" action="{{ route('Yearly_report') }}" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label small mb-1">Start Date</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ $startDate }}"
+                            min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small mb-1">End Date</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ $endDate }}"
+                            min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
+                    </div>
+                    <div class="col-md-2 d-flex gap-2">
+                        <button type="submit" class="btn btn-outline-info">
+                            <i class="fas fa-search"></i> Apply
+                        </button>
+                        <a href="{{ route('Yearly_report') }}" class="btn btn-outline-danger">
+                            <i class="fas fa-rotate-right"></i> Reset
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        @include('backend.reports.partials.export_toolbar', [
+                            'excelRoute' => 'Yearly_report.export_excel',
+                            'excelParams' => ['year' => $year],
+                        ])
+                    </div>
+                    <div class="col-12">
+                        <div class="small text-muted">
+                            The monthly breakdown table below shows the full calendar year the End Date falls in
+                            ({{ $year }}); the AI Insights panel uses the exact Start/End Date range.
+                        </div>
+                    </div>
                 </form>
-            </div>
-            <div class="col-md-6">
-                @include('backend.reports.partials.export_toolbar', [
-                    'excelRoute' => 'Yearly_report.export_excel',
-                    'excelParams' => ['year' => $year],
-                ])
             </div>
         </div>
 
@@ -153,7 +168,7 @@
 
             <div class="row">
                 <div class="col-md-12 pt-2 pb-2">
-                    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+                    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
                     <div>
                         <canvas id="budgetChart" width="800" height="300"></canvas>
                     </div>
@@ -413,5 +428,41 @@
                 </div>
             @endforeach
         </div>
+
+        @php
+            $yoySlope = $aiInsights['forecast']['overall']['forecast']['slope'] ?? 0;
+            $yoyTrend = $yoySlope > 0 ? 'Upward' : ($yoySlope < 0 ? 'Downward' : 'Stable');
+            $yoyForecast = $aiInsights['forecast']['overall']['forecast']['forecast'][0] ?? 0;
+        @endphp
+        <div class="card border-info mt-4">
+            <div class="card-header bg-info text-white">AI Year-Over-Year Analysis</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <div class="small text-muted">Spending Trend</div>
+                            <h4>{{ $yoyTrend }}</h4>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <div class="small text-muted">Forecast Next Month</div>
+                            <h4>{{ number_format($yoyForecast, 2) }}</h4>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <div class="small text-muted">Savings Rate</div>
+                            <h4>{{ number_format($analysis['avgSavingsRate'], 1) }}%</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @include('backend.reports.partials._ai_insights_panel', [
+            'aiInsights' => $aiInsights,
+            'title' => 'AI Insights for ' . $startDate . ' to ' . $endDate,
+        ])
     </div>
 </x-backend.layouts.master>

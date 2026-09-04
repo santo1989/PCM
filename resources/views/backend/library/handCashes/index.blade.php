@@ -21,40 +21,106 @@
 
             <div class="row">
                 <div class="col-12">
-                    <div class="card">
+                    <div class="card mb-4 no-print">
                         <div class="card-header">
-
                             <x-backend.form.anchor :href="route('handCashes.create')" type="create" />
                             <x-backend.form.anchor :href="route('handCashes_transfer_create')" type="Transfer" />
-
                         </div>
-                        <!-- /.card-header -->
-                        <div class="card-body justify-content-between">
-                            {{-- Date Filter Form --}}
-                            <div class="row mb-4">
-                                <div class="col-md-12">
-                                    <form action="{{ route('handCashes.index') }}" method="GET"
-                                        class="form-inline justify-content-center">
-                                        <div class="form-group mr-3">
-                                            <label for="balance_date_start" class="mr-2">From:</label>
-                                            <input type="date" name="balance_date_start" id="balance_date_start"
-                                                class="form-control" value="{{ request('balance_date_start') }}">
-                                        </div>
-                                        <div class="form-group mr-3">
-                                            <label for="balance_date_end" class="mr-2">To:</label>
-                                            <input type="date" name="balance_date_end" id="balance_date_end"
-                                                class="form-control" value="{{ request('balance_date_end') }}">
-                                        </div>
-                                        <button type="submit" class="btn btn-primary mr-2">
-                                            <i class="bi bi-filter"></i> Filter
-                                        </button>
-                                        <a href="{{ route('handCashes.index') }}" class="btn btn-secondary">
-                                            <i class="bi bi-x-circle"></i> Clear
-                                        </a>
-                                    </form>
+                        <div class="card-body">
+                            <form action="{{ route('handCashes.index') }}" method="GET" class="row g-2 align-items-end">
+                                <div class="col-md-2">
+                                    <label class="form-label small mb-1">Balance Start</label>
+                                    <input type="date" name="balance_date_start" class="form-control"
+                                        value="{{ request('balance_date_start') }}" min="{{ $minDataDate }}"
+                                        max="{{ now()->toDateString() }}">
                                 </div>
-                            </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small mb-1">Balance End</label>
+                                    <input type="date" name="balance_date_end" class="form-control"
+                                        value="{{ request('balance_date_end') }}" min="{{ $minDataDate }}"
+                                        max="{{ now()->toDateString() }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small mb-1">Txn Start</label>
+                                    <input type="date" name="handCashes_date_start" class="form-control"
+                                        value="{{ request('handCashes_date_start') }}" min="{{ $minDataDate }}"
+                                        max="{{ now()->toDateString() }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small mb-1">Txn End</label>
+                                    <input type="date" name="handCashes_date_end" class="form-control"
+                                        value="{{ request('handCashes_date_end') }}" min="{{ $minDataDate }}"
+                                        max="{{ now()->toDateString() }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small mb-1">Name</label>
+                                    <input type="text" name="handCashes_name" class="form-control"
+                                        value="{{ request('handCashes_name') }}" placeholder="Search name...">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small mb-1">Type</label>
+                                    @php
+                                        $selectedHandCashTypes = array_map(
+                                            'strtoupper',
+                                            (array) request('handCashes_type', request('types', [])),
+                                        );
+                                    @endphp
+                                    <select class="form-select select2" name="handCashes_type[]" multiple
+                                        data-placeholder="All Types">
+                                        <option value="SAVE"
+                                            {{ in_array('SAVE', $selectedHandCashTypes) ? 'selected' : '' }}>
+                                            Savings</option>
+                                        <option value="WIDROWS"
+                                            {{ in_array('WIDROWS', $selectedHandCashTypes) ? 'selected' : '' }}>
+                                            Withdraws</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small mb-1">Rules</label>
+                                    @php
+                                        $selectedHandCashRules = (array) request(
+                                            'handCashes_rule',
+                                            request('rules', []),
+                                        );
+                                    @endphp
+                                    <select class="form-select select2" name="handCashes_rule[]" multiple
+                                        data-placeholder="All Rules">
+                                        @foreach (config('finance.handcash_rules') as $ruleKey => $ruleLabel)
+                                            <option value="{{ $ruleKey }}"
+                                                {{ in_array($ruleKey, array_map('strtoupper', $selectedHandCashRules)) ? 'selected' : '' }}>
+                                                {{ $ruleLabel }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-md-8 d-flex flex-wrap gap-2 justify-content-md-end">
+                                    <button type="submit" class="btn btn-outline-info">
+                                        <i class="bi bi-filter"></i> Filter / Search
+                                    </button>
+                                    <a href="{{ route('handCashes.index') }}" class="btn btn-outline-danger">
+                                        <i class="bi bi-x-circle"></i> Clear
+                                    </a>
+                                    <a href="{{ route('handCashes.index', array_merge(request()->query(), ['export_format' => 'xlsx'])) }}"
+                                        class="btn btn-outline-success">
+                                        <i class="bi bi-file-earmark-excel"></i> Excel
+                                    </a>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+                                        <i class="bi bi-printer"></i> Print / PDF
+                                    </button>
+                                </div>
+                                <div class="col-12">
+                                    <div class="small text-muted">
+                                        Balance Start/End scopes the account-balance summaries below; Txn Start/End,
+                                        Name, Type, and Rules scope the "All Cash Handlings" transaction table
+                                        further down. Excel export requires at least one transaction filter to be
+                                        applied first.
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
 
+                    <div class="card">
+                        <div class="card-body justify-content-between">
                             {{-- handCash Table goes here --}}
 
                             <div class="row justify-content-between text-center">
@@ -236,70 +302,6 @@
                         <div class="card-header text-center">
 
                             <h4>All Cash Handlings</h4>
-                        </div>
-                        <!-- /.card-header -->
-                        {{-- handCash Table filter here --}}
-                        <div class="card-header text-center">
-                            <form action="{{ route('handCashes.index') }}" method="GET"
-                                class="form-inline justify-content-center">
-                                <div class="form-group mr-3">
-                                    <label for="handCashes_date_start" class="mr-2">From:</label>
-                                    <input type="date" name="handCashes_date_start" id="handCashes_date_start"
-                                        class="form-control" value="{{ request('handCashes_date_start') }}">
-                                </div>
-                                <div class="form-group mr-3">
-                                    <label for="handCashes_date_end" class="mr-2">To:</label>
-                                    <input type="date" name="handCashes_date_end" id="handCashes_date_end"
-                                        class="form-control" value="{{ request('handCashes_date_end') }}">
-                                </div>
-                                <!--Name, Types, Rules filter-->
-                                <div class="form-group mr-3">
-                                    <label for="handCashes_name" class="mr-2">Name:</label>
-                                    <input type="text" name="handCashes_name" id="handCashes_name"
-                                        class="form-control" value="{{ request('handCashes_name') }}">
-                                </div>
-                                <div class="form-group mr-3">
-                                    <label for="handCashes_types[]">HandCash Types</label>
-                                    @php
-                                        $selectedHandCashTypes = array_map(
-                                            'strtoupper',
-                                            (array) request('handCashes_type', request('types', [])),
-                                        );
-                                    @endphp
-                                    <select class="form-control" name="handCashes_type[]" id="handCashes_type" multiple>
-                                        <option value="SAVE"
-                                            {{ in_array('SAVE', $selectedHandCashTypes) ? 'selected' : '' }}>
-                                            Savings</option>
-                                        <option value="WIDROWS"
-                                            {{ in_array('WIDROWS', $selectedHandCashTypes) ? 'selected' : '' }}>
-                                            Withdraws</option>
-                                    </select>
-                                </div>
-                                <div class="form-group mr-3">
-                                    <label for="handCashes_rule">Cash Rules</label>
-                                    @php
-                                        $selectedHandCashRules = (array) request(
-                                            'handCashes_rule',
-                                            request('rules', []),
-                                        );
-                                    @endphp
-                                    <select class="form-control" name="handCashes_rule[]" id="handCashes_rule" multiple>
-                                        @foreach (config('finance.handcash_rules') as $ruleKey => $ruleLabel)
-                                            <option value="{{ $ruleKey }}"
-                                                {{ in_array($ruleKey, array_map('strtoupper', $selectedHandCashRules)) ? 'selected' : '' }}>
-                                                {{ $ruleLabel }}</option>
-                                        @endforeach
-                                    </select>
-
-                                </div>
-                                <button type="submit" class="btn btn-primary mr-2">
-                                    <i class="bi bi-filter"></i> Filter
-                                </button>
-                                <a href="{{ route('handCashes.index') }}" class="btn btn-secondary">
-                                    <i class="bi bi-x-circle"></i> Clear
-                                </a>
-                            </form>
-
                         </div>
                         <!-- /.card-header -->
                         <div class="card-body">

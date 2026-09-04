@@ -7,16 +7,40 @@
 
         @include('backend.reports.partials.report_nav')
 
-        <div class="gradient-header mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <div>
-                <h2 class="mb-1">Cost Optimisation</h2>
-                <div class="small">Live view of where this month's spending is running hot — auto-refreshes every 30s.</div>
-            </div>
-            <div class="text-end">
-                <button type="button" id="refreshCostOptBtn" class="btn btn-light btn-sm">
-                    <i class="bi bi-arrow-clockwise"></i> Refresh
-                </button>
-                <div class="small mt-1" id="costOptUpdatedAt" style="color: rgba(255,255,255,0.75);"></div>
+        <div class="gradient-header mb-4">
+            <h2 class="mb-1">Cost Optimisation</h2>
+            <div class="small">Live view of where this month's spending is running hot — auto-refreshes every 30s.</div>
+        </div>
+
+        <div class="card mb-4 no-print">
+            <div class="card-body">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label small mb-1">Start Date</label>
+                        <input type="date" id="costOptStartDate" class="form-control" value="{{ $startDate }}"
+                            min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small mb-1">End Date</label>
+                        <input type="date" id="costOptEndDate" class="form-control" value="{{ $endDate }}"
+                            min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
+                    </div>
+                    <div class="col-md-6 d-flex flex-wrap align-items-center justify-content-md-end gap-2">
+                        <div class="small text-muted me-auto me-md-0" id="costOptUpdatedAt"></div>
+                        <button type="button" id="refreshCostOptBtn" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+                            <i class="bi bi-printer"></i> Print / Save as PDF
+                        </button>
+                    </div>
+                    <div class="col-12">
+                        <div class="small text-muted">
+                            Analyzes the calendar month the End Date falls in — pace vs. historical daily rate, and
+                            full-month totals vs. each category's typical month.
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -28,6 +52,15 @@
         <h5 class="mb-3 mt-4"><i class="bi bi-graph-up"></i> Full-Month Historical Anomalies</h5>
         <div id="anomalySection">
             @include('backend.reports.partials._cost_optimisation_anomalies', ['suggestions' => $suggestions, 'totalPotentialSaving' => $totalPotentialSaving])
+        </div>
+
+        <h5 class="mb-3 mt-4"><i class="bi bi-robot"></i> AI Insight</h5>
+        <div id="aiSection">
+            @include('backend.reports.partials._ai_insights_panel', [
+                'aiInsights' => ['summary' => $aiSummary, 'recommendations' => $aiRecommendations],
+                'title' => 'AI Recommendations',
+                'showAnomalies' => false,
+            ])
         </div>
 
     </div>
@@ -142,12 +175,47 @@
             `;
         }
 
+        function renderAiSection(data) {
+            const container = document.getElementById('aiSection');
+            const summaryHtml = (data.aiSummary || []).map(i => `<div class="alert alert-${i.type} py-2 mb-2">${i.message}</div>`).join('')
+                || '<p class="text-muted small">No notable insights for this period yet.</p>';
+            const priorityBadge = (p) => p === 'critical' ? 'danger' : (p === 'high' ? 'warning' : 'secondary');
+            const recHtml = (data.aiRecommendations || []).map(r => `
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between">
+                        <strong>${r.title}</strong>
+                        <span class="badge bg-${priorityBadge(r.priority)}">${r.priority}</span>
+                    </div>
+                    <div class="small text-muted">${r.message}</div>
+                </div>
+            `).join('') || '<p class="text-muted small">No recommendations right now.</p>';
+
+            container.innerHTML = `
+                <div class="card mt-4">
+                    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-robot"></i> AI Recommendations</span>
+                        <span class="badge bg-light text-dark">Rule-based, built-in statistics</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">${summaryHtml}</div>
+                        <h6><i class="bi bi-lightbulb"></i> Recommendations</h6>
+                        ${recHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        const costOptStartDate = document.getElementById('costOptStartDate');
+        const costOptEndDate = document.getElementById('costOptEndDate');
+
         async function refreshCostOptimisation() {
             try {
-                const res = await fetch('{{ route('cost_optimisation.data') }}');
+                const params = new URLSearchParams({ start_date: costOptStartDate.value, end_date: costOptEndDate.value });
+                const res = await fetch(`{{ route('cost_optimisation.data') }}?${params.toString()}`);
                 const data = await res.json();
                 renderPaceSection(data);
                 renderAnomalySection(data);
+                renderAiSection(data);
                 document.getElementById('costOptUpdatedAt').textContent = 'Updated ' + new Date(data.generated_at).toLocaleTimeString();
             } catch (e) {
                 console.warn('Could not refresh Cost Optimisation data', e);
@@ -155,6 +223,8 @@
         }
 
         document.getElementById('refreshCostOptBtn').addEventListener('click', refreshCostOptimisation);
+        costOptStartDate.addEventListener('change', refreshCostOptimisation);
+        costOptEndDate.addEventListener('change', refreshCostOptimisation);
         setInterval(refreshCostOptimisation, 30000);
     </script>
 </x-backend.layouts.master>

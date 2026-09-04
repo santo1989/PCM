@@ -8,44 +8,36 @@
 
         @include('backend.reports.partials.report_nav')
 
-        <div class="row text-center p-2 no-print">
-            <form action="{{ route('Monthly_report') }}" method="get" id="Monthly_report">
-                @csrf
-                <table class="table table-borderless table-responsive text-center text-dark font-weight-bold">
-                    <tr>
-                        <div class="col-sm-4">
-                            <td>Start Date</td>
-                            <td>
-                                <input type="date" name="start_date" id="start_date" class="form-control" required
-                                    value="{{ $startDate ?? '' }}">
-                            </td>
-                        </div>
-                        <div class="col-sm-4">
-                            <td>End Date</td>
-                            <td>
-                                <input type="date" name="end_date" id="end_date" class="form-control" required
-                                    value="{{ $endDate ?? '' }}">
-                            </td>
-                        </div>
-                        <div class="col-sm-4">
-                            <td>
-                                <button type="submit" class="btn btn-lg btn-outline-secondary">
-                                    <i class="fas fa-search"></i> Search
-                                </button>
-                                <a href="{{ route('Monthly_report') }}" class="btn btn-outline-danger">
-                                    <i class="fas fa-sync-alt"></i> Refresh
-                                </a>
-                            </td>
-                        </div>
-                    </tr>
-                </table>
-            </form>
+        <div class="card mb-4 no-print">
+            <div class="card-body">
+                <form action="{{ route('Monthly_report') }}" method="get" id="Monthly_report" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label for="start_date" class="form-label small mb-1">Start Date</label>
+                        <input type="date" name="start_date" id="start_date" class="form-control" required
+                            value="{{ $startDate ?? '' }}" min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="end_date" class="form-label small mb-1">End Date</label>
+                        <input type="date" name="end_date" id="end_date" class="form-control" required
+                            value="{{ $endDate ?? '' }}" min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
+                    </div>
+                    <div class="col-md-6 d-flex flex-wrap gap-2 justify-content-md-end">
+                        <button type="submit" class="btn btn-outline-secondary">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                        <a href="{{ route('Monthly_report') }}" class="btn btn-outline-danger">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </a>
+                        <a href="{{ route('Monthly_report.export_excel', ['start_date' => $startDate, 'end_date' => $endDate]) }}" class="btn btn-outline-success">
+                            <i class="bi bi-file-earmark-excel"></i> Download Excel
+                        </a>
+                        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+                            <i class="bi bi-printer"></i> Print / Save as PDF
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
-
-        @include('backend.reports.partials.export_toolbar', [
-            'excelRoute' => 'Monthly_report.export_excel',
-            'excelParams' => ['start_date' => $startDate, 'end_date' => $endDate],
-        ])
 
         <div id="printable" class="row justify-content-center">
             <div class="col-md-12 text-center">
@@ -371,7 +363,7 @@
 
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <script>
         new Chart(document.getElementById('dayOfWeekChart').getContext('2d'), {
             type: 'bar',
@@ -414,5 +406,14 @@
             },
         });
     </script>
+
+    <div class="container-fluid">
+        @include('backend.reports.partials._ai_insights_panel', [
+            'aiInsights' => $aiInsights,
+            'title' => 'AI Monthly Insights',
+            'icon' => 'bi-lightbulb',
+            'headerClass' => 'bg-warning text-dark',
+        ])
+    </div>
 
 </x-backend.layouts.master>

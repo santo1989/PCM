@@ -34,19 +34,19 @@
 
                 <div class="row">
                     <div class="col-md-2">
-                        <x-backend.form.select name="types1" label="From: Type"
+                        <x-backend.form.select name="types1" label="From: Type" class="select2"
                             :options="config('finance.handcash_types')" selected="WIDROWS" />
                     </div>
                     <div class="col-md-3">
-                        <x-backend.form.select name="rules1" label="From: Account"
+                        <x-backend.form.select name="rules1" label="From: Account" class="select2"
                             :options="config('finance.handcash_rules')" />
                     </div>
                     <div class="col-md-2">
-                        <x-backend.form.select name="types2" label="To: Type"
+                        <x-backend.form.select name="types2" label="To: Type" class="select2"
                             :options="config('finance.handcash_types')" selected="SAVE" />
                     </div>
                     <div class="col-md-3">
-                        <x-backend.form.select name="rules2" label="To: Account"
+                        <x-backend.form.select name="rules2" label="To: Account" class="select2"
                             :options="config('finance.handcash_rules')" />
                     </div>
                 </div>

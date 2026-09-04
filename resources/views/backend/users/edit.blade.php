@@ -24,7 +24,7 @@
                         <div class="col-sm-6">
                             <div class="form-group mb-3">
                                 <label class="form-label">Role</label>
-                                <select name="role_id" id="role_id" class="form-select">
+                                <select name="role_id" id="role_id" class="form-select select2">
                                     @foreach ($roles as $role)
                                         <option value="{{ $role->id }}" {{ $role->id == $user->role_id ? 'selected' : '' }}>
                                             {{ $role->name }}</option>

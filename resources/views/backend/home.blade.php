@@ -6,20 +6,51 @@
 
     <div class="container-fluid pt-4">
 
-        <div class="gradient-header mb-4 d-flex justify-content-between align-items-start flex-wrap gap-2">
-            <div>
-                <h2 class="mb-1">Welcome back{{ auth()->user()->name ? ', ' . auth()->user()->name : '' }}</h2>
-                <div class="text-muted small">Here's how {{ date('F', mktime(0, 0, 0, $currentMonth, 1)) }} {{ $currentYear }} is looking so far.</div>
-            </div>
-            <div class="text-end">
-                <button type="button" id="refreshKpisBtn" class="btn btn-light btn-sm">
-                    <i class="bi bi-arrow-clockwise"></i> Refresh
-                </button>
-                <div class="small mt-1" id="kpisUpdatedAt" style="color: rgba(255,255,255,0.75);"></div>
-            </div>
+        <div class="gradient-header mb-4">
+            <h2 class="mb-1">Welcome back{{ auth()->user()->name ? ', ' . auth()->user()->name : '' }}</h2>
+            <div class="text-muted small">Here's how {{ date('F', mktime(0, 0, 0, $currentMonth, 1)) }} {{ $currentYear }} is looking so far.</div>
         </div>
 
         @include('backend.reports.partials.report_nav')
+
+        <div class="card mb-4 no-print">
+            <div class="card-body">
+                <form method="GET" action="{{ route('home') }}" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label small mb-1">Start Date</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ $startDate }}"
+                            min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small mb-1">End Date</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ $endDate }}"
+                            min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
+                    </div>
+                    <div class="col-md-6 d-flex flex-wrap gap-2 justify-content-md-end">
+                        <button type="submit" class="btn btn-outline-info">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                        <a href="{{ route('home') }}" class="btn btn-outline-danger">
+                            <i class="fas fa-rotate-right"></i> Reset
+                        </a>
+                        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+                            <i class="bi bi-printer"></i> Print / PDF
+                        </button>
+                        <button type="button" id="refreshKpisBtn" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh
+                        </button>
+                        <span class="small text-muted align-self-center" id="kpisUpdatedAt"></span>
+                    </div>
+                    <div class="col-12">
+                        <div class="small text-muted">
+                            "Yearly Monthly Data" below shows the full calendar year the End Date falls in
+                            ({{ $currentYear }}); the "Monthly Income &amp; Expense" and "Category ways Monthly" tabs
+                            use the End Date's specific month ({{ date('F', mktime(0, 0, 0, $currentMonth, 1)) }}).
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
 
         @php
             $monthIncomeTotal = (float) $thisMonthtotalIncome;

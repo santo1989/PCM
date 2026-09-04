@@ -13,20 +13,18 @@ class UserController extends Controller
 {
     public function index()
     {
-        $usersCollection = User::latest()->get();
+        $query = User::query()->latest();
 
-        if (request()->has('role_id')) {
-            $usersCollection = $usersCollection
-                ->where('role_id', request('role_id'));
+        $roleIds = array_values(array_filter((array) request('role_id', [])));
+        if (!empty($roleIds)) {
+            $query->whereIn('role_id', $roleIds);
         }
 
         if (request('search')) {
-            $usersCollection = $usersCollection
-                ->where('name', 'like', '%' . request('search') . '%');
+            $query->where('name', 'like', '%' . request('search') . '%');
         }
 
-        $users = $usersCollection;
-        // dd($users);
+        $users = $query->get();
         $roles = Role::all();
 
         return view('backend.users.index', [

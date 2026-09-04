@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\ExpenseCalculation;
+use App\Services\AI\MLPipeline;
 use App\Services\FinancialAnalyticsService;
 use App\Services\InsightEngine;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -111,8 +113,17 @@ class AnalyticsController extends Controller
      */
     public function budgetAlerts(Request $request)
     {
-        $year = (int) $request->get('year', now()->year);
-        $month = (int) $request->get('month', now()->month);
+        // budgetUtilization() is inherently month-scoped (actual spend vs. that month's
+        // ProjectedExpense rows) — a date range doesn't compose with it, so when a range
+        // is given, the month it ends in is used, matching MLPipeline's convention.
+        if ($request->filled('end_date')) {
+            $end = Carbon::parse($request->get('end_date'));
+            $year = (int) $end->year;
+            $month = (int) $end->month;
+        } else {
+            $year = (int) $request->get('year', now()->year);
+            $month = (int) $request->get('month', now()->month);
+        }
 
         $rows = collect($this->analytics->budgetUtilization($year, $month))
             ->filter(fn($row) => $row['utilization_percent'] > 100)
@@ -134,7 +145,10 @@ class AnalyticsController extends Controller
      */
     public function costOptimisation()
     {
-        return view('backend.reports.cost_optimisation', $this->buildCostOptimisationData());
+        return view('backend.reports.cost_optimisation', array_merge(
+            $this->buildCostOptimisationData(),
+            ['minDataDate' => ExpenseCalculation::min('date')]
+        ));
     }
 
     /** Same data as costOptimisation(), as JSON — polled every 30s by that page for a live feel. */
@@ -145,12 +159,22 @@ class AnalyticsController extends Controller
 
     private function buildCostOptimisationData(): array
     {
-        $year = (int) now()->year;
-        $month = (int) now()->month;
+        // Date range replaces the old fixed "current month": the month it analyzes is
+        // derived from the End Date (matching the same convention used elsewhere),
+        // defaulting to the current month. livePace() already handles a past month
+        // correctly (it only treats "today" as the elapsed cutoff for the real current
+        // month), so no other change is needed there.
+        $startDate = request('start_date', now()->startOfMonth()->toDateString());
+        $endDate = request('end_date', now()->toDateString());
+
+        $referenceDate = Carbon::parse($endDate);
+        $year = (int) $referenceDate->year;
+        $month = (int) $referenceDate->month;
+        $daysInSelectedMonth = Carbon::create($year, $month, 1)->daysInMonth;
 
         $paceRows = collect($this->analytics->livePace($year, $month))
             ->filter(fn($row) => $row['variance_percent'] >= 15)
-            ->map(function ($row) {
+            ->map(function ($row) use ($daysInSelectedMonth) {
                 $row['suggestion'] = sprintf(
                     '%s is on pace for %s this month (%.0f%% above its usual daily rate over the last %d day%s). At the historical rate it would land around %s instead.',
                     $row['category_name'],
@@ -158,7 +182,7 @@ class AnalyticsController extends Controller
                     $row['variance_percent'],
                     $row['days_elapsed'],
                     $row['days_elapsed'] === 1 ? '' : 's',
-                    number_format($row['historical_daily_pace'] * now()->daysInMonth, 2)
+                    number_format($row['historical_daily_pace'] * $daysInSelectedMonth, 2)
                 );
                 return $row;
             })
@@ -176,36 +200,60 @@ class AnalyticsController extends Controller
             return $row;
         }, $anomalies);
 
+        $aiInsights = MLPipeline::run(Carbon::create($year, $month, 1)->startOfMonth(), Carbon::create($year, $month, 1)->endOfMonth());
+
         return [
+            'startDate' => $startDate,
+            'endDate' => $endDate,
             'paceRows' => $paceRows,
             'totalProjectedOverspend' => array_sum(array_map(
-                fn($row) => max($row['projected_month_total'] - $row['historical_daily_pace'] * now()->daysInMonth, 0),
+                fn($row) => max($row['projected_month_total'] - $row['historical_daily_pace'] * $daysInSelectedMonth, 0),
                 $paceRows
             )),
             'suggestions' => $anomalySuggestions,
             'totalPotentialSaving' => array_sum(array_column($anomalySuggestions, 'potential_saving')),
+            'aiSummary' => $aiInsights['summary'],
+            'aiRecommendations' => $aiInsights['recommendations'],
             'generated_at' => now()->toDateTimeString(),
         ];
     }
 
     /**
-     * Predictive Budget page — next month's per-category budget from a linear
-     * forecast over each category's last 6 months, shown alongside the
-     * existing reduction-factor approach on Budget Projection (not a
-     * replacement for it).
+     * Predictive Budget page — next-month per-category budget from a linear
+     * forecast over a history window, shown alongside the existing
+     * reduction-factor approach on Budget Projection (not a replacement for it).
+     *
+     * Date range replaces the old fixed "last 6 completed months": Start/End Date
+     * define the history window fed into the regression (defaulting to the 6
+     * months up through today), and the forecast predicts the month right after
+     * the window ends.
      */
     public function predictiveBudget()
     {
+        $minDataDate = ExpenseCalculation::min('date');
+        $startDate = request('start_date', now()->subMonths(6)->startOfMonth()->toDateString());
+        $endDate = request('end_date', now()->toDateString());
+
+        $historyMonths = [];
+        $cursor = Carbon::parse($startDate)->startOfMonth();
+        $lastMonth = Carbon::parse($endDate)->startOfMonth();
+        while ($cursor->lte($lastMonth)) {
+            $historyMonths[] = $cursor->copy();
+            $cursor->addMonth();
+        }
+        if (empty($historyMonths)) {
+            $historyMonths[] = $lastMonth->copy();
+        }
+
         $categories = Category::where('types', 'EXPENSE')->get();
         $rows = [];
 
         foreach ($categories as $category) {
             $monthlyTotals = [];
-            for ($i = 6; $i >= 1; $i--) {
-                $cursor = now()->subMonths($i);
+            foreach ($historyMonths as $m) {
                 $monthlyTotals[] = (float) ExpenseCalculation::where('types', 'EXPENSE')
                     ->where('category_id', $category->id)
-                    ->whereYear('date', $cursor->year)->whereMonth('date', $cursor->month)
+                    ->whereYear('date', $m->year)->whereMonth('date', $m->month)
                     ->sum('amount');
             }
 
@@ -213,25 +261,28 @@ class AnalyticsController extends Controller
                 continue;
             }
 
-            // History ends last month, so step 1 would predict the current
-            // (already partially-actual) month — step 2 is the first fully
-            // future month, which is what "next month's budget" should mean.
-            $forecast = $this->analytics->linearForecast($monthlyTotals, 2);
+            $forecast = $this->analytics->linearForecast($monthlyTotals, 1);
 
             $rows[] = [
                 'category' => $category->name,
                 'last_6_months' => $monthlyTotals,
-                'predicted_next_month' => max($forecast['forecast'][1], 0),
-                'lower' => max($forecast['lower'][1], 0),
-                'upper' => max($forecast['upper'][1], 0),
+                'predicted_next_month' => max($forecast['forecast'][0], 0),
+                'lower' => max($forecast['lower'][0], 0),
+                'upper' => max($forecast['upper'][0], 0),
             ];
         }
 
         usort($rows, fn($a, $b) => $b['predicted_next_month'] <=> $a['predicted_next_month']);
 
+        $aiInsights = MLPipeline::run(Carbon::parse($startDate)->startOfDay(), Carbon::parse($endDate)->endOfDay());
+
         return view('backend.reports.predictive_budget', [
             'rows' => $rows,
             'totalPredicted' => array_sum(array_column($rows, 'predicted_next_month')),
+            'aiInsights' => $aiInsights,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'minDataDate' => $minDataDate,
         ]);
     }
 }

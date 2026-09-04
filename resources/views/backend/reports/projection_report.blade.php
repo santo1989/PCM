@@ -5,11 +5,47 @@
 
     <div class="container">
 
+        <x-backend.layouts.elements.message :message="session('message')" />
+        <x-backend.layouts.elements.message :message="session('error_message')" type="error" />
+        <x-backend.layouts.elements.errors />
+
         @include('backend.reports.partials.report_nav')
 
-        @include('backend.reports.partials.export_toolbar', [
-            'excelRoute' => 'Budge_Projection.export_excel',
-        ])
+        <div class="card mb-4 no-print">
+            <div class="card-body">
+                <form method="GET" action="{{ route('Budge_Projection') }}" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label small mb-1">Start Date</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ $startDate }}"
+                            min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small mb-1">End Date</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ $endDate }}"
+                            min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
+                    </div>
+                    <div class="col-md-6 d-flex flex-wrap gap-2 justify-content-md-end">
+                        <button type="submit" class="btn btn-outline-info">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                        <a href="{{ route('Budge_Projection') }}" class="btn btn-outline-danger">
+                            <i class="fas fa-rotate-right"></i> Reset
+                        </a>
+                        @include('backend.reports.partials.export_toolbar', [
+                            'excelRoute' => 'Budge_Projection.export_excel',
+                            'excelParams' => ['start_date' => $startDate, 'end_date' => $endDate],
+                        ])
+                    </div>
+                    <div class="col-12">
+                        <div class="small text-muted">
+                            Filters the "Avg Expense" column and the AI Insights panel below. Everything else on this
+                            page (this month's income, last month's expense, next month's projection) always uses the
+                            current/adjacent calendar month.
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
 
         <!-- Forecasted budget (linear regression on the last 6 completed months) -->
         <div class="card mb-4">
@@ -45,6 +81,11 @@
                     </div>
                 </div>
             </div>
+
+            @include('backend.reports.partials._ai_insights_panel', [
+                'aiInsights' => $aiInsights,
+                'title' => 'AI-Powered Budget Insights (' . ($hasDateRange ? $startDate . ' to ' . $endDate : 'This Month') . ')',
+            ])
         </div>
     </div>
 
@@ -63,7 +104,7 @@
                 </div>
                 <div class="col-sm-6 d-flex gap-2">
                     <button type="button" id="previewBtn" class="btn btn-secondary">Preview</button>
-                    <button type="submit" class="btn btn-primary">Calculate &amp; Save Next Month's Budget</button>
+                    <button type="button" id="saveBudgetBtn" class="btn btn-primary">Calculate &amp; Save Next Month's Budget</button>
                 </div>
             </div>
             <input type="hidden" name="date" value="{{ date('Y-m-d') }}">
@@ -71,7 +112,7 @@
                 <thead>
                     <tr>
                         <th>Category</th>
-                        <th>Avg Expense (This Year)</th>
+                        <th>Avg Expense ({{ $hasDateRange ? $startDate . ' to ' . $endDate : 'All Time' }})</th>
                         <th>Last Month Expensed</th>
                         <th>This Month Projected Expense</th>
                     </tr>
@@ -567,6 +608,22 @@ Total: {{ number_format($categoryAverages[$month]['total_amount'], 0) }}">
             document.getElementById('previewBtn').addEventListener('click', function(e) {
                 e.preventDefault();
                 previewProjection();
+            });
+
+            document.getElementById('saveBudgetBtn').addEventListener('click', function() {
+                Swal.fire({
+                    title: "Save next month's budget?",
+                    text: 'This will overwrite any existing projected budget for next month.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#0d6efd',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Yes, save it',
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        document.getElementById('projectionForm').submit();
+                    }
+                });
             });
 
             // Apply modal edits back to main inputs

@@ -15,7 +15,7 @@
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            html: '@foreach ($errors->all() as $error){{ $error }}<br>@endforeach',
+            html: (@json($errors->all())).join('<br>'),
         });
     </script>
 @endif

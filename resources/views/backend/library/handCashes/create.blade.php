@@ -32,11 +32,11 @@
                             <x-backend.form.input name="amount[]" type="number" step="0.01" label="Amount" />
                         </div>
                         <div class="col-md-2">
-                            <x-backend.form.select name="types[]" label="HandCash Types"
+                            <x-backend.form.select name="types[]" label="HandCash Types" class="select2"
                                 :options="config('finance.handcash_types')" />
                         </div>
                         <div class="col-md-2">
-                            <x-backend.form.select name="rules[]" label="Cash Rules"
+                            <x-backend.form.select name="rules[]" label="Cash Rules" class="select2"
                                 :options="config('finance.handcash_rules')" />
                         </div>
                         <div class="col-md-2 mb-3">
@@ -69,14 +69,14 @@
                     <input type="number" step="0.01" name="amount[]" class="form-control" placeholder="Amount">
                 </div>
                 <div class="col-md-2">
-                    <select class="form-select" name="types[]">
+                    <select class="form-select select2" name="types[]">
                         @foreach (config('finance.handcash_types') as $key => $value)
                             <option value="{{ $key }}">{{ $value }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <select class="form-select" name="rules[]">
+                    <select class="form-select select2" name="rules[]">
                         @foreach (config('finance.handcash_rules') as $key => $value)
                             <option value="{{ $key }}">{{ $value }}</option>
                         @endforeach
@@ -87,6 +87,15 @@
                     <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeInput(this)"><i class="bi bi-dash-lg"></i> Remove</button>
                 </div>
             `;
+
+            // Global Select2 init already ran on page load, before this row existed —
+            // initialize it on just the new row's selects.
+            if (window.jQuery && jQuery.fn.select2) {
+                jQuery(newRow).find('.select2').select2({
+                    theme: 'bootstrap-5',
+                    width: '100%'
+                });
+            }
 
             dynamicInputs.appendChild(newRow);
         }

@@ -7,25 +7,31 @@
 
         <h3>Interactive Financial Dashboard</h3>
 
-        <div class="row mb-3 no-print">
-            <div class="col-md-3">
-                <label for="yearSelect">Year</label>
-                <select id="yearSelect" class="form-control"></select>
-            </div>
-            <div class="col-md-3">
-                <label for="monthSelect">Month (optional)</label>
-                <select id="monthSelect" class="form-control">
-                    <option value="">All Year</option>
-                </select>
-            </div>
-            <div class="col-md-3 d-flex align-items-end gap-2">
-                <button id="refreshBtn" class="btn btn-primary">Refresh</button>
-                <a id="exportExcelBtn" class="btn btn-outline-success" href="{{ route('interactive.dashboard.export_excel') }}">
-                    <i class="bi bi-file-earmark-excel"></i> Excel
-                </a>
-                <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
-                    <i class="bi bi-printer"></i> Print
-                </button>
+        <div class="card mb-4 no-print">
+            <div class="card-body">
+                <div class="row align-items-end">
+                    <div class="col-md-3">
+                        <label for="startDateInput" class="form-label small mb-1">Start Date</label>
+                        <input type="date" id="startDateInput" class="form-control"
+                            min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="endDateInput" class="form-label small mb-1">End Date</label>
+                        <input type="date" id="endDateInput" class="form-control"
+                            min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
+                    </div>
+                    <div class="col-md-6 d-flex flex-wrap align-items-end gap-2 justify-content-md-end">
+                        <button id="refreshBtn" class="btn btn-primary">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh
+                        </button>
+                        <a id="exportExcelBtn" class="btn btn-outline-success" href="{{ route('interactive.dashboard.export_excel') }}">
+                            <i class="bi bi-file-earmark-excel"></i> Excel
+                        </a>
+                        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+                            <i class="bi bi-printer"></i> Print
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -100,43 +106,48 @@
             </div>
         </div>
 
+        <div id="aiInsightsPanel" class="card mt-4 border-info">
+            <div class="card-header bg-info text-white d-flex justify-content-between">
+                <span><i class="bi bi-robot"></i> AI Insights</span>
+                <span class="badge bg-light text-dark" id="aiTimestamp"></span>
+            </div>
+            <div class="card-body" id="aiContent">
+                <div class="text-center py-3">
+                    <div class="spinner-border text-info" role="status"></div>
+                    <p>Loading AI analysis...</p>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <script>
-        const yearSelect = document.getElementById('yearSelect');
-        const monthSelect = document.getElementById('monthSelect');
+        const startDateInput = document.getElementById('startDateInput');
+        const endDateInput = document.getElementById('endDateInput');
         const refreshBtn = document.getElementById('refreshBtn');
 
-        // populate year select (last 5 years)
-        const currentYear = new Date().getFullYear();
-        for (let y = currentYear; y >= currentYear - 5; y--) {
-            const opt = document.createElement('option');
-            opt.value = y;
-            opt.text = y;
-            yearSelect.appendChild(opt);
-        }
-        yearSelect.value = currentYear;
-
-        // populate months
-        const months = ["", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
-        const monthNames = ["All Year", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        for (let i = 0; i < months.length; i++) {
-            const opt = document.createElement('option');
-            opt.value = months[i];
-            opt.text = monthNames[i];
-            monthSelect.appendChild(opt);
-        }
+        // Default: the current calendar month
+        (function setDefaultRange() {
+            const pad = (n) => String(n).padStart(2, '0');
+            const now = new Date();
+            const firstOfMonth = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
+            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            const lastOfMonth = `${lastDay.getFullYear()}-${pad(lastDay.getMonth() + 1)}-${pad(lastDay.getDate())}`;
+            startDateInput.value = firstOfMonth;
+            endDateInput.value = lastOfMonth;
+        })();
 
         let trendChart = null;
         let categoryChart = null;
 
+        function rangeQuery() {
+            return `start_date=${startDateInput.value}&end_date=${endDateInput.value}`;
+        }
+
         async function fetchSummary() {
-            const year = yearSelect.value;
-            const month = monthSelect.value;
-            const url = `/interactive-dashboard/data/summary?year=${year}${month ? `&month=${month}` : ''}`;
-            const res = await fetch(url);
+            const res = await fetch(`/interactive-dashboard/data/summary?${rangeQuery()}`);
             return res.json();
         }
 
@@ -146,10 +157,7 @@
         }
 
         async function fetchCategory() {
-            const year = yearSelect.value;
-            const month = monthSelect.value;
-            const url = `/interactive-dashboard/data/category-breakdown?year=${year}${month ? `&month=${month}` : ''}`;
-            const res = await fetch(url);
+            const res = await fetch(`/interactive-dashboard/data/category-breakdown?${rangeQuery()}`);
             return res.json();
         }
 
@@ -159,8 +167,7 @@
         }
 
         async function fetchTopCategories() {
-            const year = yearSelect.value;
-            const res = await fetch(`/interactive-dashboard/data/top-categories?year=${year}`);
+            const res = await fetch(`/interactive-dashboard/data/top-categories?${rangeQuery()}`);
             return res.json();
         }
 
@@ -175,9 +182,12 @@
         }
 
         async function fetchBudgetAlerts() {
-            const year = yearSelect.value;
-            const month = monthSelect.value || new Date().getMonth() + 1;
-            const res = await fetch(`/interactive-dashboard/data/budget-alerts?year=${year}&month=${month}`);
+            const res = await fetch(`/interactive-dashboard/data/budget-alerts?${rangeQuery()}`);
+            return res.json();
+        }
+
+        async function fetchAiInsights() {
+            const res = await fetch(`/interactive-dashboard/data/ai-insights?${rangeQuery()}`);
             return res.json();
         }
 
@@ -188,24 +198,16 @@
             const container = document.getElementById('summaryCards');
             container.innerHTML = '';
             const cards = [{
-                    title: 'Year Total Income',
+                    title: 'Total Income (Selected Range)',
                     value: data.totalIncome
                 },
                 {
-                    title: 'Year Total Expense',
+                    title: 'Total Expense (Selected Range)',
                     value: data.totalExpense
                 },
                 {
-                    title: 'Year Net',
+                    title: 'Net (Selected Range)',
                     value: data.net
-                },
-                {
-                    title: 'Month Income',
-                    value: data.monthIncome
-                },
-                {
-                    title: 'Month Expense',
-                    value: data.monthExpense
                 }
             ];
             for (const c of cards) {
@@ -310,7 +312,7 @@
                 return;
             }
 
-            // categoryChart data is year-to-date (or year+month) spend for that category;
+            // categoryChart data is spend for that category over the selected range;
             // treat it as a monthly-equivalent rate scaled to a year for a simple estimate.
             const yearlyTotal = parseFloat(selected.dataset.total) || 0;
             const reducePct = parseFloat(reduceSlider.value) / 100;
@@ -339,11 +341,11 @@
         }
 
         function updateExportLink() {
-            const year = yearSelect.value;
-            const month = monthSelect.value;
+            // The export endpoint takes year(+optional month), not a range — derive them
+            // from the end of the selected range so it still reflects the visible period.
             const btn = document.getElementById('exportExcelBtn');
-            let url = `{{ route('interactive.dashboard.export_excel') }}?year=${year}`;
-            if (month) url += `&month=${month}`;
+            const end = endDateInput.value ? new Date(endDateInput.value) : new Date();
+            const url = `{{ route('interactive.dashboard.export_excel') }}?year=${end.getFullYear()}&month=${end.getMonth() + 1}`;
             btn.href = url;
         }
 
@@ -367,8 +369,8 @@
             const fmtPct = (v) => v === null || isNaN(v) ? 'N/A' : (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
 
             const cards = [
-                { title: 'Savings Rate (Year)', value: savingsRate.toFixed(1) + '%' },
-                { title: 'Expense Ratio (Year)', value: expenseRatio.toFixed(1) + '%' },
+                { title: 'Savings Rate (Range)', value: savingsRate.toFixed(1) + '%' },
+                { title: 'Expense Ratio (Range)', value: expenseRatio.toFixed(1) + '%' },
                 { title: 'Income vs Last Month', value: fmtPct(momIncomeChange) },
                 { title: 'Expense vs Last Month', value: fmtPct(momExpenseChange) },
             ];
@@ -382,11 +384,36 @@
             }
         }
 
+        function renderAiInsights(data) {
+            const container = document.getElementById('aiContent');
+            let html = (data.summary || []).map(i => `<div class="alert alert-${i.type} py-2 mb-2">${i.message}</div>`).join('');
+
+            if (data.anomalies && data.anomalies.length > 0) {
+                html += `<h6>⚠️ Anomalies</h6><ul>`;
+                data.anomalies.forEach(a => {
+                    const badge = a.severity === 'critical' ? 'danger' : (a.severity === 'high' ? 'warning' : 'info');
+                    html += `<li>${a.category}: ${Number(a.current).toFixed(2)} <span class="badge bg-${badge}">${a.severity}</span></li>`;
+                });
+                html += `</ul>`;
+            }
+
+            if (data.recommendations && data.recommendations.length > 0) {
+                html += `<h6>💡 Recommendations</h6><ul>`;
+                data.recommendations.forEach(r => {
+                    html += `<li>${r.message}</li>`;
+                });
+                html += `</ul>`;
+            }
+
+            container.innerHTML = html || '<p class="text-muted small">No notable insights for this period yet.</p>';
+            document.getElementById('aiTimestamp').textContent = new Date().toLocaleTimeString();
+        }
+
         async function refreshAll() {
             updateExportLink();
-            const [summary, trend, categories, savings, topCategories, running, recent, alerts] = await Promise.all([
+            const [summary, trend, categories, savings, topCategories, running, recent, alerts, ai] = await Promise.all([
                 fetchSummary(), fetchTrend(), fetchCategory(), fetchSavingsLoans(), fetchTopCategories(),
-                fetchRunningBalance(), fetchRecentTransactions(), fetchBudgetAlerts()
+                fetchRunningBalance(), fetchRecentTransactions(), fetchBudgetAlerts(), fetchAiInsights()
             ]);
             renderSummaryCards(summary);
             renderInsightCards(summary, trend);
@@ -398,6 +425,7 @@
             allRecentTransactions = recent;
             renderRecentTransactions(recent);
             renderBudgetAlerts(alerts);
+            renderAiInsights(ai);
         }
 
         function renderSavingsChart(data) {
@@ -487,6 +515,8 @@
         // initial load
         refreshAll();
         refreshBtn.addEventListener('click', refreshAll);
+        startDateInput.addEventListener('change', refreshAll);
+        endDateInput.addEventListener('change', refreshAll);
 
         // near-real-time: re-poll every 30s (matches the app-wide AJAX-polling
         // approach chosen over WebSockets, since no Pusher/Echo/websocket

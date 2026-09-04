@@ -26,12 +26,23 @@
 
     <span class="d-none d-md-inline-block ms-3 small text-white-50">{{ $wishMessage }}, {{ auth()->user()->name ?? '' }}</span>
 
+    <ul class="navbar-nav me-2 d-none d-sm-flex">
+        <li class="nav-item">
+            <button type="button" id="backupNowBtn" class="btn btn-sm btn-outline-light" title="Back up the database now">
+                <i class="bi bi-cloud-arrow-down"></i> Backup Now
+            </button>
+        </li>
+    </ul>
+
+    {{-- ms-auto lives here (not on the "Backup Now" block above) so the notification bell
+         and user menu stay pinned to the right edge even when Backup Now is hidden
+         below the sm breakpoint — margins on a display:none element have no effect. --}}
     {{-- notification bell icon with dropdown board for notifications --}}
-    <ul class="navbar-nav ms-auto ms-md-0 me-3 me-lg-4">
+    <ul class="navbar-nav ms-auto me-3 me-lg-4">
         <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" id="notificationsDropdown" href="#" role="button"
                 data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="fa fa-bell"></i>
+                <i class="fas fa-bell"></i>
                 <span class="badge rounded-pill"></span>
             </a>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationsDropdown">
@@ -41,7 +52,7 @@
         <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle d-flex align-items-center" id="userMenuDropdown" href="#" role="button"
                 data-bs-toggle="dropdown" aria-expanded="false">
-                <img src="{{ asset('images/users/' . auth()->user()->picture) }}" class="rounded-circle me-2"
+                <img src="{{ asset('images/users/' . (auth()->user()->picture ?: 'avatar.png')) }}" class="rounded-circle me-2"
                     width="36" height="36" alt="{{ auth()->user()->name }}">
                 <span class="text-light">{{ auth()->user()->name ?? '' }}</span>
             </a>

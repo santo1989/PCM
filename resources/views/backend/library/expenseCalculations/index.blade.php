@@ -7,7 +7,7 @@
     <x-backend.layouts.elements.errors />
 
     <!-- Chart.js Library -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 
 
     <section class="content">
@@ -15,98 +15,78 @@
 
             <div class="row">
                 <div class="col-md-12 col-sm-12 col-xl-12">
-                    <div class="card" style="background: var(--grad-primary);">
-
-
-                        <div class="card-header" style="background: rgba(0, 0, 0, 0.15); color: #f1f1f1; border-bottom-color: rgba(255,255,255,0.15);">
-
-                            <form method="GET" action="{{ route('expenseCalculations.index') }}">
+                    <div class="card mb-3 no-print">
+                        <div class="card-body">
+                            <form method="GET" action="{{ route('expenseCalculations.index') }}" class="row g-2 align-items-end">
                                 @csrf
-                                <div class="row">
-                                    <div class="col-md-12 col-sm-12">
-                                        <table
-                                            class="table table-borderless table-responsive text-center text-light font-weight-bold">
-                                            <tr>
-
-
-                                                <div class="form-group">
-                                                    <td>Types:</td>
-                                                    <td>
-                                                        <select class="form-control" name="types" id="types">
-                                                            <option value="">Select Types</option>
-
-                                                            @php
-                                                                $types = App\Models\ExpenseCalculation::select('types')
-                                                                    ->distinct()
-                                                                    ->get();
-                                                            @endphp
-                                                            @foreach ($types as $type)
-                                                                <option value="{{ $type->types }}"
-                                                                    {{ $type->types == $search_types ? 'selected' : '' }}>
-                                                                    {{ $type->types }}
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
-                                                    </td>
-                                                </div>
-
-                                                <div class="form-group">
-                                                    <td>Category:</td>
-                                                    <td>
-                                                        <select class="form-control select2" name="category_id"
-                                                            id="category_id" style="min-width: 220px;">
-                                                            <option value="">Select Category</option>
-                                                            @foreach ($categories as $category)
-                                                                <option value="{{ $category->id }}"
-                                                                    {{ $category->id == $search_category_id ? 'selected' : '' }}>
-                                                                    {{ $category->name }}
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
-                                                    </td>
-                                                </div>
-
-                                                <div class="form-group">
-                                                    <td>Date:</td>
-                                                    <td>
-                                                        <input type="date" name="entry_date_start"
-                                                            id="entry_date_start" class="form-control"
-                                                            value="{{ $search_entry_date_start }}">
-                                                    </td>
-                                                    <td>-</td>
-                                                    <td>
-                                                        <input type="date" name="entry_date_end" id="entry_date_end"
-                                                            class="form-control" value="{{ $search_entry_date_end }}">
-                                                    </td>
-                                                </div>
-                                                <td>
-                                                    <button class="btn btn-outline-info btn-sm"
-                                                        onclick="validateForm()"><i class="fa fa-search"></i>
-                                                        Search</button>
-
-                                                </td>
-
-                                                <td>
-                                                    <a href="{{ route('expenseCalculations.index') }}"
-                                                        class="btn btn-outline-danger btn-sm"><i
-                                                            class="fa fa-refresh"></i> Reset</a>
-                                                </td>
-                                            </tr>
-                                        </table>
-                                    </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small mb-1">Types</label>
+                                    @php
+                                        $types = App\Models\ExpenseCalculation::select('types')
+                                            ->distinct()
+                                            ->get();
+                                    @endphp
+                                    <select class="form-select select2" name="types[]" id="types"
+                                        multiple data-placeholder="All Types">
+                                        @foreach ($types as $type)
+                                            <option value="{{ $type->types }}"
+                                                {{ in_array($type->types, $search_types) ? 'selected' : '' }}>
+                                                {{ $type->types }}
+                                            </option>
+                                        @endforeach
+                                    </select>
                                 </div>
 
+                                <div class="col-md-3">
+                                    <label class="form-label small mb-1">Category</label>
+                                    <select class="form-select select2" name="category_id[]"
+                                        id="category_id" multiple data-placeholder="All Categories">
+                                        @foreach ($categories as $category)
+                                            <option value="{{ $category->id }}"
+                                                {{ in_array((string) $category->id, array_map('strval', $search_category_id), true) ? 'selected' : '' }}>
+                                                {{ $category->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="col-md-2">
+                                    <label class="form-label small mb-1">Start Date</label>
+                                    <input type="date" name="entry_date_start"
+                                        id="entry_date_start" class="form-control"
+                                        value="{{ $search_entry_date_start }}"
+                                        min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small mb-1">End Date</label>
+                                    <input type="date" name="entry_date_end" id="entry_date_end"
+                                        class="form-control" value="{{ $search_entry_date_end }}"
+                                        min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
+                                </div>
+
+                                <div class="col-md-3 d-flex flex-wrap gap-2 justify-content-md-end">
+                                    <button class="btn btn-outline-info" onclick="validateForm()">
+                                        <i class="fas fa-search"></i> Search
+                                    </button>
+                                    <a href="{{ route('expenseCalculations.index') }}" class="btn btn-outline-danger">
+                                        <i class="fas fa-rotate-right"></i> Reset
+                                    </a>
+                                    <a href="{{ route('expenseCalculations.index', array_merge(request()->query(), ['export_format' => 'xlsx'])) }}"
+                                        class="btn btn-outline-success">
+                                        <i class="fas fa-file-excel"></i> Excel
+                                    </a>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+                                        <i class="bi bi-printer"></i> Print / PDF
+                                    </button>
+                                </div>
                             </form>
-
-
                         </div>
-
                     </div>
 
                     <div class="row pt-1">
                         <div class="col-md-2 col-sm-12">
                             <a type="button" class="btn btn-outline-dark" data-bs-toggle="modal"
-                                data-bs-target="#CashEntryModal"><i class="fa fa-plus" aria-hidden="true"></i>
+                                data-bs-target="#CashEntryModal"><i class="fas fa-plus" aria-hidden="true"></i>
                                 Create
                             </a>
 
@@ -817,28 +797,6 @@
 
 
                         </div>
-                        <div class="col-md-2 col-sm-12 text-md-end">
-                            @if ($search_cashes == !null)
-                                <form method="GET" action="{{ route('expenseCalculations.index') }}">
-                                    @csrf
-
-                                    <div class="row">
-                                        <div class="col-md-12 col-sm-12">
-                                            <div class="form-group" id="hide_div">
-                                                <label for="export_format">Export Format:</label>
-                                                <select name="export_format" id="export_format" class="form-control">
-                                                    <option value="xlsx">Excel (XLS)</option>
-                                                </select>
-                                            </div>
-                                            <button type="submit" class="btn btn-outline-info">
-                                                <i class="fa fa-file-excel" aria-hidden="true"></i> Export
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                </form>
-                            @endif
-                        </div>
                     </div>
 
 
@@ -971,7 +929,7 @@
                                             </div>
                                             <div class="col-md-2">
                                                 <x-backend.form.select name="types[]" label="HandCash Types"
-                                                    :options="config('finance.handcash_types')" />
+                                                    class="select2" :options="config('finance.handcash_types')" />
                                             </div>
                                             <div class="col-md-2">
                                                 <x-backend.form.select name="rules[]" label="Cash Rules"
@@ -1024,7 +982,7 @@
                     <input type="number" step="0.01" name="amount[]" class="form-control" placeholder="Amount">
                 </div>
                 <div class="col-md-2">
-                    <select class="form-select" name="types[]">
+                    <select class="form-select select2" name="types[]">
                         @foreach (config('finance.handcash_types') as $key => $value)
                             <option value="{{ $key }}">{{ $value }}</option>
                         @endforeach
@@ -1103,11 +1061,12 @@
 
                                             <div class="row g-2 align-items-end">
                                                 <div class="col-md-3">
-                                                    <x-backend.form.input name="date" type="date" label="Date"
-                                                        :value="$cash->date" />
+                                                    <x-backend.form.input name="date" :id="'edit_date_' . $cash->id"
+                                                        type="date" label="Date" :value="$cash->date" />
                                                 </div>
                                                 <div class="col-md-3">
-                                                    <x-backend.form.select name="category_id" label="Category"
+                                                    <x-backend.form.select name="category_id"
+                                                        :id="'edit_category_id_' . $cash->id" label="Category"
                                                         class="select2"
                                                         :options="$categories->pluck('name', 'id')"
                                                         :selected="$cash->category_id" />
@@ -1118,7 +1077,8 @@
                                                         :value="$cash->name" />
                                                 </div>
                                                 <div class="col-md-3">
-                                                    <x-backend.form.input name="amount" type="number" step="0.01"
+                                                    <x-backend.form.input name="amount"
+                                                        :id="'edit_amount_' . $cash->id" type="number" step="0.01"
                                                         label="Amount" :value="$cash->amount" />
                                                 </div>
                                             </div>
@@ -1185,10 +1145,6 @@
 
     <!--  End model for Data details -->
     <script>
-        $(document).ready(function() {
-            $("#hide_div").hide();
-        });
-
         function validateForm() {
             var incCategory = document.getElementById("types").value;
             var entryDateStart = document.getElementById("entry_date_start").value;

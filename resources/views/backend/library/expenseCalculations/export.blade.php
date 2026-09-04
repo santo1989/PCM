@@ -1,42 +1,47 @@
-
-<table id="cashesTable" style="border: 1px solid #000; padding: 4px; border-collapse: collapse; padding-top: 1em;">
-    <thead style="border: 1px solid #000; padding: 4px;">
+@php
+    $headerStyle = 'background-color:#4F46E5;color:#FFFFFF;font-weight:bold;text-align:center;padding:8px;border:1px solid #D1D5DB;';
+    $cellStyle = 'padding:6px 8px;border:1px solid #D1D5DB;text-align:right;';
+    $labelStyle = 'padding:6px 8px;border:1px solid #D1D5DB;text-align:left;';
+    $totalStyle = 'background-color:#E0E7FF;font-weight:bold;';
+    $zebra = '#F8F9FC';
+    $total = $search_cashes->sum('amount');
+@endphp
+<table id="cashesTable" style="border-collapse:collapse;font-family:Calibri, Arial, sans-serif;">
+    <thead>
+        @include('backend.reports.exports.partials._title_band', [
+            'title' => 'Expense Calculation Report',
+            'subtitle' => 'Generated on ' . \Carbon\Carbon::now()->format('d M Y, h:i A'),
+            'colspan' => 7,
+        ])
         <tr>
-            <th colspan="6" style="text-align: center; border: none; "> Expense Calculation Report  
-                <span style="float: right; font-size: 10px">Download Date: {{ Carbon\Carbon::now()->format('d-M-Y') }}</span>
-            </th>
-        </tr>
-        <tr>  
-            <th style="border: 1px solid #000; padding: 4px;">Sl</th>
-            <th style="border: 1px solid #000; padding: 4px;">Date</th> 
-            <th style="border: 1px solid #000; padding: 4px;">Name</th>
-            <th style="border: 1px solid #000; padding: 4px;">Category</th>
-            <th style="border: 1px solid #000; padding: 4px;">Types</th>
-            <th style="border: 1px solid #000; padding: 4px;">Rules of Cost</th> 
-            <th style="border: 1px solid #000; padding: 4px;">Cash Amount BDT</th> 
+            <th style="{{ $headerStyle }}">Sl</th>
+            <th style="{{ $headerStyle }}">Date</th>
+            <th style="{{ $headerStyle }}">Name</th>
+            <th style="{{ $headerStyle }}">Category</th>
+            <th style="{{ $headerStyle }}">Types</th>
+            <th style="{{ $headerStyle }}">Rules of Cost</th>
+            <th style="{{ $headerStyle }}">Cash Amount BDT</th>
         </tr>
     </thead>
-    <tbody style="border: 1px solid #000; padding: 4px;">
-        @php $sl = 1; 
-        $total = 0;
-        @endphp
-        @foreach ($search_cashes as $cash)
-            <tr> 
-                <td style="border: 1px solid #000; padding: 4px;">{{ $sl++ }}</td>
-                <td style="border: 1px solid #000; padding: 4px;">{{ \Carbon\Carbon::parse($cash->date)->format('d-M-Y') }}</td>
-                <td style="border: 1px solid #000; padding: 4px;">{{ $cash->name }}</td>
-                <td style="border: 1px solid #000; padding: 4px;">{{ $cash->category->name }}</td>
-                <td style="border: 1px solid #000; padding: 4px;">{{ $cash->types }}</td>
-                <td style="border: 1px solid #000; padding: 4px;">{{ $cash->rules }}</td>
-                <td style="border: 1px solid #000; padding: 4px;">{{ $cash->amount }}</td>
-                @php
-                    $total += $cash->amount;
-                @endphp 
-                 
+    <tbody>
+        @forelse ($search_cashes as $cash)
+            <tr style="background-color:{{ $loop->even ? $zebra : '#FFFFFF' }};">
+                <td style="{{ $labelStyle }}">{{ $loop->iteration }}</td>
+                <td style="{{ $labelStyle }}">{{ \Carbon\Carbon::parse($cash->date)->format('d-M-Y') }}</td>
+                <td style="{{ $labelStyle }}">{{ $cash->name }}</td>
+                <td style="{{ $labelStyle }}">{{ optional($cash->category)->name ?? 'Unknown' }}</td>
+                <td style="{{ $labelStyle }}">
+                    <span style="color:{{ $cash->types === 'INCOME' ? '#16A34A' : '#DC2626' }};font-weight:bold;">{{ $cash->types }}</span>
+                </td>
+                <td style="{{ $labelStyle }}">{{ $cash->rules }}</td>
+                <td style="{{ $cellStyle }}">{{ number_format($cash->amount, 2) }}</td>
             </tr>
-        @endforeach
-        <tr>
-            <td colspan="6" style="text-align: right; border: 1px solid #000; padding: 4px;">Total</td>
-            <td style="border: 1px solid #000; padding: 4px;"> {{ $total }} </td> 
+        @empty
+            <tr><td colspan="7" style="{{ $labelStyle }}color:#6B7280;">No transactions found.</td></tr>
+        @endforelse
+        <tr style="{{ $totalStyle }}">
+            <td colspan="6" style="{{ $labelStyle }}text-align:right;">Total</td>
+            <td style="{{ $cellStyle }}">{{ number_format($total, 2) }}</td>
+        </tr>
     </tbody>
 </table>

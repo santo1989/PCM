@@ -12,18 +12,20 @@
     <!-- <link href="css/styles.css" rel="stylesheet" /> -->
 
     <!-- jQuery -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 
     <!-- Poppins (app-wide font, matches auth pages) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- font-awesome -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js" crossorigin="anonymous"></script>
+    <!-- font-awesome (v4-shims keeps old-style icon names like "fa-refresh" and bare "fa fa-x"
+         working after the 5→6 bump, without auditing every icon usage individually) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/js/all.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/js/v4-shims.min.js" crossorigin="anonymous"></script>
 
     <!-- Bootstrap core icon -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 
     <!-- Select2 CSS + Bootstrap 5 theme -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/css/select2.min.css" rel="stylesheet" />
@@ -39,7 +41,7 @@
 
     <!-- DataTable -->
 
-    <link href="https://cdn.jsdelivr.net/npm/simple-datatables@latest/dist/style.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/simple-datatables@9/dist/style.css" rel="stylesheet" />
 
     <!-- Custom CSS -->
 
@@ -50,6 +52,10 @@
 
     <!-- Print stylesheet: reports use .no-print to hide chrome (nav, filters, buttons) when printing / saving as PDF -->
     <style>
+        .print-footer {
+            display: none;
+        }
+
         @media print {
             .no-print, .sb-topnav, #layoutSidenav_nav {
                 display: none !important;
@@ -63,8 +69,40 @@
                 background: #fff !important;
             }
 
-            .card, .table {
+            /* Browsers skip background colors/gradients by default when printing — force them
+               on, so gradient headers, stat cards, and colored table headers actually show up
+               in the printed/PDF output instead of collapsing to plain black-on-white text. */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+
+            @page {
+                margin: 1.2cm;
+            }
+
+            .card, .stat-card, tr {
                 break-inside: avoid;
+            }
+
+            .card {
+                border: 1px solid #dee2e6 !important;
+                box-shadow: none !important;
+            }
+
+            table thead {
+                display: table-header-group;
+            }
+
+            .print-footer {
+                display: block !important;
+                text-align: center;
+                font-size: 10px;
+                color: #6b7280;
+                margin-top: 1.5rem;
+                padding-top: 0.5rem;
+                border-top: 1px solid #dee2e6;
             }
         }
     </style>
@@ -91,6 +129,10 @@
                     {{ $breadCrumb ?? ' ' }}
 
                     {{ $slot ?? ' ' }}
+
+                    <div class="print-footer">
+                        {{ $pageTitle ?? 'Report' }} — Generated on {{ now()->format('d M Y, h:i A') }} by Personal Cost Management
+                    </div>
                 </div>
             </main>
             {{-- <!-- @yield('content') --> --}}
@@ -112,7 +154,7 @@
 
 
     <!-- DataTable JS -->
-    <script src="https://cdn.jsdelivr.net/npm/simple-datatables@latest" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/simple-datatables@9" crossorigin="anonymous"></script>
     <script src="{{ asset('ui/backend/js/datatables-simple-demo.js') }}"></script>
 
     <!-- Select2 JS -->
@@ -126,6 +168,70 @@
                 width: '100%'
             });
         });
+    </script>
+
+    <!-- Database backup: manual button + once-per-day automatic check -->
+    <script>
+        function runDatabaseBackup(onDone) {
+            return fetch('{{ route('backup.run') }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                }
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (onDone) onDone(data);
+                    return data;
+                });
+        }
+
+        document.getElementById('backupNowBtn')?.addEventListener('click', function () {
+            Swal.fire({
+                title: 'Backing up database…',
+                text: 'Please wait, this can take a moment.',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            runDatabaseBackup(function (data) {
+                if (data.success) {
+                    Swal.fire({ icon: 'success', title: 'Backup complete', timer: 2000, showConfirmButton: false });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Backup failed', text: data.message || 'Please try again.' });
+                }
+            }).catch(function () {
+                Swal.fire({ icon: 'error', title: 'Backup failed', text: 'Could not reach the server.' });
+            });
+        });
+
+        // Once per calendar day: check quickly, and only block the UI if a backup is
+        // actually still needed today. Fails open (no popup) if the DB is unreachable.
+        fetch('{{ route('backup.status') }}', { headers: { 'Accept': 'application/json' } })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.needed) return;
+
+                Swal.fire({
+                    title: 'Server backup and maintenance',
+                    text: 'Please wait while we back up the database.',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => Swal.showLoading()
+                });
+
+                runDatabaseBackup(function () {
+                    Swal.close();
+                }).catch(function () {
+                    Swal.close();
+                });
+            })
+            .catch(function () {
+                // DB unreachable or request failed — fail open, no interruption.
+            });
     </script>
 
 </body>

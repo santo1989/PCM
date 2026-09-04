@@ -33,8 +33,15 @@ class AppServiceProvider extends ServiceProvider
         Paginator::useBootstrap();
         // Move heavy DB queries out of Blade by composing data for the dashboard
         View::composer('backend.home', function ($view) {
-            $currentYear = request('year') ?? date('Y');
-            $currentMonth = request('month') ?? date('m');
+            // Date range replaces the old Year/Month selectors: the year/month they cover
+            // are derived from the End Date, defaulting to the current month. Bounded by
+            // the earliest transaction on record through today.
+            $minDataDate = ExpenseCalculation::min('date');
+            $startDate = request('start_date') ?? now()->startOfMonth()->toDateString();
+            $endDate = request('end_date') ?? now()->toDateString();
+
+            $currentYear = (int) \Carbon\Carbon::parse($endDate)->year;
+            $currentMonth = (int) \Carbon\Carbon::parse($endDate)->month;
 
             // Last 12 months summary (by month)
             $monthlyData = [];
@@ -84,10 +91,6 @@ class AppServiceProvider extends ServiceProvider
                     'thisMonthsavings' => (float) $thisMonthsavings,
                 ];
             }
-
-            // Current month/year selections
-            $currentMonth = (int) $currentMonth;
-            $currentYear = (int) $currentYear;
 
             // Exports tab data
             $thisMonthtotalIncome = ExpenseCalculation::where('types', 'INCOME')
@@ -157,7 +160,7 @@ class AppServiceProvider extends ServiceProvider
 
             $insights = \App\Services\InsightEngine::dashboardSummary();
 
-            $view->with(compact('monthlyData', 'thisMonthIncome', 'thisMonthExpense', 'thisMonthneeds', 'thisMonthwants', 'thisMonthsavings', 'thisYearIncome', 'thisYearExpense', 'categoryMap', 'currentMonth', 'currentYear', 'thisMonthtotalIncome', 'thisYeartotalIncome', 'insights'));
+            $view->with(compact('monthlyData', 'thisMonthIncome', 'thisMonthExpense', 'thisMonthneeds', 'thisMonthwants', 'thisMonthsavings', 'thisYearIncome', 'thisYearExpense', 'categoryMap', 'currentMonth', 'currentYear', 'thisMonthtotalIncome', 'thisYeartotalIncome', 'insights', 'startDate', 'endDate', 'minDataDate'));
         });
     }
 }

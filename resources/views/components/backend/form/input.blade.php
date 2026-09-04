@@ -1,9 +1,11 @@
-@props(['name', 'label'])
+@props(['name', 'label', 'id' => null])
+
+@php($fieldId = $id ?? $name)
 
 <div class="form-group mb-3">
     @if ($label ?? false)
-        <label for="{{ $name }}" class="form-label">{{ $label }}</label>
+        <label for="{{ $fieldId }}" class="form-label">{{ $label }}</label>
     @endif
-    <input name="{{ $name }}" id="{{ $name }}" {{ $attributes->class(['form-control', 'is-invalid' => $errors->has($name)]) }}>
+    <input name="{{ $name }}" id="{{ $fieldId }}" {{ $attributes->class(['form-control', 'is-invalid' => $errors->has($name)]) }}>
     <x-backend.form.error :name="$name" />
 </div>

@@ -24,10 +24,11 @@
                                 <input type="text" name="search" placeholder="Search by name"
                                     value="{{ request('search') }}" class="form-control" style="max-width: 220px;">
 
-                                <select name="role_id" class="form-select" style="max-width: 200px;">
-                                    <option value="">All Roles</option>
+                                @php $selectedRoleIds = array_map('strval', (array) request('role_id', [])); @endphp
+                                <select name="role_id[]" class="form-select select2" multiple
+                                    data-placeholder="All Roles" style="min-width: 220px;">
                                     @foreach ($roles as $role)
-                                        <option value="{{ $role->id }}" {{ (string) request('role_id') === (string) $role->id ? 'selected' : '' }}>
+                                        <option value="{{ $role->id }}" {{ in_array((string) $role->id, $selectedRoleIds, true) ? 'selected' : '' }}>
                                             {{ $role->name }}
                                         </option>
                                     @endforeach
@@ -67,9 +68,9 @@
                                                         method="POST">
                                                         @csrf
                                                         <button
-                                                            onclick="return confirm('Are you sure want to change status ?')"
-                                                            class="btn btn-sm {{ $user->is_active ? 'btn-danger' : 'btn-success' }}"
-                                                            type="submit">{{ $user->is_active ? 'Inactive' : 'Active' }}</button>
+                                                            type="button"
+                                                            onclick="confirmStatusToggle(this.closest('form'))"
+                                                            class="btn btn-sm {{ $user->is_active ? 'btn-danger' : 'btn-success' }}">{{ $user->is_active ? 'Inactive' : 'Active' }}</button>
                                                     </form>
                                                 </td>
                                                 <td>
@@ -95,6 +96,22 @@
     </section>
 
     <script>
+        function confirmStatusToggle(form) {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: 'Are you sure want to change status?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#667eea',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, change it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            });
+        }
+
         function confirmDelete(url) {
             Swal.fire({
                 title: 'Are you sure?',

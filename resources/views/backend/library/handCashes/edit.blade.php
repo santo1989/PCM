@@ -27,10 +27,10 @@
 
                 <x-backend.form.input name="amount" type="number" step="0.01" label="Amount" :value="$handCashes->amount" />
 
-                <x-backend.form.select name="types" label="HandCash Types"
+                <x-backend.form.select name="types" label="HandCash Types" class="select2"
                     :options="config('finance.handcash_types')" :selected="$handCashes->types" />
 
-                <x-backend.form.select name="rules" label="Cash Rules"
+                <x-backend.form.select name="rules" label="Cash Rules" class="select2"
                     :options="config('finance.handcash_rules')" :selected="$handCashes->rules" />
 
                 <x-backend.form.saveButton>Save</x-backend.form.saveButton>

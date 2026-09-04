@@ -11,11 +11,31 @@ use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 
 class BudgetProjectionExport implements FromView, ShouldAutoSize
 {
+    private ?string $startDate;
+    private ?string $endDate;
+
+    /**
+     * Mirrors HandCashController::Budge_Projection()'s own date-range handling: narrows
+     * the "Avg Expense" column when a range is given, defaults to an all-time average
+     * (not "current month") when not — a single month isn't a meaningful average, and
+     * this matches the same default already shown on the report page itself.
+     */
+    public function __construct(?string $startDate = null, ?string $endDate = null)
+    {
+        $this->startDate = $startDate;
+        $this->endDate = $endDate;
+    }
+
     public function view(): \Illuminate\Contracts\View\View
     {
         $categories = Category::where('types', 'EXPENSE')->get();
 
-        $allYearExpenses = ExpenseCalculation::where('types', 'EXPENSE')
+        $allYearExpensesQuery = ExpenseCalculation::where('types', 'EXPENSE');
+        if ($this->startDate && $this->endDate) {
+            $allYearExpensesQuery->whereBetween('date', [$this->startDate, $this->endDate]);
+        }
+
+        $allYearExpenses = $allYearExpensesQuery
             ->groupBy('category_id')
             ->select('category_id', DB::raw('sum(amount) as totalExpense'), DB::raw('count(distinct MONTH(date)) as totalMonths'))
             ->get()
@@ -53,6 +73,9 @@ class BudgetProjectionExport implements FromView, ShouldAutoSize
 
         return view('backend.reports.exports.budget_projection', [
             'rows' => $rows,
+            'avgRangeLabel' => ($this->startDate && $this->endDate)
+                ? $this->startDate . ' to ' . $this->endDate
+                : 'All Time',
         ]);
     }
 }
