@@ -97,7 +97,7 @@
                 <label for="reduction_percent" class="col-sm-2 col-form-label">Reduction target (%)</label>
                 <div class="col-sm-4">
                     <div class="input-group">
-                        <input type="number" step="0.01" min="0" max="0.9" class="form-control"
+                        <input type="number" step="any" min="0" max="0.9" class="form-control"
                             name="reduction_percent" id="reduction_percent" value="0.10">
                         <span class="input-group-text">(0.10 = 10%)</span>
                     </div>

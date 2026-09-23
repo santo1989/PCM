@@ -29,7 +29,7 @@
                                 model="App\Models\HandCash" column="name" />
                         </div>
                         <div class="col-md-2">
-                            <x-backend.form.input name="amount[]" type="number" step="0.01" label="Amount" />
+                            <x-backend.form.input name="amount[]" type="number" step="any" label="Amount" />
                         </div>
                         <div class="col-md-2">
                             <x-backend.form.select name="types[]" label="HandCash Types" class="select2"
@@ -66,7 +66,7 @@
                     <input type="text" list="dl_App_Models_HandCash_name" name="name[]" class="form-control" autocomplete="off" placeholder="HandCash Name">
                 </div>
                 <div class="col-md-2">
-                    <input type="number" step="0.01" name="amount[]" class="form-control" placeholder="Amount">
+                    <input type="number" step="any" name="amount[]" class="form-control" placeholder="Amount">
                 </div>
                 <div class="col-md-2">
                     <select class="form-select select2" name="types[]">

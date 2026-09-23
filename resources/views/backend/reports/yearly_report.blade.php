@@ -37,8 +37,8 @@
                     </div>
                     <div class="col-12">
                         <div class="small text-muted">
-                            The monthly breakdown table below shows the full calendar year the End Date falls in
-                            ({{ $year }}); the AI Insights panel uses the exact Start/End Date range.
+                            Every section below — cards, chart, and the month-by-month table — covers exactly the
+                            Start/End Date range selected, one row per calendar month it touches.
                         </div>
                     </div>
                 </form>
@@ -46,7 +46,8 @@
         </div>
 
         <div id="printable">
-            <h2 class="text-center">Yearly Report - {{ $year }}</h2>
+            <h2 class="text-center">Report: {{ \Carbon\Carbon::parse($startDate)->format('M d, Y') }} &ndash;
+                {{ \Carbon\Carbon::parse($endDate)->format('M d, Y') }}</h2>
 
             {{-- Detailed analysis / insights --}}
             <div class="row justify-content-center mb-4">
@@ -86,7 +87,8 @@
                 <div class="col-md-2 col-6 mb-2">
                     <div class="card text-center h-100">
                         <div class="card-body p-2">
-                            <div class="text-muted small">Income vs {{ $analysis['prevYear'] }}</div>
+                            <div class="text-muted small" title="{{ $analysis['prevRangeStart'] }} to {{ $analysis['prevRangeEnd'] }}">
+                                Income vs Previous Period</div>
                             <div class="fw-bold">
                                 @if (is_null($analysis['incomeYoyChange']))
                                     <span class="text-muted">N/A</span>
@@ -102,7 +104,8 @@
                 <div class="col-md-2 col-6 mb-2">
                     <div class="card text-center h-100">
                         <div class="card-body p-2">
-                            <div class="text-muted small">Expense vs {{ $analysis['prevYear'] }}</div>
+                            <div class="text-muted small" title="{{ $analysis['prevRangeStart'] }} to {{ $analysis['prevRangeEnd'] }}">
+                                Expense vs Previous Period</div>
                             <div class="fw-bold">
                                 @if (is_null($analysis['expenseYoyChange']))
                                     <span class="text-muted">N/A</span>
@@ -122,25 +125,25 @@
                 <div class="col-md-3 col-6 mb-2">
                     <div class="alert alert-success mb-0 text-center py-2">
                         <div class="small">Best Income Month</div>
-                        <strong>{{ $analysis['bestIncomeMonth'] ? date('F', mktime(0, 0, 0, $analysis['bestIncomeMonth'], 1)) : 'N/A' }}</strong>
+                        <strong>{{ $analysis['bestIncomeMonth'] ? $monthlyData[$analysis['bestIncomeMonth']]['label'] : 'N/A' }}</strong>
                     </div>
                 </div>
                 <div class="col-md-3 col-6 mb-2">
                     <div class="alert alert-warning mb-0 text-center py-2">
                         <div class="small">Weakest Income Month</div>
-                        <strong>{{ $analysis['worstIncomeMonth'] ? date('F', mktime(0, 0, 0, $analysis['worstIncomeMonth'], 1)) : 'N/A' }}</strong>
+                        <strong>{{ $analysis['worstIncomeMonth'] ? $monthlyData[$analysis['worstIncomeMonth']]['label'] : 'N/A' }}</strong>
                     </div>
                 </div>
                 <div class="col-md-3 col-6 mb-2">
                     <div class="alert alert-danger mb-0 text-center py-2">
                         <div class="small">Highest Expense Month</div>
-                        <strong>{{ $analysis['highestExpenseMonth'] ? date('F', mktime(0, 0, 0, $analysis['highestExpenseMonth'], 1)) : 'N/A' }}</strong>
+                        <strong>{{ $analysis['highestExpenseMonth'] ? $monthlyData[$analysis['highestExpenseMonth']]['label'] : 'N/A' }}</strong>
                     </div>
                 </div>
                 <div class="col-md-3 col-6 mb-2">
                     <div class="alert alert-info mb-0 text-center py-2">
                         <div class="small">Lowest Expense Month</div>
-                        <strong>{{ $analysis['lowestExpenseMonth'] ? date('F', mktime(0, 0, 0, $analysis['lowestExpenseMonth'], 1)) : 'N/A' }}</strong>
+                        <strong>{{ $analysis['lowestExpenseMonth'] ? $monthlyData[$analysis['lowestExpenseMonth']]['label'] : 'N/A' }}</strong>
                     </div>
                 </div>
             </div>
@@ -176,6 +179,7 @@
                     <script>
                         var monthlyData = @json($monthlyData);
 
+                        var monthLabels = Object.values(monthlyData).map(data => data.label);
                         var incomeData = Object.values(monthlyData).map(data => data.income);
                         var expenseData = Object.values(monthlyData).map(data => data.expense);
                         var netData = Object.values(monthlyData).map(data => data.net);
@@ -212,9 +216,7 @@
                         var budgetChart = new Chart(ctx, {
                             type: 'bar',
                             data: {
-                                labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
-                                    'September', 'October', 'November', 'December'
-                                ],
+                                labels: monthLabels,
                                 datasets: [{
                                         label: 'Income',
                                         backgroundColor: 'rgba(40, 167, 69, 0.7)',
@@ -265,16 +267,19 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($monthlyData as $month => $data)
+                        @foreach ($monthlyData as $periodKey => $data)
+                            @php
+                                $modalKey = str_replace('-', '_', $periodKey);
+                            @endphp
                             <tr>
                                 <td rowspan="2">
-                                    {{ date('F', mktime(0, 0, 0, $month, 1)) }} </td>
+                                    {{ $data['label'] }} </td>
                                 <td>
                                     @if ($data['income'] > 0)
                                         <button type="button"
                                             class="btn btn-link p-0 text-decoration-none text-primary"
                                             data-bs-toggle="modal"
-                                            data-bs-target="#monthIncomeDetailsModal_m{{ $month }}">
+                                            data-bs-target="#monthIncomeDetailsModal_m{{ $modalKey }}">
                                             {{ number_format($data['income'], 2) }}
                                         </button>
                                     @else
@@ -299,7 +304,7 @@
                                         <button type="button"
                                             class="btn btn-link p-0 text-decoration-none text-primary"
                                             data-bs-toggle="modal"
-                                            data-bs-target="#monthExpenseDetailsModal_m{{ $month }}">
+                                            data-bs-target="#monthExpenseDetailsModal_m{{ $modalKey }}">
                                             {{ number_format($data['expense'], 2) }}
                                         </button>
                                     @else
@@ -344,12 +349,15 @@
                 $categories = App\Models\Category::all();
             @endphp
 
-            @foreach ($monthlyData as $month => $data)
-                <div class="modal fade" id="monthIncomeDetailsModal_m{{ $month }}" tabindex="-1" aria-hidden="true">
+            @foreach ($monthlyData as $periodKey => $data)
+                @php
+                    $modalKey = str_replace('-', '_', $periodKey);
+                @endphp
+                <div class="modal fade" id="monthIncomeDetailsModal_m{{ $modalKey }}" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog modal-lg">
                         <div class="modal-content">
                             <div class="modal-header bg-primary text-white">
-                                <h5 class="modal-title">Income Details for {{ date('F', mktime(0, 0, 0, $month, 1)) }}, {{ $year }}</h5>
+                                <h5 class="modal-title">Income Details for {{ $data['label'] }}</h5>
                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
                             <div class="modal-body">
@@ -362,7 +370,7 @@
                                             @php
                                                 $categoryIncomes = [];
                                                 foreach ($categories as $category) {
-                                                    $amount = App\Models\ExpenseCalculation::where('types', 'INCOME')->where('category_id', $category->id)->whereYear('date', $year)->whereMonth('date', $month)->sum('amount');
+                                                    $amount = App\Models\ExpenseCalculation::where('types', 'INCOME')->where('category_id', $category->id)->whereBetween('date', [$data['rangeStart'], $data['rangeEnd']])->sum('amount');
                                                     if ($amount != 0) {
                                                         $categoryIncomes[] = ['name' => $category->name, 'amount' => $amount];
                                                     }
@@ -386,11 +394,11 @@
                     </div>
                 </div>
 
-                <div class="modal fade" id="monthExpenseDetailsModal_m{{ $month }}" tabindex="-1" aria-hidden="true">
+                <div class="modal fade" id="monthExpenseDetailsModal_m{{ $modalKey }}" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog modal-lg">
                         <div class="modal-content">
                             <div class="modal-header bg-warning text-dark">
-                                <h5 class="modal-title">Expense Details for {{ date('F', mktime(0, 0, 0, $month, 1)) }}, {{ $year }}</h5>
+                                <h5 class="modal-title">Expense Details for {{ $data['label'] }}</h5>
                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
                             <div class="modal-body">
@@ -403,7 +411,7 @@
                                             @php
                                                 $categoryExpenses = [];
                                                 foreach ($categories as $category) {
-                                                    $amount = App\Models\ExpenseCalculation::where('types', 'EXPENSE')->where('category_id', $category->id)->whereYear('date', $year)->whereMonth('date', $month)->sum('amount');
+                                                    $amount = App\Models\ExpenseCalculation::where('types', 'EXPENSE')->where('category_id', $category->id)->whereBetween('date', [$data['rangeStart'], $data['rangeEnd']])->sum('amount');
                                                     if ($amount != 0) {
                                                         $categoryExpenses[] = ['name' => $category->name, 'amount' => $amount];
                                                     }

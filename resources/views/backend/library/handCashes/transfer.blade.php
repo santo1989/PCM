@@ -28,7 +28,7 @@
                             model="App\Models\HandCash" column="name" />
                     </div>
                     <div class="col-md-2">
-                        <x-backend.form.input name="amount" type="number" step="0.01" label="Amount" />
+                        <x-backend.form.input name="amount" type="number" step="any" label="Amount" />
                     </div>
                 </div>
 

@@ -25,7 +25,7 @@
                 <x-backend.form.autocomplete-input name="name" label="Name" model="App\Models\HandCash" column="name"
                     :value="$handCashes->name" />
 
-                <x-backend.form.input name="amount" type="number" step="0.01" label="Amount" :value="$handCashes->amount" />
+                <x-backend.form.input name="amount" type="number" step="any" label="Amount" :value="$handCashes->amount" />
 
                 <x-backend.form.select name="types" label="HandCash Types" class="select2"
                     :options="config('finance.handcash_types')" :selected="$handCashes->types" />
