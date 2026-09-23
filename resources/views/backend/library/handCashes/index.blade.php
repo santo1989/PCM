@@ -27,7 +27,7 @@
                             <x-backend.form.anchor :href="route('handCashes_transfer_create')" type="Transfer" />
                         </div>
                         <div class="card-body">
-                            <form action="{{ route('handCashes.index') }}" method="GET" class="row g-2 align-items-end">
+                            <form action="{{ route('handCashes.index') }}" method="GET" data-live-filter class="row g-2 align-items-end">
                                 <div class="col-md-2">
                                     <label class="form-label small mb-1">Balance Start</label>
                                     <input type="date" name="balance_date_start" class="form-control"
@@ -92,6 +92,7 @@
                                         @endforeach
                                     </select>
                                 </div>
+                                <div class="col-md-2"><x-backend.per-page :default="20" /></div>
                                 <div class="col-md-8 d-flex flex-wrap gap-2 justify-content-md-end">
                                     <button type="submit" class="btn btn-outline-info">
                                         <i class="bi bi-filter"></i> Filter / Search
@@ -99,7 +100,7 @@
                                     <a href="{{ route('handCashes.index') }}" class="btn btn-outline-danger">
                                         <i class="bi bi-x-circle"></i> Clear
                                     </a>
-                                    <a href="{{ route('handCashes.index', array_merge(request()->query(), ['export_format' => 'xlsx'])) }}"
+                                    <a data-live-export href="{{ route('handCashes.index', array_merge(request()->query(), ['export_format' => 'xlsx'])) }}"
                                         class="btn btn-outline-success">
                                         <i class="bi bi-file-earmark-excel"></i> Excel
                                     </a>
@@ -119,6 +120,7 @@
                         </div>
                     </div>
 
+                    <div id="live-handcash" data-live-region>
                     <div class="card">
                         <div class="card-body justify-content-between">
                             {{-- handCash Table goes here --}}
@@ -359,7 +361,7 @@
                                         </tbody>
                                     </table>
                                     <div class="d-flex justify-content-center mt-3">
-                                        {{ $handCashes->links() }}
+                                        <x-backend.pager :paginator="$handCashes" />
                                     </div>
                                 </div>
 
@@ -368,6 +370,7 @@
                         <!-- /.card-body -->
                     </div>
                     <!-- /.card -->
+                    </div>
 
 
                     <!-- /.card -->

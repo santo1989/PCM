@@ -25,7 +25,7 @@ class HandCashController extends Controller
 
     public function index()
     {
-        $handCashesQuery = HandCash::query()->latest();
+        $handCashesQuery = HandCash::query()->orderByDesc('date')->orderByDesc('created_at');
 
         $typeInput = request('types', request('handCashes_type'));
         $typeValues = array_values(array_filter(array_map('strtoupper', (array) $typeInput)));
@@ -93,7 +93,7 @@ class HandCashController extends Controller
             return response()->make($viewContent, 200, $headers);
         }
 
-        $handCashes = $handCashesQuery->paginate(20)->appends(request()->query());
+        $handCashes = $handCashesQuery->paginate($this->perPage(20))->appends(request()->query());
 
         // Perform the database queries and retrieve the data
         // Date filtering for balance calculations
@@ -397,7 +397,7 @@ class HandCashController extends Controller
             $request->input('date') === null ||
             $request->input('amount') === null
         ) {
-            return redirect()->route('handCashes.index')->withErrors('All fields are null, Please fill up at least one field');
+            return $this->redirectToIndex('handCashes.index')->withErrors('All fields are null, Please fill up at least one field');
         }
 
         // Iterate through each set of input fields
@@ -442,7 +442,7 @@ class HandCashController extends Controller
         } catch (\Exception $e) {
         }
 
-        return redirect()->route('handCashes.index')->withMessage('HandCash and related data are added successfully!');
+        return $this->redirectToIndex('handCashes.index')->withMessage('HandCash and related data are added successfully!');
     }
 
     public function handCashes_transfer_create()
@@ -482,7 +482,7 @@ class HandCashController extends Controller
 
 
 
-        return redirect()->route('handCashes.index')->withMessage('HandCash and related data are added successfully!');
+        return $this->redirectToIndex('handCashes.index')->withMessage('HandCash and related data are added successfully!');
     }
 
 
@@ -533,7 +533,7 @@ class HandCashController extends Controller
         }
 
         // Redirect
-        return redirect()->route('handCashes.index')->withMessage('HandCash and related data are updated successfully!');
+        return $this->redirectToIndex('handCashes.index')->withMessage('HandCash and related data are updated successfully!');
     }
 
 
@@ -557,57 +557,79 @@ class HandCashController extends Controller
         } catch (\Exception $e) {
         }
 
-        return redirect()->route('handCashes.index')->withMessage('HandCash and related data are deleted successfully!');
+        return $this->redirectToIndex('handCashes.index')->withMessage('HandCash and related data are deleted successfully!');
     }
 
 
 
     public function Yearly_report(Request $request)
     {
-        // Date range replaces the old Year selector: the year it covers is derived from
-        // the End Date (matching the same "resolve month/year from range end" convention
-        // used elsewhere), defaulting to the current month. The date inputs are bounded
-        // by the earliest transaction on record through today.
+        // The month-by-month breakdown, chart, and cards all cover the exact
+        // Start/End Date range (which may span multiple calendar years) —
+        // one row per calendar month touched by the range, clipped to the
+        // range at the first/last month. Bounded by the earliest transaction
+        // on record through today.
         $minDataDate = ExpenseCalculation::min('date');
         $startDate = $request->get('start_date', now()->startOfMonth()->toDateString());
         $endDate = $request->get('end_date', now()->toDateString());
 
-        $year = (int) Carbon::parse($endDate)->year;
+        $rangeStart = Carbon::parse($startDate)->startOfDay();
+        $rangeEnd = Carbon::parse($endDate)->endOfDay();
+        if ($rangeStart->gt($rangeEnd)) {
+            [$rangeStart, $rangeEnd] = [$rangeEnd->copy()->startOfDay(), $rangeStart->copy()->endOfDay()];
+        }
+
+        // Kept for the Excel export link, which is still a single-year report.
+        $year = (int) $rangeEnd->year;
 
         $monthlyData = [];
 
-        for ($month = 1; $month <= 12; $month++) {
+        $cursor = $rangeStart->copy()->startOfMonth();
+        $lastMonth = $rangeEnd->copy()->startOfMonth();
+
+        while ($cursor->lte($lastMonth)) {
+            $monthStart = $cursor->copy()->startOfMonth();
+            if ($monthStart->lt($rangeStart)) {
+                $monthStart = $rangeStart->copy();
+            }
+            $monthEnd = $cursor->copy()->endOfMonth();
+            if ($monthEnd->gt($rangeEnd)) {
+                $monthEnd = $rangeEnd->copy();
+            }
+            $monthStartDate = $monthStart->toDateString();
+            $monthEndDate = $monthEnd->toDateString();
+
             $thisMonthIncome = ExpenseCalculation::where('types', 'INCOME')
-                ->whereYear('date', $year)
-                ->whereMonth('date', $month)
+                ->whereBetween('date', [$monthStartDate, $monthEndDate])
                 ->get();
 
             $thisMonthExpense = ExpenseCalculation::where('types', 'EXPENSE')
-                ->whereYear('date', $year)
-                ->whereMonth('date', $month)
+                ->whereBetween('date', [$monthStartDate, $monthEndDate])
                 ->groupBy('category_id')
                 ->select('category_id', DB::raw('SUM(amount) as totalExpense'))
                 ->get();
 
             $thisMonthneeds = ExpenseCalculation::where('rules', 'NEEDS')
-                ->whereYear('date', $year)
-                ->whereMonth('date', $month)
+                ->whereBetween('date', [$monthStartDate, $monthEndDate])
                 ->sum('amount');
 
             $thisMonthwants = ExpenseCalculation::where('rules', 'WANTS')
-                ->whereYear('date', $year)
-                ->whereMonth('date', $month)
+                ->whereBetween('date', [$monthStartDate, $monthEndDate])
                 ->sum('amount');
 
             $thisMonthsavings = ExpenseCalculation::where('rules', 'SAVINGS')
-                ->whereYear('date', $year)
-                ->whereMonth('date', $month)
+                ->whereBetween('date', [$monthStartDate, $monthEndDate])
                 ->sum('amount');
 
             $income = (float) $thisMonthIncome->sum('amount');
             $expense = (float) $thisMonthExpense->sum('totalExpense');
 
-            $monthlyData[$month] = [
+            $monthlyData[$cursor->format('Y-m')] = [
+                'year' => (int) $cursor->year,
+                'month' => (int) $cursor->month,
+                'label' => $cursor->format('F Y'),
+                'rangeStart' => $monthStartDate,
+                'rangeEnd' => $monthEndDate,
                 'income' => $income,
                 'needs' => $income * 0.5,
                 'wants' => $income * 0.3,
@@ -618,6 +640,8 @@ class HandCashController extends Controller
                 'thisMonthwants' => (float) $thisMonthwants,
                 'thisMonthsavings' => (float) $thisMonthsavings,
             ];
+
+            $cursor->addMonth();
         }
 
         // ---- Detailed analysis ----
@@ -628,9 +652,18 @@ class HandCashController extends Controller
         $monthsWithIncome = $monthsCollection->filter(fn($d) => $d['income'] > 0);
         $monthsWithExpense = $monthsCollection->filter(fn($d) => $d['expense'] > 0);
 
-        $prevYear = $year - 1;
-        $prevYearIncome = (float) ExpenseCalculation::where('types', 'INCOME')->whereYear('date', $prevYear)->sum('amount');
-        $prevYearExpense = (float) ExpenseCalculation::where('types', 'EXPENSE')->whereYear('date', $prevYear)->sum('amount');
+        // Compared against the immediately preceding period of equal length,
+        // since an arbitrary range has no single "previous calendar year".
+        $rangeDays = $rangeStart->diffInDays($rangeEnd) + 1;
+        $prevRangeEnd = $rangeStart->copy()->subDay()->endOfDay();
+        $prevRangeStart = $prevRangeEnd->copy()->subDays($rangeDays - 1)->startOfDay();
+
+        $prevPeriodIncome = (float) ExpenseCalculation::where('types', 'INCOME')
+            ->whereBetween('date', [$prevRangeStart->toDateString(), $prevRangeEnd->toDateString()])
+            ->sum('amount');
+        $prevPeriodExpense = (float) ExpenseCalculation::where('types', 'EXPENSE')
+            ->whereBetween('date', [$prevRangeStart->toDateString(), $prevRangeEnd->toDateString()])
+            ->sum('amount');
 
         $analysis = [
             'totalIncome' => $totalIncome,
@@ -641,15 +674,15 @@ class HandCashController extends Controller
             'worstIncomeMonth' => $monthsWithIncome->sortBy('income')->keys()->first(),
             'highestExpenseMonth' => $monthsWithExpense->sortByDesc('expense')->keys()->first(),
             'lowestExpenseMonth' => $monthsWithExpense->sortBy('expense')->keys()->first(),
-            'prevYear' => $prevYear,
-            'prevYearIncome' => $prevYearIncome,
-            'prevYearExpense' => $prevYearExpense,
-            'incomeYoyChange' => $prevYearIncome > 0 ? (($totalIncome - $prevYearIncome) / $prevYearIncome) * 100 : null,
-            'expenseYoyChange' => $prevYearExpense > 0 ? (($totalExpense - $prevYearExpense) / $prevYearExpense) * 100 : null,
+            'prevRangeStart' => $prevRangeStart->toDateString(),
+            'prevRangeEnd' => $prevRangeEnd->toDateString(),
+            'prevPeriodIncome' => $prevPeriodIncome,
+            'prevPeriodExpense' => $prevPeriodExpense,
+            'incomeYoyChange' => $prevPeriodIncome > 0 ? (($totalIncome - $prevPeriodIncome) / $prevPeriodIncome) * 100 : null,
+            'expenseYoyChange' => $prevPeriodExpense > 0 ? (($totalExpense - $prevPeriodExpense) / $prevPeriodExpense) * 100 : null,
         ];
 
-        // AI Insights panel uses the exact selected range (not the whole derived year).
-        $aiInsights = MLPipeline::run(Carbon::parse($startDate)->startOfDay(), Carbon::parse($endDate)->endOfDay());
+        $aiInsights = MLPipeline::run($rangeStart, $rangeEnd);
 
         return view('backend.reports.yearly_report', compact('monthlyData', 'year', 'analysis', 'aiInsights', 'startDate', 'endDate', 'minDataDate'));
     }

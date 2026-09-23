@@ -234,6 +234,9 @@
             });
     </script>
 
+    <script>window.LIVE_SIG_URL = '{{ route('live.signature') }}';</script>
+    <script src="{{ asset('js/live-index.js') }}?v={{ @filemtime(public_path('js/live-index.js')) }}"></script>
+
 </body>
 
 </html>

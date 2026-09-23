@@ -6,6 +6,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ExpenseCalculationController;
 use App\Http\Controllers\FinancialAnalysisDashboardController;
 use App\Http\Controllers\HandCashController;
+use App\Http\Controllers\LiveController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
@@ -134,6 +135,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/financial-analysis/kpi/{type}', [FinancialAnalysisDashboardController::class, 'kpi'])->name('financial_analysis.kpi');
     Route::post('/financial-analysis/analyze', [FinancialAnalysisDashboardController::class, 'analyze'])->name('financial_analysis.analyze');
     Route::get('/financial-analysis/insights', [FinancialAnalysisDashboardController::class, 'insights'])->name('financial_analysis.insights');
+
+    Route::get('/live/signature', [LiveController::class, 'signature'])->name('live.signature');
 
     // Database backup
     Route::get('/backup/status', [BackupController::class, 'status'])->name('backup.status');

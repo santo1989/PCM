@@ -26,6 +26,7 @@ class ExpenseCalculationController extends Controller
         $search_types = array_values(array_filter(array_map('strtoupper', (array) request('types', []))));
         $search_entry_date_start = request('entry_date_start');
         $search_entry_date_end = request('entry_date_end');
+        $search_name = request('name');
 
         if (!empty($search_category_id)) {
             $query->whereIn('category_id', $search_category_id);
@@ -33,6 +34,10 @@ class ExpenseCalculationController extends Controller
 
         if (!empty($search_types)) {
             $query->whereIn('types', $search_types);
+        }
+
+        if ($search_name) {
+            $query->where('name', 'like', '%' . $search_name . '%');
         }
 
         if ($search_entry_date_start && $search_entry_date_end) {
@@ -51,7 +56,7 @@ class ExpenseCalculationController extends Controller
 
             $search_cashes = $query->get();
             if ($search_cashes->isEmpty()) {
-                return redirect()->route('expenseCalculations.index')->withErrors('No transactions found for the selected filters to export.');
+                return $this->redirectToIndex('expenseCalculations.index')->withErrors('No transactions found for the selected filters to export.');
             }
 
             $viewContent = View::make('backend.library.expenseCalculations.export', compact('search_cashes'))->render();
@@ -64,7 +69,7 @@ class ExpenseCalculationController extends Controller
             return response()->make($viewContent, 200, $headers);
         }
 
-        $expenseCalculations = $query->paginate(50)->withQueryString();
+        $expenseCalculations = $query->paginate($this->perPage(50))->withQueryString();
 
         // Efficient category usage sorting with single query using left join and count
         $categories = Category::leftJoin('expense_calculations', 'categories.id', '=', 'expense_calculations.category_id')
@@ -79,7 +84,7 @@ class ExpenseCalculationController extends Controller
         // Bounds for the date filter inputs: earliest transaction on record through today.
         $minDataDate = ExpenseCalculation::min('date');
 
-        return view('backend.library.expenseCalculations.index', compact('expenseCalculations', 'search_cashes', 'categories', 'search_category_id', 'search_types', 'search_entry_date_start', 'search_entry_date_end', 'minDataDate'));
+        return view('backend.library.expenseCalculations.index', compact('expenseCalculations', 'search_cashes', 'categories', 'search_category_id', 'search_types', 'search_name', 'search_entry_date_start', 'search_entry_date_end', 'minDataDate'));
     }
 
 
@@ -88,7 +93,7 @@ class ExpenseCalculationController extends Controller
     public function create()
     {
         // Create happens via the modal on the index page, not a standalone form.
-        return redirect()->route('expenseCalculations.index');
+        return $this->redirectToIndex('expenseCalculations.index');
     }
 
 
@@ -110,7 +115,7 @@ class ExpenseCalculationController extends Controller
             }
         }
         if (!$hasRow) {
-            return redirect()->route('expenseCalculations.index')->withErrors('All fields are null, Please fill up at least one field');
+            return $this->redirectToIndex('expenseCalculations.index')->withErrors('All fields are null, Please fill up at least one field');
         }
 
         // Preload categories to avoid N+1
@@ -210,7 +215,7 @@ class ExpenseCalculationController extends Controller
             // don't block workflow if cache clearing fails
         }
 
-        return redirect()->route('expenseCalculations.index')->withMessage('ExpenseCalculation and related data are added successfully!');
+        return $this->redirectToIndex('expenseCalculations.index')->withMessage('ExpenseCalculation and related data are added successfully!');
     }
 
 
@@ -226,7 +231,7 @@ class ExpenseCalculationController extends Controller
     public function edit($id)
     {
         // Edit happens via the per-row modal on the index page, not a standalone form.
-        return redirect()->route('expenseCalculations.index');
+        return $this->redirectToIndex('expenseCalculations.index');
     }
 
 
@@ -265,7 +270,7 @@ class ExpenseCalculationController extends Controller
         }
 
         // Redirect
-        return redirect()->route('expenseCalculations.index')->withMessage('ExpenseCalculation and related data are updated successfully!');
+        return $this->redirectToIndex('expenseCalculations.index')->withMessage('ExpenseCalculation and related data are updated successfully!');
     }
 
 
@@ -289,7 +294,7 @@ class ExpenseCalculationController extends Controller
         } catch (\Exception $e) {
         }
 
-        return redirect()->route('expenseCalculations.index')->withMessage('ExpenseCalculation and related data are deleted successfully!');
+        return $this->redirectToIndex('expenseCalculations.index')->withMessage('ExpenseCalculation and related data are deleted successfully!');
     }
     public function filter(Request $request)
     {

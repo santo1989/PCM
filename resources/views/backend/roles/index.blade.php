@@ -22,10 +22,14 @@
                             <a class="btn btn-sm btn-outline-secondary" href="{{ route('roles.create') }}">
                                 <i class="bi bi-plus-circle"></i> Create
                             </a>
+                            <form method="GET" action="{{ route('roles.index') }}" data-live-filter class="d-inline-flex gap-2 ms-2 align-items-center">
+                                <input type="search" name="search" class="form-control form-control-sm" placeholder="Search role" value="{{ request('search') }}" autocomplete="off">
+                                <x-backend.per-page :default="25" />
+                            </form>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body" id="live-roles" data-live-region>
                             <div class="table-responsive">
-                                <table id="datatablesSimple" class="table table-bordered table-hover">
+                                <table class="table table-bordered table-hover">
                                     <thead>
                                         <tr>
                                             <th>Sl#</th>
@@ -34,7 +38,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @php $sl = 0 @endphp
+                                        @php $sl = ($roles->currentPage() - 1) * $roles->perPage(); @endphp
                                         @foreach ($roles as $role)
                                             <tr>
                                                 <td>{{ ++$sl }}</td>
@@ -55,6 +59,7 @@
                                     </tbody>
                                 </table>
                             </div>
+                            <x-backend.pager :paginator="$roles" />
                         </div>
                     </div>
                 </div>

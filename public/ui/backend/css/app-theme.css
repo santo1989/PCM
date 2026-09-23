@@ -281,3 +281,21 @@ a:hover {
     text-align: left;
   }
 }
+
+/* ---- Listing polish: sticky headers, calmer rows, smooth live refresh ---- */
+[data-live-region] .table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #f8fafc;
+    text-transform: uppercase;
+    font-size: .72rem;
+    letter-spacing: .04em;
+    color: #475569;
+    white-space: nowrap;
+}
+[data-live-region] .table tbody tr:hover { background: rgba(99, 102, 241, .05); }
+[data-live-region] .pagination { margin-bottom: 0; flex-wrap: wrap; }
+[data-live-region] .pagination .page-link { border-radius: .5rem; margin: 0 2px; }
+form[data-live-filter] .form-control:focus,
+form[data-live-filter] .form-select:focus { box-shadow: 0 0 0 .2rem rgba(99, 102, 241, .15); }

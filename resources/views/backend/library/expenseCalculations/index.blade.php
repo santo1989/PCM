@@ -17,7 +17,7 @@
                 <div class="col-md-12 col-sm-12 col-xl-12">
                     <div class="card mb-3 no-print">
                         <div class="card-body">
-                            <form method="GET" action="{{ route('expenseCalculations.index') }}" class="row g-2 align-items-end">
+                            <form method="GET" action="{{ route('expenseCalculations.index') }}" data-live-filter class="row g-2 align-items-end">
                                 @csrf
                                 <div class="col-md-2">
                                     <label class="form-label small mb-1">Types</label>
@@ -51,6 +51,21 @@
                                 </div>
 
                                 <div class="col-md-2">
+                                    <label class="form-label small mb-1">Name</label>
+                                    @php
+                                        $listId = 'dl_search_name';
+                                        $nameSuggestions = \App\Services\AutocompleteSource::values(\App\Models\ExpenseCalculation::class, 'name');
+                                    @endphp
+                                    <input list="{{ $listId }}" type="text" name="name" class="form-control"
+                                        autocomplete="off" value="{{ $search_name }}" placeholder="Search name...">
+                                    <datalist id="{{ $listId }}">
+                                        @foreach ($nameSuggestions as $suggestion)
+                                            <option value="{{ $suggestion }}"></option>
+                                        @endforeach
+                                    </datalist>
+                                </div>
+
+                                <div class="col-md-2">
                                     <label class="form-label small mb-1">Start Date</label>
                                     <input type="date" name="entry_date_start"
                                         id="entry_date_start" class="form-control"
@@ -64,6 +79,7 @@
                                         min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
                                 </div>
 
+                                <div class="col-md-1"><x-backend.per-page :default="50" /></div>
                                 <div class="col-md-3 d-flex flex-wrap gap-2 justify-content-md-end">
                                     <button class="btn btn-outline-info" onclick="validateForm()">
                                         <i class="fas fa-search"></i> Search
@@ -71,7 +87,7 @@
                                     <a href="{{ route('expenseCalculations.index') }}" class="btn btn-outline-danger">
                                         <i class="fas fa-rotate-right"></i> Reset
                                     </a>
-                                    <a href="{{ route('expenseCalculations.index', array_merge(request()->query(), ['export_format' => 'xlsx'])) }}"
+                                    <a data-live-export href="{{ route('expenseCalculations.index', array_merge(request()->query(), ['export_format' => 'xlsx'])) }}"
                                         class="btn btn-outline-success">
                                         <i class="fas fa-file-excel"></i> Excel
                                     </a>
@@ -803,7 +819,7 @@
                 </div>
                 <!-- /.card-header -->
                 <div class="card-body">
-                    <!--  Table goes here id="datatablesSimple" -->
+                    <div id="live-expense-table" data-live-region>
                     <table class="table table-bordered table-hover table-responsive-cards" id="myTable">
                         <thead>
                             <tr>
@@ -859,7 +875,8 @@
                         </tbody>
                     </table>
 
-                    {{ $expenseCalculations->links() }}
+                    <x-backend.pager :paginator="$expenseCalculations" />
+                    </div>
 
 
 
@@ -924,7 +941,7 @@
                                                     model="App\Models\ExpenseCalculation" column="name" />
                                             </div>
                                             <div class="col-md-2">
-                                                <x-backend.form.input name="amount[]" type="number" step="0.01"
+                                                <x-backend.form.input name="amount[]" type="number" step="any"
                                                     label="Amount" />
                                             </div>
                                             <div class="col-md-2">
@@ -979,7 +996,7 @@
                     <input type="text" list="dl_App_Models_ExpenseCalculation_name" name="name[]" class="form-control" autocomplete="off" placeholder="Name">
                 </div>
                 <div class="col-md-2">
-                    <input type="number" step="0.01" name="amount[]" class="form-control" placeholder="Amount">
+                    <input type="number" step="any" name="amount[]" class="form-control" placeholder="Amount">
                 </div>
                 <div class="col-md-2">
                     <select class="form-select select2" name="types[]">
@@ -1037,6 +1054,7 @@
 
     <!--  end model for Data Entry -->
 
+    <div id="live-expense-modals" data-live-region>
     <!--  start model for Data Edit -->
     @foreach ($expenseCalculations as $cash)
         <div class="modal fade" id="CashEditModal{{ $cash->id }}" tabindex="-1"
@@ -1078,7 +1096,7 @@
                                                 </div>
                                                 <div class="col-md-3">
                                                     <x-backend.form.input name="amount"
-                                                        :id="'edit_amount_' . $cash->id" type="number" step="0.01"
+                                                        :id="'edit_amount_' . $cash->id" type="number" step="any"
                                                         label="Amount" :value="$cash->amount" />
                                                 </div>
                                             </div>
@@ -1144,6 +1162,7 @@
     @endforeach
 
     <!--  End model for Data details -->
+    </div>
     <script>
         function validateForm() {
             var incCategory = document.getElementById("types").value;

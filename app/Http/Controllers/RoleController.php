@@ -10,7 +10,11 @@ class RoleController extends Controller
     public function index()
     {
 
-        $roles = Role::get();
+        $roles = Role::query()
+            ->when(trim((string) request("search")), fn ($q, $s) => $q->where("name", "like", "%" . $s . "%"))
+            ->orderBy("id")
+            ->paginate($this->perPage())
+            ->withQueryString();
 
         return view('backend.roles.index', [
             'roles' => $roles
@@ -32,7 +36,7 @@ class RoleController extends Controller
             'name' => $request->name,
         ]);
 
-        return redirect()->route('roles.index')->withMessage('Role created successfully!');
+        return $this->redirectToIndex('roles.index')->withMessage('Role created successfully!');
     }
 
     public function edit(Role $role)
@@ -52,13 +56,13 @@ class RoleController extends Controller
             'name' => $request->name,
         ]);
 
-        return redirect()->route('roles.index')->withMessage('Role updated successfully!');
+        return $this->redirectToIndex('roles.index')->withMessage('Role updated successfully!');
     }
 
     public function destroy(Role $role)
     {
         $role->delete();
 
-        return redirect()->route('roles.index')->withMessage('Role deleted successfully!');
+        return $this->redirectToIndex('roles.index')->withMessage('Role deleted successfully!');
     }
 }

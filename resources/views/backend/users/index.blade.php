@@ -20,8 +20,8 @@
                 <div class="col-12">
                     <div class="card">
                         <div class="card-header">
-                            <form method="GET" action="{{ route('users.index') }}" class="d-flex flex-wrap gap-2">
-                                <input type="text" name="search" placeholder="Search by name"
+                            <form method="GET" action="{{ route('users.index') }}" data-live-filter class="d-flex flex-wrap gap-2 align-items-end">
+                                <input name="search" placeholder="Search name or email" type="search" autocomplete="off"
                                     value="{{ request('search') }}" class="form-control" style="max-width: 220px;">
 
                                 @php $selectedRoleIds = array_map('strval', (array) request('role_id', [])); @endphp
@@ -34,6 +34,7 @@
                                     @endforeach
                                 </select>
 
+                                <x-backend.per-page :default="25" />
                                 <button class="btn btn-sm btn-outline-secondary" type="submit">
                                     <i class="bi bi-search"></i> Filter
                                 </button>
@@ -42,9 +43,9 @@
                                 </a>
                             </form>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body" id="live-users" data-live-region>
                             <div class="table-responsive">
-                                <table id="datatablesSimple" class="table table-bordered table-hover">
+                                <table class="table table-bordered table-hover">
                                     <thead>
                                         <tr>
                                             <th>Sl#</th>
@@ -56,7 +57,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @php $sl = 0 @endphp
+                                        @php $sl = ($users->currentPage() - 1) * $users->perPage(); @endphp
                                         @foreach ($users as $user)
                                             <tr>
                                                 <td>{{ ++$sl }}</td>
@@ -88,6 +89,7 @@
                                     </tbody>
                                 </table>
                             </div>
+                            <x-backend.pager :paginator="$users" />
                         </div>
                     </div>
                 </div>

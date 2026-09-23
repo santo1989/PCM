@@ -21,10 +21,13 @@ class UserController extends Controller
         }
 
         if (request('search')) {
-            $query->where('name', 'like', '%' . request('search') . '%');
+            $query->where(function ($q) {
+                $q->where("name", "like", "%" . request("search") . "%")
+                    ->orWhere("email", "like", "%" . request("search") . "%");
+            });
         }
 
-        $users = $query->get();
+        $users = $query->with("role")->paginate($this->perPage())->withQueryString();
         $roles = Role::all();
 
         return view('backend.users.index', [
@@ -67,7 +70,7 @@ class UserController extends Controller
 
             $user->update($requestData);
 
-            return redirect()->route('users.index')->withMessage('Successfully Updated!');
+            return $this->redirectToIndex('users.index')->withMessage('Successfully Updated!');
         } catch (QueryException $e) {
             return redirect()->back()->withInput()->withErrors($e->getMessage());
         }
@@ -77,7 +80,7 @@ class UserController extends Controller
     {
         try {
             $user->delete();
-            return redirect()->route('users.index')->withMessage('Successfully Deleted!');
+            return $this->redirectToIndex('users.index')->withMessage('Successfully Deleted!');
         } catch (QueryException $e) {
             return redirect()->back()->withErrors($e->getMessage());
         }
@@ -107,6 +110,6 @@ class UserController extends Controller
             $user->is_active = 0;
         }
         $user->save();
-        return redirect()->route('users.index');
+        return $this->redirectToIndex('users.index');
     }
 }

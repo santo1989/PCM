@@ -36,8 +36,31 @@
 
                 <x-backend.insights-panel :insights="\App\Services\InsightEngine::dashboardSummary()" />
 
+                <div class="card mb-3 no-print">
+                    <div class="card-body">
+                        <form method="GET" action="{{ route('categories.index') }}" data-live-filter class="row g-2 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label small mb-1">Search</label>
+                                <input type="search" name="search" class="form-control" value="{{ request('search') }}" placeholder="Name, type or rule..." autocomplete="off">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small mb-1">Types</label>
+                                <select name="types[]" class="form-select select2" multiple data-placeholder="All Types">
+                                    @foreach (['INCOME', 'EXPENSE', 'LOAN', 'RETURN'] as $t)
+                                        <option value="{{ $t }}" {{ in_array($t, array_map('strtoupper', (array) request('types', []))) ? 'selected' : '' }}>{{ $t }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-2"><x-backend.per-page :default="25" /></div>
+                            <div class="col-md-3">
+                                <a href="{{ route('categories.index') }}" class="btn btn-outline-danger"><i class="bi bi-x-circle"></i> Reset</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
                 <div class="row">
-                    <div class="col-12">
+                    <div class="col-12" id="live-categories" data-live-region>
                         <div class="card">
                             <div class="card-body">
                                 <div class="table-responsive">
@@ -51,7 +74,7 @@
                                             'RETURN' => 'bi-arrow-left-right text-info',
                                         ];
                                     @endphp
-                                    <table id="datatablesSimple" class="table table-bordered table-hover table-responsive-cards">
+                                    <table class="table table-bordered table-hover table-responsive-cards">
                                         <thead>
                                             <tr>
                                                 <th>Sl#</th>
@@ -62,7 +85,7 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @php $sl = 0 @endphp
+                                            @php $sl = ($categories->currentPage() - 1) * $categories->perPage(); @endphp
                                             @foreach ($categories as $category)
                                                 <tr>
                                                     <td data-label="Sl#">{{ ++$sl }}</td>
@@ -92,6 +115,7 @@
                                         </tbody>
                                     </table>
                                 </div>
+                                <x-backend.pager :paginator="$categories" />
                             </div>
                         </div>
                     </div>

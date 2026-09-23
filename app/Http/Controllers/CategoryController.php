@@ -9,8 +9,19 @@ class CategoryController extends Controller
 {
     public function index()
     {
-        $categories = Category::all();
-        return view('backend.library.categories.index', compact('categories'));
+        $query = Category::query()->orderBy("id");
+        if ($search = trim((string) request("search"))) {
+            $query->where(function ($q) use ($search) {
+                $q->where("name", "like", "%" . $search . "%")
+                    ->orWhere("types", "like", "%" . $search . "%")
+                    ->orWhere("rules", "like", "%" . $search . "%");
+            });
+        }
+        if ($types = array_filter((array) request("types"))) {
+            $query->whereIn("types", array_map("strtoupper", $types));
+        }
+        $categories = $query->paginate($this->perPage())->withQueryString();
+        return view("backend.library.categories.index", compact('categories'));
     }
 
 
@@ -45,7 +56,7 @@ class CategoryController extends Controller
         $categories->save();
 
         // Redirect
-        return redirect()->route('categories.index');
+        return $this->redirectToIndex('categories.index');
     }
 
 
@@ -84,7 +95,7 @@ class CategoryController extends Controller
         $categories->save();
 
         // Redirect
-        return redirect()->route('categories.index');
+        return $this->redirectToIndex('categories.index');
     }
 
 
@@ -92,6 +103,6 @@ class CategoryController extends Controller
     {
         $categories = Category::findOrFail($id)->delete();
 
-        return redirect()->route('categories.index')->withMessage('Category are deleted successfully!');
+        return $this->redirectToIndex('categories.index')->withMessage('Category are deleted successfully!');
     }
 }
