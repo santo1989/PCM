@@ -111,7 +111,7 @@
         var form = document.querySelector('form[data-live-filter]');
         if (!a || !form) return;
         var u = formUrl(form);
-        a.href = u + (u.indexOf('?') > -1 ? '&' : '?') + 'export_format=xlsx';
+        a.href = u + (u.indexOf('?') > -1 ? '&' : '?') + 'export_format=' + (a.dataset.liveExport || 'xlsx');
     });
 
     // AJAX pagination

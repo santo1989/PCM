@@ -32,7 +32,7 @@
                     <div class="col-md-4">
                         @include('backend.reports.partials.export_toolbar', [
                             'excelRoute' => 'Yearly_report.export_excel',
-                            'excelParams' => ['year' => $year],
+                            'excelParams' => ['start_date' => $startDate, 'end_date' => $endDate],
                         ])
                     </div>
                     <div class="col-12">
@@ -268,9 +268,6 @@
                     </thead>
                     <tbody>
                         @foreach ($monthlyData as $periodKey => $data)
-                            @php
-                                $modalKey = str_replace('-', '_', $periodKey);
-                            @endphp
                             <tr>
                                 <td rowspan="2">
                                     {{ $data['label'] }} </td>
@@ -279,7 +276,7 @@
                                         <button type="button"
                                             class="btn btn-link p-0 text-decoration-none text-primary"
                                             data-bs-toggle="modal"
-                                            data-bs-target="#monthIncomeDetailsModal_m{{ $modalKey }}">
+                                            data-bs-target="#monthIncomeDetailsModal_m{{ $periodKey }}">
                                             {{ number_format($data['income'], 2) }}
                                         </button>
                                     @else
@@ -304,7 +301,7 @@
                                         <button type="button"
                                             class="btn btn-link p-0 text-decoration-none text-primary"
                                             data-bs-toggle="modal"
-                                            data-bs-target="#monthExpenseDetailsModal_m{{ $modalKey }}">
+                                            data-bs-target="#monthExpenseDetailsModal_m{{ $periodKey }}">
                                             {{ number_format($data['expense'], 2) }}
                                         </button>
                                     @else
@@ -345,95 +342,88 @@
                 </table>
             </div>
 
+            {{-- Print / PDF only: the modals' category breakdowns, which can't be printed from a popup. --}}
             @php
-                $categories = App\Models\Category::all();
+                $yearCount = collect($monthlyData)->flatMap(fn($d) => array_keys($d['years']))->unique()->count();
             @endphp
+            <div class="d-none d-print-block" style="page-break-before: always;">
+                <h4 class="text-center">Category-wise Income / Expense Breakdown</h4>
+                <table style="border-collapse:collapse;width:100%;font-size:12px;">
+                    <tbody>
+                        @include('backend.reports.partials._yearly_category_rows', [
+                            'monthlyData' => $monthlyData,
+                            'colspan' => $yearCount + 2,
+                        ])
+                    </tbody>
+                </table>
+            </div>
 
             @foreach ($monthlyData as $periodKey => $data)
-                @php
-                    $modalKey = str_replace('-', '_', $periodKey);
-                @endphp
-                <div class="modal fade" id="monthIncomeDetailsModal_m{{ $modalKey }}" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog modal-lg">
-                        <div class="modal-content">
-                            <div class="modal-header bg-primary text-white">
-                                <h5 class="modal-title">Income Details for {{ $data['label'] }}</h5>
-                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body">
-                                <div class="table-responsive">
-                                    <table class="table table-hover table-striped">
-                                        <thead class="table-light">
-                                            <tr><th>Category</th><th class="text-end">Total Income</th></tr>
-                                        </thead>
-                                        <tbody>
-                                            @php
-                                                $categoryIncomes = [];
-                                                foreach ($categories as $category) {
-                                                    $amount = App\Models\ExpenseCalculation::where('types', 'INCOME')->where('category_id', $category->id)->whereBetween('date', [$data['rangeStart'], $data['rangeEnd']])->sum('amount');
-                                                    if ($amount != 0) {
-                                                        $categoryIncomes[] = ['name' => $category->name, 'amount' => $amount];
-                                                    }
-                                                }
-                                                usort($categoryIncomes, fn($a, $b) => $b['amount'] <=> $a['amount']);
-                                            @endphp
-                                            @foreach ($categoryIncomes as $categoryIncome)
-                                                <tr>
-                                                    <td>{{ $categoryIncome['name'] }}</td>
-                                                    <td class="text-end fw-semibold text-success">{{ number_format($categoryIncome['amount'], 2) }}</td>
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                        <tfoot class="table-primary">
-                                            <tr><td class="fw-bold">Total</td><td class="text-end fw-bold">{{ number_format($data['income'], 2) }}</td></tr>
-                                        </tfoot>
-                                    </table>
+                @foreach ([
+                    ['type' => 'income', 'title' => 'Income', 'header' => 'bg-primary text-white', 'close' => 'btn-close-white', 'text' => 'text-success', 'foot' => 'table-primary'],
+                    ['type' => 'expense', 'title' => 'Expense', 'header' => 'bg-warning text-dark', 'close' => '', 'text' => 'text-danger', 'foot' => 'table-warning'],
+                ] as $cfg)
+                    <div class="modal fade" id="month{{ $cfg['title'] }}DetailsModal_m{{ $periodKey }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                            <div class="modal-content">
+                                <div class="modal-header {{ $cfg['header'] }}">
+                                    <h5 class="modal-title">{{ $cfg['title'] }} Details for {{ $data['label'] }}</h5>
+                                    <button type="button" class="btn-close {{ $cfg['close'] }}" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                                <div class="modal-body">
+                                    <h6 class="fw-bold">{{ $data['label'] }} &mdash; All Years ({{ implode(', ', array_keys($data['years'])) }})</h6>
+                                    <div class="table-responsive mb-4">
+                                        <table class="table table-hover table-striped">
+                                            <thead class="table-light">
+                                                <tr><th>Category</th><th class="text-end">Total {{ $cfg['title'] }}</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                @forelse ($data[$cfg['type'] . 'ByCategory'] as $name => $amount)
+                                                    <tr>
+                                                        <td>{{ $name }}</td>
+                                                        <td class="text-end fw-semibold {{ $cfg['text'] }}">{{ number_format($amount, 2) }}</td>
+                                                    </tr>
+                                                @empty
+                                                    <tr><td colspan="2" class="text-center text-muted">No records</td></tr>
+                                                @endforelse
+                                            </tbody>
+                                            <tfoot class="{{ $cfg['foot'] }}">
+                                                <tr><td class="fw-bold">Total</td><td class="text-end fw-bold">{{ number_format($data[$cfg['type']], 2) }}</td></tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
 
-                <div class="modal fade" id="monthExpenseDetailsModal_m{{ $modalKey }}" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog modal-lg">
-                        <div class="modal-content">
-                            <div class="modal-header bg-warning text-dark">
-                                <h5 class="modal-title">Expense Details for {{ $data['label'] }}</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body">
-                                <div class="table-responsive">
-                                    <table class="table table-hover table-striped">
-                                        <thead class="table-light">
-                                            <tr><th>Category</th><th class="text-end">Total Expense</th></tr>
-                                        </thead>
-                                        <tbody>
-                                            @php
-                                                $categoryExpenses = [];
-                                                foreach ($categories as $category) {
-                                                    $amount = App\Models\ExpenseCalculation::where('types', 'EXPENSE')->where('category_id', $category->id)->whereBetween('date', [$data['rangeStart'], $data['rangeEnd']])->sum('amount');
-                                                    if ($amount != 0) {
-                                                        $categoryExpenses[] = ['name' => $category->name, 'amount' => $amount];
-                                                    }
-                                                }
-                                                usort($categoryExpenses, fn($a, $b) => $b['amount'] <=> $a['amount']);
-                                            @endphp
-                                            @foreach ($categoryExpenses as $categoryExpense)
-                                                <tr>
-                                                    <td>{{ $categoryExpense['name'] }}</td>
-                                                    <td class="text-end fw-semibold text-danger">{{ number_format($categoryExpense['amount'], 2) }}</td>
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                        <tfoot class="table-warning">
-                                            <tr><td class="fw-bold">Total</td><td class="text-end fw-bold">{{ number_format($data['expense'], 2) }}</td></tr>
-                                        </tfoot>
-                                    </table>
+                                    @foreach ($data['years'] as $yearData)
+                                        <h6 class="fw-bold">
+                                            {{ $data['label'] }} {{ $yearData['year'] }}
+                                            <small class="text-muted fw-normal">({{ $yearData['rangeStart'] }} to {{ $yearData['rangeEnd'] }})</small>
+                                        </h6>
+                                        <div class="table-responsive mb-4">
+                                            <table class="table table-sm table-hover table-striped">
+                                                <thead class="table-light">
+                                                    <tr><th>Category</th><th class="text-end">{{ $cfg['title'] }}</th></tr>
+                                                </thead>
+                                                <tbody>
+                                                    @forelse ($yearData[$cfg['type'] . 'ByCategory'] as $name => $amount)
+                                                        <tr>
+                                                            <td>{{ $name }}</td>
+                                                            <td class="text-end fw-semibold {{ $cfg['text'] }}">{{ number_format($amount, 2) }}</td>
+                                                        </tr>
+                                                    @empty
+                                                        <tr><td colspan="2" class="text-center text-muted">No records</td></tr>
+                                                    @endforelse
+                                                </tbody>
+                                                <tfoot class="{{ $cfg['foot'] }}">
+                                                    <tr><td class="fw-bold">Total</td><td class="text-end fw-bold">{{ number_format($yearData[$cfg['type']], 2) }}</td></tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    @endforeach
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                @endforeach
             @endforeach
         </div>
 

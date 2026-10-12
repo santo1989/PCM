@@ -107,6 +107,13 @@
                                     <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
                                         <i class="bi bi-printer"></i> Print / PDF
                                     </button>
+                                    <a data-live-export="balance_xlsx" href="{{ route('handCashes.index', array_merge(request()->query(), ['export_format' => 'balance_xlsx'])) }}"
+                                        class="btn btn-outline-success">
+                                        <i class="bi bi-file-earmark-spreadsheet"></i> Balance Excel
+                                    </a>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="printBalanceSummary()">
+                                        <i class="bi bi-printer"></i> Print Balance / PDF
+                                    </button>
                                 </div>
                                 <div class="col-12">
                                     <div class="small text-muted">
@@ -122,8 +129,16 @@
 
                     <div id="live-handcash" data-live-region>
                     <div class="card">
-                        <div class="card-body justify-content-between">
+                        <div class="card-body justify-content-between" id="balance-summary">
                             {{-- handCash Table goes here --}}
+                            <div class="d-none d-print-block text-center mb-3">
+                                <h3 class="mb-0">Hand Cash Balance Summary</h3>
+                                <div class="small text-muted">
+                                    Balance period:
+                                    {{ request('balance_date_start') && request('balance_date_end') ? request('balance_date_start') . ' to ' . request('balance_date_end') : 'All Time' }}
+                                    &mdash; Printed {{ now()->format('d M Y, h:i A') }}
+                                </div>
+                            </div>
 
                             <div class="row justify-content-between text-center">
                                 <div class="col-md-12">
@@ -382,7 +397,26 @@
         <!-- /.container-fluid -->
     </section>
 
+    <style>
+        @media print {
+            /* "Print Balance / PDF" prints only the balance summary tables. */
+            body.print-balance-only * { visibility: hidden; }
+            body.print-balance-only #balance-summary,
+            body.print-balance-only #balance-summary * { visibility: visible; }
+            body.print-balance-only #balance-summary { position: absolute; left: 0; top: 0; width: 100%; }
+            body.print-balance-only #balance-summary .col-md-3 { flex: 0 0 50%; max-width: 50%; }
+        }
+    </style>
+
     <script>
+        function printBalanceSummary() {
+            document.body.classList.add('print-balance-only');
+            window.addEventListener('afterprint', function () {
+                document.body.classList.remove('print-balance-only');
+            }, { once: true });
+            window.print();
+        }
+
         function confirmDelete(url) {
             Swal.fire({
                 title: 'Are you sure?',

@@ -4,13 +4,15 @@
     $labelStyle = 'padding:6px 8px;border:1px solid #D1D5DB;text-align:left;';
     $totalStyle = 'background-color:#E0E7FF;font-weight:bold;';
     $zebra = '#F8F9FC';
+    $yearCount = collect($monthlyData)->flatMap(fn($d) => array_keys($d['years']))->unique()->count();
+    $colspan = max(7, $yearCount + 2);
 @endphp
 <table style="border-collapse:collapse;font-family:Calibri, Arial, sans-serif;">
     <thead>
         @include('backend.reports.exports.partials._title_band', [
-            'title' => 'Yearly Report — ' . $year,
-            'subtitle' => 'Generated on ' . now()->format('d M Y, h:i A'),
-            'colspan' => 7,
+            'title' => 'Yearly Report — ' . \Carbon\Carbon::parse($startDate)->format('d M Y') . ' to ' . \Carbon\Carbon::parse($endDate)->format('d M Y'),
+            'subtitle' => 'Month-by-month totals across all years in the range · Generated on ' . now()->format('d M Y, h:i A'),
+            'colspan' => $colspan,
         ])
         <tr>
             <th style="{{ $headerStyle }}">Month</th>
@@ -25,13 +27,13 @@
     <tbody>
         @foreach ($monthlyData as $data)
             <tr style="background-color:{{ $loop->even ? $zebra : '#FFFFFF' }};">
-                <td style="{{ $labelStyle }}">{{ $data['month'] }}</td>
+                <td style="{{ $labelStyle }}">{{ $data['label'] }}</td>
                 <td style="{{ $cellStyle }}color:#16A34A;">{{ number_format($data['income'], 2) }}</td>
                 <td style="{{ $cellStyle }}color:#DC2626;">{{ number_format($data['expense'], 2) }}</td>
                 <td style="{{ $cellStyle }}{{ $data['net'] >= 0 ? 'color:#16A34A;' : 'color:#DC2626;' }}">{{ number_format($data['net'], 2) }}</td>
-                <td style="{{ $cellStyle }}">{{ number_format($data['needs'], 2) }}</td>
-                <td style="{{ $cellStyle }}">{{ number_format($data['wants'], 2) }}</td>
-                <td style="{{ $cellStyle }}">{{ number_format($data['savings'], 2) }}</td>
+                <td style="{{ $cellStyle }}">{{ number_format($data['thisMonthneeds'], 2) }}</td>
+                <td style="{{ $cellStyle }}">{{ number_format($data['thisMonthwants'], 2) }}</td>
+                <td style="{{ $cellStyle }}">{{ number_format($data['thisMonthsavings'], 2) }}</td>
             </tr>
         @endforeach
         <tr style="{{ $totalStyle }}">
@@ -39,9 +41,10 @@
             <td style="{{ $cellStyle }}">{{ number_format(array_sum(array_column($monthlyData, 'income')), 2) }}</td>
             <td style="{{ $cellStyle }}">{{ number_format(array_sum(array_column($monthlyData, 'expense')), 2) }}</td>
             <td style="{{ $cellStyle }}">{{ number_format(array_sum(array_column($monthlyData, 'net')), 2) }}</td>
-            <td style="{{ $cellStyle }}">{{ number_format(array_sum(array_column($monthlyData, 'needs')), 2) }}</td>
-            <td style="{{ $cellStyle }}">{{ number_format(array_sum(array_column($monthlyData, 'wants')), 2) }}</td>
-            <td style="{{ $cellStyle }}">{{ number_format(array_sum(array_column($monthlyData, 'savings')), 2) }}</td>
+            <td style="{{ $cellStyle }}">{{ number_format(array_sum(array_column($monthlyData, 'thisMonthneeds')), 2) }}</td>
+            <td style="{{ $cellStyle }}">{{ number_format(array_sum(array_column($monthlyData, 'thisMonthwants')), 2) }}</td>
+            <td style="{{ $cellStyle }}">{{ number_format(array_sum(array_column($monthlyData, 'thisMonthsavings')), 2) }}</td>
         </tr>
+        @include('backend.reports.partials._yearly_category_rows', ['monthlyData' => $monthlyData, 'colspan' => $colspan])
     </tbody>
 </table>
