@@ -945,13 +945,15 @@
                                                     label="Amount" />
                                             </div>
                                             <div class="col-md-2">
+                                                {{-- Withdraws listed first and pre-selected: the usual entry here --}}
                                                 <x-backend.form.select name="types[]" label="HandCash Types"
-                                                    class="select2" :options="config('finance.handcash_types')" />
+                                                    class="select2" selected="WIDROWS"
+                                                    :options="['WIDROWS' => config('finance.handcash_types.WIDROWS')] + config('finance.handcash_types')" />
                                             </div>
                                             <div class="col-md-2">
                                                 <x-backend.form.select name="rules[]" label="Cash Rules"
                                                     class="select2"
-                                                    :options="config('finance.handcash_rules')" />
+                                                    :options="\App\Services\AutocompleteSource::ranked(config('finance.handcash_rules'), \App\Models\HandCash::class, 'rules')" />
                                             </div>
                                         </div>
                                         <!-- row-1 end -->
@@ -1000,14 +1002,14 @@
                 </div>
                 <div class="col-md-2">
                     <select class="form-select select2" name="types[]">
-                        @foreach (config('finance.handcash_types') as $key => $value)
-                            <option value="{{ $key }}">{{ $value }}</option>
+                        @foreach (['WIDROWS' => config('finance.handcash_types.WIDROWS')] + config('finance.handcash_types') as $key => $value)
+                            <option value="{{ $key }}" {{ $key === 'WIDROWS' ? 'selected' : '' }}>{{ $value }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="col-md-2">
                     <select class="form-select select2" name="rules[]">
-                        @foreach (config('finance.handcash_rules') as $key => $value)
+                        @foreach (\App\Services\AutocompleteSource::ranked(config('finance.handcash_rules'), \App\Models\HandCash::class, 'rules') as $key => $value)
                             <option value="{{ $key }}">{{ $value }}</option>
                         @endforeach
                     </select>

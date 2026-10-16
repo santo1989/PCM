@@ -39,7 +39,7 @@
                     </div>
                     <div class="col-md-3">
                         <x-backend.form.select name="rules1" label="From: Account" class="select2"
-                            :options="config('finance.handcash_rules')" />
+                            :options="\App\Services\AutocompleteSource::ranked(config('finance.handcash_rules'), \App\Models\HandCash::class, 'rules')" />
                     </div>
                     <div class="col-md-2">
                         <x-backend.form.select name="types2" label="To: Type" class="select2"
@@ -47,7 +47,7 @@
                     </div>
                     <div class="col-md-3">
                         <x-backend.form.select name="rules2" label="To: Account" class="select2"
-                            :options="config('finance.handcash_rules')" />
+                            :options="\App\Services\AutocompleteSource::ranked(config('finance.handcash_rules'), \App\Models\HandCash::class, 'rules')" />
                     </div>
                 </div>
 

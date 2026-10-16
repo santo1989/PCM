@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\ExpenseCalculation;
+use App\Services\BudgetService;
 use App\Models\HandCash;
 use Illuminate\Http\Request;
 use App\Http\Requests\ExpenseCalculationRequest;
@@ -179,41 +180,9 @@ class ExpenseCalculationController extends Controller
         });
 
         // Invalidate dashboard caches for affected periods
-        try {
-            $years = [];
-            $months = [];
-            foreach ($expenseRows as $r) {
-                if (!empty($r['date'])) {
-                    $y = date('Y', strtotime($r['date']));
-                    $m = date('m', strtotime($r['date']));
-                    $years[$y] = true;
-                    $months[$y . ':' . $m] = true;
-                }
-            }
-            foreach ($handRows as $r) {
-                if (!empty($r['date'])) {
-                    $y = date('Y', strtotime($r['date']));
-                    $m = date('m', strtotime($r['date']));
-                    $years[$y] = true;
-                    $months[$y . ':' . $m] = true;
-                }
-            }
-            // forget common keys
-            Cache::forget('dashboard:monthly_trend:last12');
-            \App\Services\FinancialAnalyticsService::forgetAll();
-            \App\Services\FinancialAnalysisService::forgetAll();
-            foreach (array_keys($years) as $y) {
-                Cache::forget("dashboard:category_breakdown:{$y}:all");
-                Cache::forget("dashboard:top_categories:{$y}");
-            }
-            foreach (array_keys($months) as $ym) {
-                [$y, $m] = explode(':', $ym);
-                Cache::forget("dashboard:summary:{$y}:{$m}");
-                Cache::forget("dashboard:category_breakdown:{$y}:{$m}");
-            }
-        } catch (\Exception $e) {
-            // don't block workflow if cache clearing fails
-        }
+        ExpenseCalculation::flushReportCaches(array_merge(array_column($expenseRows, 'date'), array_column($handRows, 'date')));
+
+        BudgetService::flashWarnings(array_column($expenseRows, 'category_id'));
 
         return $this->redirectToIndex('expenseCalculations.index')->withMessage('ExpenseCalculation and related data are added successfully!');
     }
@@ -255,19 +224,9 @@ class ExpenseCalculationController extends Controller
         $expenseCalculations->save();
 
         // Clear cache for this record's period
-        try {
-            if ($expenseCalculations->date) {
-                $y = date('Y', strtotime($expenseCalculations->date));
-                $m = date('m', strtotime($expenseCalculations->date));
-                Cache::forget('dashboard:monthly_trend:last12');
-            \App\Services\FinancialAnalyticsService::forgetAll();
-            \App\Services\FinancialAnalysisService::forgetAll();
-                Cache::forget("dashboard:summary:{$y}:{$m}");
-                Cache::forget("dashboard:category_breakdown:{$y}:all");
-                Cache::forget("dashboard:category_breakdown:{$y}:{$m}");
-            }
-        } catch (\Exception $e) {
-        }
+        ExpenseCalculation::flushReportCaches([$expenseCalculations->date]);
+
+        BudgetService::flashWarnings([$expenseCalculations->category_id]);
 
         // Redirect
         return $this->redirectToIndex('expenseCalculations.index')->withMessage('ExpenseCalculation and related data are updated successfully!');
@@ -280,19 +239,7 @@ class ExpenseCalculationController extends Controller
         $date = $expenseCalculations->date;
         $expenseCalculations->delete();
 
-        try {
-            if ($date) {
-                $y = date('Y', strtotime($date));
-                $m = date('m', strtotime($date));
-                Cache::forget('dashboard:monthly_trend:last12');
-            \App\Services\FinancialAnalyticsService::forgetAll();
-            \App\Services\FinancialAnalysisService::forgetAll();
-                Cache::forget("dashboard:summary:{$y}:{$m}");
-                Cache::forget("dashboard:category_breakdown:{$y}:all");
-                Cache::forget("dashboard:category_breakdown:{$y}:{$m}");
-            }
-        } catch (\Exception $e) {
-        }
+        ExpenseCalculation::flushReportCaches([$date]);
 
         return $this->redirectToIndex('expenseCalculations.index')->withMessage('ExpenseCalculation and related data are deleted successfully!');
     }

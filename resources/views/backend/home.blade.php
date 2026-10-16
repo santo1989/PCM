@@ -4,7 +4,7 @@
         Dashboard
     </x-slot>
 
-    <div class="container-fluid pt-4">
+    <div class="container-fluid px-0">
 
         <div class="gradient-header mb-4">
             <h2 class="mb-1">Welcome back{{ auth()->user()->name ? ', ' . auth()->user()->name : '' }}</h2>
@@ -129,6 +129,11 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-lg-6"><x-backend.budget-progress :limit="5" class="h-100" /></div>
+            <div class="col-lg-6"><x-backend.upcoming-recurring class="h-100" /></div>
         </div>
 
         <x-backend.insights-panel :insights="$insights ?? []" title="This Month's Insights" />

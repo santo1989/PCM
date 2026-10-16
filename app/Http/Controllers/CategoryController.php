@@ -38,9 +38,9 @@ class CategoryController extends Controller
             'name' => 'required|min:3|max:191',
             'types' => 'required',
             'rules' => 'required',
+            'monthly_budget' => 'nullable|numeric|min:0',
         ]);
 
-        $categories = Category::all();
         // Data insert
         $categories = new Category;
         $categories->name = $request->name;
@@ -51,7 +51,7 @@ class CategoryController extends Controller
         } else {
             $categories->rules = '0';
         }
-
+        $categories->monthly_budget = $request->filled('monthly_budget') ? $request->monthly_budget : null;
 
         $categories->save();
 
@@ -80,6 +80,7 @@ class CategoryController extends Controller
             'name' => 'required|min:3|max:191',
             'types' => 'required',
             'rules' => 'required',
+            'monthly_budget' => 'nullable|numeric|min:0',
         ]);
 
         // Data update
@@ -92,6 +93,7 @@ class CategoryController extends Controller
         } else {
             $categories->rules = '0';
         }
+        $categories->monthly_budget = $request->filled('monthly_budget') ? $request->monthly_budget : null;
         $categories->save();
 
         // Redirect

@@ -1,21 +1,11 @@
-@php
-    $reportLinks = [
-        ['route' => 'financial_analysis.index', 'label' => 'Financial Analysis', 'icon' => 'bi-clipboard-data'],
-        ['route' => 'Budge_Projection', 'label' => 'Budget Projection', 'icon' => 'bi-graph-up-arrow'],
-        ['route' => 'Yearly_report', 'label' => 'Yearly Report', 'icon' => 'bi-calendar3'],
-        ['route' => 'Monthly_report', 'label' => 'Monthly Report', 'icon' => 'bi-calendar-month'],
-        ['route' => 'Monthly_invest', 'label' => 'Monthly Investment', 'icon' => 'bi-piggy-bank'],
-        ['route' => 'interactive.dashboard', 'label' => 'Interactive Dashboard', 'icon' => 'bi-speedometer2'],
-        ['route' => 'cost_optimisation', 'label' => 'Cost Optimisation', 'icon' => 'bi-scissors'],
-        ['route' => 'predictive_budget', 'label' => 'Predictive Budget', 'icon' => 'bi-magic'],
-        ['route' => 'power_bi_report', 'label' => 'BI Report', 'icon' => 'bi-bar-chart-line'],
-    ];
-@endphp
-<div class="d-flex flex-wrap justify-content-center gap-2 report-nav mb-4 no-print">
+{{-- Report tabs, from the "Reports" group in config/navigation.php. Swipeable on phones. --}}
+@php($reportLinks = collect(config('navigation.groups'))->firstWhere('label', 'Reports')['items'] ?? [])
+<nav class="d-flex gap-2 report-nav mb-4 no-print" aria-label="Reports">
     @foreach ($reportLinks as $link)
-        <a href="{{ route($link['route']) }}"
-            class="btn btn-sm {{ request()->routeIs($link['route']) ? 'btn-danger' : 'btn-outline-danger' }}">
+        @php($active = request()->routeIs($link['match'] ?? $link['route']))
+        <a href="{{ route($link['route']) }}" class="btn btn-sm {{ $active ? 'btn-primary' : 'btn-outline-secondary' }}"
+            @if ($active) aria-current="page" @endif>
             <i class="bi {{ $link['icon'] }}"></i> {{ $link['label'] }}
         </a>
     @endforeach
-</div>
+</nav>

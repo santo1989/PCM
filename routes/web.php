@@ -8,7 +8,9 @@ use App\Http\Controllers\FinancialAnalysisDashboardController;
 use App\Http\Controllers\HandCashController;
 use App\Http\Controllers\LiveController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\RecurringTransactionController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\UserController;
 use App\Models\Notification;
 use Illuminate\Support\Facades\Artisan;
@@ -141,32 +143,19 @@ Route::middleware('auth')->group(function () {
     // Database backup
     Route::get('/backup/status', [BackupController::class, 'status'])->name('backup.status');
     Route::post('/backup/run', [BackupController::class, 'run'])->name('backup.run');
+
+    // Ctrl+K search palette
+    Route::get('/search', SearchController::class)->name('search');
+
+    // Recurring income/expenses
+    Route::get('/recurring', [RecurringTransactionController::class, 'index'])->name('recurring.index');
+    Route::post('/recurring', [RecurringTransactionController::class, 'store'])->name('recurring.store');
+    Route::post('/recurring/run-now', [RecurringTransactionController::class, 'runNow'])->name('recurring.run_now');
+    Route::get('/recurring/{recurring}/edit', [RecurringTransactionController::class, 'edit'])->name('recurring.edit');
+    Route::put('/recurring/{recurring}', [RecurringTransactionController::class, 'update'])->name('recurring.update');
+    Route::post('/recurring/{recurring}/toggle', [RecurringTransactionController::class, 'toggle'])->name('recurring.toggle');
+    Route::delete('/recurring/{recurring}', [RecurringTransactionController::class, 'destroy'])->name('recurring.destroy');
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 Route::get('/read/{notification}', [NotificationController::class, 'read'])->name('notification.read');
@@ -174,53 +163,54 @@ Route::get('/read/{notification}', [NotificationController::class, 'read'])->nam
 
 require __DIR__ . '/auth.php';
 
-//php artisan command
+// Maintenance shortcuts (php artisan ...) are admin-only: /migrate-fresh wipes the database.
+Route::middleware(['auth', 'can:Admin'])->group(function () {
+    Route::get('/foo', function () {
+        Artisan::call('storage:link');
+    });
 
-Route::get('/foo', function () {
-    Artisan::call('storage:link');
-});
+    Route::get('/cleareverything', function () {
+        $clearcache = Artisan::call('cache:clear');
+        echo "Cache cleared<br>";
 
-Route::get('/cleareverything', function () {
-    $clearcache = Artisan::call('cache:clear');
-    echo "Cache cleared<br>";
+        $clearview = Artisan::call('view:clear');
+        echo "View cleared<br>";
 
-    $clearview = Artisan::call('view:clear');
-    echo "View cleared<br>";
+        $clearconfig = Artisan::call('config:cache');
+        echo "Config cleared<br>";
+    });
 
-    $clearconfig = Artisan::call('config:cache');
-    echo "Config cleared<br>";
-});
+    Route::get('/key =', function () {
+        $key =  Artisan::call('key:generate');
+        echo "key:generate<br>";
+    });
 
-Route::get('/key =', function () {
-    $key =  Artisan::call('key:generate');
-    echo "key:generate<br>";
-});
+    Route::get('/migrate', function () {
+        $migrate = Artisan::call('migrate');
+        echo "migration create<br>";
+    });
 
-Route::get('/migrate', function () {
-    $migrate = Artisan::call('migrate');
-    echo "migration create<br>";
-});
+    Route::get('/migrate-fresh', function () {
+        $fresh = Artisan::call('migrate:fresh --seed');
+        echo "migrate:fresh --seed create<br>";
+    });
 
-Route::get('/migrate-fresh', function () {
-    $fresh = Artisan::call('migrate:fresh --seed');
-    echo "migrate:fresh --seed create<br>";
-});
+    Route::get('/optimize', function () {
+        $optimize = Artisan::call('optimize:clear');
+        echo "optimize cleared<br>";
+    });
+    Route::get('/route-clear', function () {
+        $route_clear = Artisan::call('route:clear');
+        echo "route cleared<br>";
+    });
 
-Route::get('/optimize', function () {
-    $optimize = Artisan::call('optimize:clear');
-    echo "optimize cleared<br>";
-});
-Route::get('/route-clear', function () {
-    $route_clear = Artisan::call('route:clear');
-    echo "route cleared<br>";
-});
+    Route::get('/route-cache', function () {
+        $route_cache = Artisan::call('route:cache');
+        echo "route cache<br>";
+    });
 
-Route::get('/route-cache', function () {
-    $route_cache = Artisan::call('route:cache');
-    echo "route cache<br>";
-});
-
-Route::get('/updateapp', function () {
-    $dump_autoload = Artisan::call('dump-autoload');
-    echo 'dump-autoload complete';
+    Route::get('/updateapp', function () {
+        $dump_autoload = Artisan::call('dump-autoload');
+        echo 'dump-autoload complete';
+    });
 });

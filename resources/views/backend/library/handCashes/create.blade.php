@@ -37,7 +37,7 @@
                         </div>
                         <div class="col-md-2">
                             <x-backend.form.select name="rules[]" label="Cash Rules" class="select2"
-                                :options="config('finance.handcash_rules')" />
+                                :options="\App\Services\AutocompleteSource::ranked(config('finance.handcash_rules'), \App\Models\HandCash::class, 'rules')" />
                         </div>
                         <div class="col-md-2 mb-3">
                             <button type="button" class="btn btn-sm btn-outline-primary" onclick="addInput()"><i class="bi bi-plus-lg"></i> Add</button>
@@ -77,7 +77,7 @@
                 </div>
                 <div class="col-md-2">
                     <select class="form-select select2" name="rules[]">
-                        @foreach (config('finance.handcash_rules') as $key => $value)
+                        @foreach (\App\Services\AutocompleteSource::ranked(config('finance.handcash_rules'), \App\Models\HandCash::class, 'rules') as $key => $value)
                             <option value="{{ $key }}">{{ $value }}</option>
                         @endforeach
                     </select>

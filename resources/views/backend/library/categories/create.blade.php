@@ -30,6 +30,10 @@
                 <x-backend.form.select name="rules" label="50/30/20 rules" class="select2"
                     :options="config('finance.budget_rules')" />
 
+                <x-backend.form.input name="monthly_budget" type="number" step="0.01" min="0" inputmode="decimal"
+                    label="Monthly budget (optional)" placeholder="e.g. 5000" :value="old('monthly_budget')" />
+                <div class="form-text mt-n2 mb-3">Expense categories only. You'll get an alert at {{ \App\Services\BudgetService::WARN_AT }}% and when it's exceeded.</div>
+
                 <x-backend.form.saveButton>Save</x-backend.form.saveButton>
             </form>
         </div>

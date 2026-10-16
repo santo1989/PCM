@@ -73,6 +73,7 @@
                                             'LOAN' => 'bi-arrow-left-right text-warning',
                                             'RETURN' => 'bi-arrow-left-right text-info',
                                         ];
+                                        $budgets = \App\Services\BudgetService::currentMonth()->keyBy('id');
                                     @endphp
                                     <table class="table table-bordered table-hover table-responsive-cards">
                                         <thead>
@@ -81,6 +82,7 @@
                                                 <th>Name</th>
                                                 <th>Types</th>
                                                 <th>Rules</th>
+                                                <th>Budget ({{ now()->format('M') }})</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
@@ -95,6 +97,19 @@
                                                     </td>
                                                     <td data-label="Types">{{ $category->types }}</td>
                                                     <td data-label="Rules">{{ $category->rules }}</td>
+                                                    <td data-label="Budget" style="min-width: 150px;">
+                                                        @if ($b = $budgets[$category->id] ?? null)
+                                                            <div class="small text-nowrap">
+                                                                {{ number_format($b['spent'], 0) }} / {{ number_format($b['budget'], 0) }}
+                                                                <span class="{{ $b['percent'] >= 100 ? 'text-danger' : ($b['percent'] >= \App\Services\BudgetService::WARN_AT ? 'text-warning' : 'text-muted') }}">({{ $b['percent'] }}%)</span>
+                                                            </div>
+                                                            <div class="progress mt-1" style="height: 5px;">
+                                                                <div class="progress-bar {{ $b['percent'] >= 100 ? 'bg-danger' : ($b['percent'] >= \App\Services\BudgetService::WARN_AT ? 'bg-warning' : 'bg-success') }}" style="width: {{ min($b['percent'], 100) }}%"></div>
+                                                            </div>
+                                                        @else
+                                                            <span class="text-muted small">—</span>
+                                                        @endif
+                                                    </td>
                                                     <td data-label="Actions">
                                                         <x-backend.form.anchor
                                                             :href="route('categories.edit', ['category' => $category->id])"
