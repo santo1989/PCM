@@ -7,7 +7,7 @@
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
         <div>
             <h2 class="h4 mb-0">Recurring transactions</h2>
-            <div class="text-muted small">Salary, rent, bills and other monthly entries, added automatically.</div>
+            <div class="text-muted small">Monthly income and account-to-account transfers (DPS, savings…), added automatically.</div>
         </div>
         <div class="d-flex gap-2">
             <form method="POST" action="{{ route('recurring.run_now') }}">
@@ -38,7 +38,7 @@
         </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="live-recurring" data-live-region>
         <div class="card-body">
             @if ($recurring->isEmpty())
                 <div class="text-center text-muted py-4">
@@ -51,7 +51,8 @@
                         <thead>
                             <tr>
                                 <th>Name</th>
-                                <th>Category</th>
+                                <th>Type</th>
+                                <th>Category / Accounts</th>
                                 <th class="text-end">Amount</th>
                                 <th>Schedule</th>
                                 <th>Next</th>
@@ -61,12 +62,17 @@
                         </thead>
                         <tbody>
                             @foreach ($recurring as $rule)
-                                @php($isIncome = optional($rule->category)->types === 'INCOME')
+                                @php($isIncome = !$rule->isTransfer() && optional($rule->category)->types === 'INCOME')
                                 <tr class="{{ $rule->is_active ? '' : 'opacity-75' }}">
                                     <td data-label="Name" class="fw-semibold">{{ $rule->name }}</td>
-                                    <td data-label="Category">{{ $rule->category->name ?? '—' }}</td>
-                                    <td data-label="Amount" class="text-end fw-semibold {{ $isIncome ? 'text-success' : 'text-danger' }}">
-                                        {{ $isIncome ? '+' : '−' }}{{ number_format($rule->amount, 2) }}
+                                    <td data-label="Type">
+                                        <span class="badge {{ $rule->isTransfer() ? 'text-bg-info' : 'text-bg-success' }}">
+                                            {{ $rule->isTransfer() ? 'Transfer' : 'Income' }}
+                                        </span>
+                                    </td>
+                                    <td data-label="Category / Accounts">{{ $rule->targetLabel() }}</td>
+                                    <td data-label="Amount" class="text-end fw-semibold {{ $rule->isTransfer() ? '' : ($isIncome ? 'text-success' : 'text-danger') }}">
+                                        {{ $rule->isTransfer() ? '' : ($isIncome ? '+' : '−') }}{{ number_format($rule->amount, 2) }}
                                     </td>
                                     <td data-label="Schedule" class="small">
                                         {{ $rule->scheduleLabel() }}

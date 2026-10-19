@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToUser;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ProjectedExpense extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToUser;
     protected $guarded = [];
 
     public function category()

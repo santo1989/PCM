@@ -16,7 +16,7 @@ class LiveController extends Controller
         // Cached for 2s so many open tabs cost at most one aggregate query burst per window.
         $sig = Cache::remember('live:signature', 2, function () {
             $parts = [];
-            foreach (['expense_calculations', 'hand_cashes', 'categories', 'users', 'roles'] as $table) {
+            foreach (['expense_calculations', 'hand_cashes', 'categories', 'users', 'roles', 'recurring_transactions', 'projected_expenses'] as $table) {
                 $row = DB::table($table)->selectRaw('COUNT(*) as c, MAX(updated_at) as m, MAX(id) as i')->first();
                 $parts[$table] = [$row->c, $row->m, $row->i];
             }

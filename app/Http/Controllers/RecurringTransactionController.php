@@ -7,6 +7,7 @@ use App\Models\RecurringTransaction;
 use App\Services\RecurringTransactionService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class RecurringTransactionController extends Controller
 {
@@ -99,14 +100,30 @@ class RecurringTransactionController extends Controller
 
     private function validated(Request $request): array
     {
+        $accounts = implode(',', array_keys(config('finance.handcash_rules')));
+        $isTransfer = $request->input('kind') === RecurringTransaction::KIND_TRANSFER;
+
         $data = $request->validate([
+            'kind' => 'required|in:' . RecurringTransaction::KIND_INCOME . ',' . RecurringTransaction::KIND_TRANSFER,
             'name' => 'required|string|max:191',
-            'category_id' => 'required|exists:categories,id',
+            // Income must use an INCOME category; transfers use accounts instead.
+            'category_id' => [$isTransfer ? 'nullable' : 'required', Rule::exists('categories', 'id')->where('types', 'INCOME')],
+            'from_account' => [$isTransfer ? 'required' : 'nullable', 'in:' . $accounts],
+            'to_account' => [$isTransfer ? 'required' : 'nullable', 'in:' . $accounts, 'different:from_account'],
             'amount' => 'required|numeric|min:0.01',
             'day_of_month' => 'required|integer|between:1,31',
             'start_date' => 'required|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
+        ], [
+            'category_id.exists' => 'Choose an income category.',
+            'to_account.different' => 'The "to" account must be different from the "from" account.',
         ]);
+
+        if ($isTransfer) {
+            $data['category_id'] = null;
+        } else {
+            $data['from_account'] = $data['to_account'] = null;
+        }
         $data['start_date'] = Carbon::parse($data['start_date']);
         $data['end_date'] = !empty($data['end_date']) ? Carbon::parse($data['end_date']) : null;
 
@@ -115,6 +132,6 @@ class RecurringTransactionController extends Controller
 
     private function categoryOptions()
     {
-        return Category::whereIn('types', ['INCOME', 'EXPENSE'])->orderBy('types')->orderBy('name')->get(['id', 'name', 'types']);
+        return Category::where('types', 'INCOME')->orderBy('name')->get(['id', 'name', 'types']);
     }
 }

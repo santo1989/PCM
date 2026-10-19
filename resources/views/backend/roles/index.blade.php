@@ -25,6 +25,9 @@
                             <form method="GET" action="{{ route('roles.index') }}" data-live-filter class="d-inline-flex gap-2 ms-2 align-items-center">
                                 <input type="search" name="search" class="form-control form-control-sm" placeholder="Search role" value="{{ request('search') }}" autocomplete="off">
                                 <x-backend.per-page :default="25" />
+                                <a href="{{ route('roles.index') }}" class="btn btn-sm btn-outline-danger text-nowrap">
+                                    <i class="bi bi-x-circle"></i> Clear
+                                </a>
                             </form>
                         </div>
                         <div class="card-body" id="live-roles" data-live-region>

@@ -25,6 +25,9 @@
                         <button type="submit" class="btn btn-outline-secondary">
                             <i class="bi bi-filter"></i> Filter
                         </button>
+                        <a href="{{ route('Monthly_invest') }}" class="btn btn-outline-danger">
+                            <i class="bi bi-arrow-counterclockwise"></i> Reset
+                        </a>
                         <a href="{{ route('Monthly_invest.export_excel', ['start_date' => $startDate, 'end_date' => $endDate]) }}" class="btn btn-outline-success">
                             <i class="bi bi-file-earmark-excel"></i> Download Excel
                         </a>

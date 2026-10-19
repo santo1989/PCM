@@ -131,7 +131,7 @@
             </div>
         </div>
 
-        <div class="row g-3 mb-4">
+        <div class="row g-3 mb-4" id="live-home-widgets" data-live-region>
             <div class="col-lg-6"><x-backend.budget-progress :limit="5" class="h-100" /></div>
             <div class="col-lg-6"><x-backend.upcoming-recurring class="h-100" /></div>
         </div>
@@ -259,7 +259,7 @@
                         </div>
 
                         @php
-                            $categories = App\Models\Category::all();
+                            $categoryNames = App\Models\Category::pluck('name', 'id');
                         @endphp
 
                         <!-- Monthly Income & Expense Detail Modals -->
@@ -288,20 +288,11 @@
                                                     <tbody>
                                                         @php
                                                             $categoryIncomes = [];
-                                                            foreach ($categories as $category) {
-                                                                $amount = App\Models\ExpenseCalculation::where('types', 'INCOME')
-                                                                    ->where('category_id', $category->id)
-                                                                    ->whereMonth('date', $month)
-                                                                    ->whereYear('date', $currentYear)
-                                                                    ->sum('amount');
-                                                                if ($amount != 0) {
-                                                                    $categoryIncomes[] = [
-                                                                        'name' => $category->name,
-                                                                        'amount' => $amount,
-                                                                    ];
+                                                            foreach ($monthCategoryTotals[$month]['INCOME'] as $categoryId => $amount) {
+                                                                if (isset($categoryNames[$categoryId])) {
+                                                                    $categoryIncomes[] = ['name' => $categoryNames[$categoryId], 'amount' => $amount];
                                                                 }
                                                             }
-                                                            usort($categoryIncomes, fn($a, $b) => $b['amount'] <=> $a['amount']);
                                                         @endphp
 
                                                         @foreach ($categoryIncomes as $categoryIncome)
@@ -352,20 +343,11 @@
                                                     <tbody>
                                                         @php
                                                             $categoryExpenses = [];
-                                                            foreach ($categories as $category) {
-                                                                $amount = App\Models\ExpenseCalculation::where('types', 'EXPENSE')
-                                                                    ->where('category_id', $category->id)
-                                                                    ->whereMonth('date', $month)
-                                                                    ->whereYear('date', $currentYear)
-                                                                    ->sum('amount');
-                                                                if ($amount != 0) {
-                                                                    $categoryExpenses[] = [
-                                                                        'name' => $category->name,
-                                                                        'amount' => $amount,
-                                                                    ];
+                                                            foreach ($monthCategoryTotals[$month]['EXPENSE'] as $categoryId => $amount) {
+                                                                if (isset($categoryNames[$categoryId])) {
+                                                                    $categoryExpenses[] = ['name' => $categoryNames[$categoryId], 'amount' => $amount];
                                                                 }
                                                             }
-                                                            usort($categoryExpenses, fn($a, $b) => $b['amount'] <=> $a['amount']);
                                                         @endphp
 
                                                         @foreach ($categoryExpenses as $categoryExpense)

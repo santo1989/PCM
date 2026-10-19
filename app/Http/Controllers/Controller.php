@@ -24,6 +24,12 @@ class Controller extends BaseController
         return in_array($n, [10, 25, 50, 100], true) ? $n : $default;
     }
 
+    /** '%term%' for a LIKE search, with % and _ matched literally instead of as wildcards. */
+    protected function likeTerm($term): string
+    {
+        return '%' . addcslashes(trim((string) $term), '\\%_') . '%';
+    }
+
     protected function redirectToIndex(string $routeName)
     {
         return redirect()->to(RememberIndexUrl::lastUrl($routeName));

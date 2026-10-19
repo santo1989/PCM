@@ -12,9 +12,9 @@ class CategoryController extends Controller
         $query = Category::query()->orderBy("id");
         if ($search = trim((string) request("search"))) {
             $query->where(function ($q) use ($search) {
-                $q->where("name", "like", "%" . $search . "%")
-                    ->orWhere("types", "like", "%" . $search . "%")
-                    ->orWhere("rules", "like", "%" . $search . "%");
+                $q->where("name", "like", $this->likeTerm($search))
+                    ->orWhere("types", "like", $this->likeTerm($search))
+                    ->orWhere("rules", "like", $this->likeTerm($search));
             });
         }
         if ($types = array_filter((array) request("types"))) {

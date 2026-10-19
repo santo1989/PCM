@@ -11,7 +11,7 @@ class RoleController extends Controller
     {
 
         $roles = Role::query()
-            ->when(trim((string) request("search")), fn ($q, $s) => $q->where("name", "like", "%" . $s . "%"))
+            ->when(trim((string) request("search")), fn ($q, $s) => $q->where("name", "like", $this->likeTerm($s)))
             ->orderBy("id")
             ->paginate($this->perPage())
             ->withQueryString();

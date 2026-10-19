@@ -41,7 +41,7 @@ class HandCashController extends Controller
 
         $name = request('name') ?: request('handCashes_name');
         if ($name) {
-            $handCashesQuery->where('name', 'like', '%' . $name . '%');
+            $handCashesQuery->where('name', 'like', $this->likeTerm($name));
         }
 
         $entryDateStart = request('entry_date_start') ?: request('handCashes_date_start');
@@ -99,6 +99,11 @@ class HandCashController extends Controller
         // Date filtering for balance calculations
         $balanceDateStart = request('balance_date_start');
         $balanceDateEnd = request('balance_date_end');
+        // One bound alone still filters: open side runs from the first record / to today.
+        if ($balanceDateStart xor $balanceDateEnd) {
+            $balanceDateStart = $balanceDateStart ?: (HandCash::min('date') ?: $balanceDateEnd);
+            $balanceDateEnd = $balanceDateEnd ?: now()->toDateString();
+        }
 
         // Bounds for every date input on this page: earliest handcash transaction through today.
         $minDataDate = HandCash::min('date');
@@ -501,6 +506,10 @@ class HandCashController extends Controller
 
         // Save the cash record
         $cash2->save();
+
+        // Link the two halves so editing one keeps the other in step.
+        HandCash::whereKey($cash1->id)->update(['transfer_pair_id' => $cash2->id]);
+        HandCash::whereKey($cash2->id)->update(['transfer_pair_id' => $cash1->id]);
 
 
 
@@ -1688,7 +1697,8 @@ class HandCashController extends Controller
 
         // 5. Save the new projected budget to the database
         if (!empty($projectedExpensesData)) {
-            ProjectedExpense::insert($projectedExpensesData);
+            // Bulk insert skips model events, so stamp the owner here.
+            ProjectedExpense::insert(array_map(fn($row) => $row + ['user_id' => auth()->id()], $projectedExpensesData));
             \App\Services\FinancialAnalyticsService::forgetAll();
             \App\Services\FinancialAnalysisService::forgetAll();
         }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToUser;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class RecurringTransaction extends Model
 {
+    use BelongsToUser;
+
     protected $guarded = [];
 
     protected $casts = [
@@ -26,6 +29,26 @@ class RecurringTransaction extends Model
     public function category()
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public const KIND_INCOME = 'income';
+    public const KIND_TRANSFER = 'transfer';
+
+    public function isTransfer(): bool
+    {
+        return $this->kind === self::KIND_TRANSFER;
+    }
+
+    /** "City Bank → DPS" for transfers, the category name for income. */
+    public function targetLabel(): string
+    {
+        if ($this->isTransfer()) {
+            $accounts = config('finance.handcash_rules');
+
+            return ($accounts[$this->from_account] ?? $this->from_account) . ' → ' . ($accounts[$this->to_account] ?? $this->to_account);
+        }
+
+        return $this->category->name ?? '—';
     }
 
     public function setNameAttribute($value)

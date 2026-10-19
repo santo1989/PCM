@@ -248,13 +248,19 @@ class AnalyticsController extends Controller
         $categories = Category::where('types', 'EXPENSE')->get();
         $rows = [];
 
+        // One grouped query for every category x month (was one query per pair).
+        $totals = ExpenseCalculation::where('types', 'EXPENSE')
+            ->whereBetween('date', [$historyMonths[0]->copy()->startOfMonth()->toDateString(), end($historyMonths)->copy()->endOfMonth()->toDateString()])
+            ->groupBy('category_id', DB::raw("DATE_FORMAT(date, '%Y-%m')"))
+            ->selectRaw("category_id, DATE_FORMAT(date, '%Y-%m') as ym, SUM(amount) as total")
+            ->get()
+            ->groupBy('category_id')
+            ->map(fn($g) => $g->pluck('total', 'ym'));
+
         foreach ($categories as $category) {
             $monthlyTotals = [];
             foreach ($historyMonths as $m) {
-                $monthlyTotals[] = (float) ExpenseCalculation::where('types', 'EXPENSE')
-                    ->where('category_id', $category->id)
-                    ->whereYear('date', $m->year)->whereMonth('date', $m->month)
-                    ->sum('amount');
+                $monthlyTotals[] = (float) ($totals[$category->id][$m->format('Y-m')] ?? 0);
             }
 
             if (array_sum($monthlyTotals) <= 0) {

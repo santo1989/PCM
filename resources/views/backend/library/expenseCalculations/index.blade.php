@@ -125,6 +125,28 @@
                                     'amount',
                                 );
                                 // dd($all_time_expense);
+
+                                // Category totals for the four breakdown modals + charts below, from one
+                                // grouped query (was one query per category per table/chart).
+                                $categoryTotals = App\Models\ExpenseCalculation::whereIn('types', ['INCOME', 'EXPENSE'])
+                                    ->groupBy('types', 'category_id')
+                                    ->selectRaw('types, category_id, SUM(amount) as all_total, SUM(CASE WHEN date BETWEEN ? AND ? THEN amount ELSE 0 END) as month_total', [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()])
+                                    ->get();
+                                $categoryBreakdown = [];
+                                foreach (['INCOME', 'EXPENSE'] as $breakdownType) {
+                                    foreach (['month' => 'month_total', 'all' => 'all_total'] as $period => $column) {
+                                        $rowsForType = $categoryTotals->where('types', $breakdownType)->keyBy('category_id');
+                                        $list = [];
+                                        foreach (App\Models\Category::orderBy('id')->get(['id', 'name']) as $category) {
+                                            $amount = $rowsForType[$category->id]->{$column} ?? 0;
+                                            if ($amount != 0) {
+                                                $list[] = ['name' => $category->name, 'amount' => $amount];
+                                            }
+                                        }
+                                        usort($list, fn($a, $b) => $b['amount'] <=> $a['amount']);
+                                        $categoryBreakdown[$breakdownType][$period] = $list;
+                                    }
+                                }
                             @endphp
                         </div>
                         <div class="col-md-2 col-sm-12">
@@ -132,7 +154,7 @@
                                 <!--modal trigger button for show categories wise this month income-->
                                 <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal"
                                     data-bs-target="#categoriesWiseIncomeModal">
-                                    This Month Income: {{ $this_month_income }}
+                                    This Month Income: {{ number_format((float) $this_month_income, 2) }}
                                 </button>
                                 <!-- Modal -->
                                 <div class="modal fade" id="categoriesWiseIncomeModal" tabindex="-1"
@@ -157,32 +179,12 @@
                                                             </thead>
                                                             <tbody>
                                                                 @php
-                                                                    $categories = App\Models\Category::all();
-                                                                    $categoryIncomes = [];
-                                                                    foreach ($categories as $category) {
-                                                                        $amount = App\Models\ExpenseCalculation::where(
-                                                                            'types',
-                                                                            'income',
-                                                                        )
-                                                                            ->where('category_id', $category->id)
-                                                                            ->whereMonth('date', date('m'))
-                                                                             ->whereYear('date', date('Y'))
-                                                                             ->sum('amount');
-                                                                         if ($amount != 0) {
-                                                                             $categoryIncomes[] = [
-                                                                                 'name' => $category->name,
-                                                                                 'amount' => $amount,
-                                                                             ];
-                                                                         }
-                                                                    }
-                                                                    usort($categoryIncomes, function ($a, $b) {
-                                                                        return $b['amount'] <=> $a['amount'];
-                                                                    });
+                                                                    $categoryIncomes = $categoryBreakdown['INCOME']['month'];
                                                                 @endphp
                                                                 @foreach ($categoryIncomes as $categoryIncome)
                                                                     <tr>
                                                                         <td>{{ $categoryIncome['name'] }}</td>
-                                                                        <td>{{ $categoryIncome['amount'] }}</td>
+                                                                        <td class="text-end">{{ number_format((float) $categoryIncome['amount'], 2) }}</td>
                                                                     </tr>
                                                                 @endforeach
                                                             </tbody>
@@ -203,18 +205,8 @@
 
                                                         <script>
                                                             @php
-                                                                $categories = App\Models\Category::all();
-                                                                $chartData = [];
-                                                                $totalIncome = 0;
-
-                                                                foreach ($categories as $category) {
-                                                                     $amount = App\Models\ExpenseCalculation::where('types', 'INCOME')->where('category_id', $category->id)->whereMonth('date', date('m'))->whereYear('date', date('Y'))->sum('amount');
-                                                                     if ($amount != 0) {
-                                                                         $chartData[] = ['name' => $category->name, 'amount' => $amount];
-                                                                         $totalIncome += $amount;
-                                                                     }
-                                                                }
-                                                                usort($chartData, fn($a, $b) => $b['amount'] <=> $a['amount']);
+                                                                $chartData = $categoryBreakdown['INCOME']['month'];
+                                                                $totalIncome = array_sum(array_column($chartData, 'amount'));
                                                                 $incomeLabels = array_column($chartData, 'name');
                                                                 $incomeData = array_column($chartData, 'amount');
                                                             @endphp
@@ -304,7 +296,7 @@
                                 <!--modal trigger button for show categories wise this month expense-->
                                 <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal"
                                     data-bs-target="#categoriesWiseExpenseModal">
-                                    This Month Expense: {{ $this_month_expense }}
+                                    This Month Expense: {{ number_format((float) $this_month_expense, 2) }}
                                 </button>
 
                                 <!-- Modal -->
@@ -330,32 +322,12 @@
                                                             </thead>
                                                             <tbody>
                                                                 @php
-                                                                    $categories = App\Models\Category::all();
-                                                                    $categoryExpenses = [];
-                                                                    foreach ($categories as $category) {
-                                                                        $amount = App\Models\ExpenseCalculation::where(
-                                                                            'types',
-                                                                            'expense',
-                                                                        )
-                                                                            ->where('category_id', $category->id)
-                                                                            ->whereMonth('date', date('m'))
-                                                                             ->whereYear('date', date('Y'))
-                                                                             ->sum('amount');
-                                                                         if ($amount != 0) {
-                                                                             $categoryExpenses[] = [
-                                                                                 'name' => $category->name,
-                                                                                 'amount' => $amount,
-                                                                             ];
-                                                                         }
-                                                                    }
-                                                                    usort($categoryExpenses, function ($a, $b) {
-                                                                        return $b['amount'] <=> $a['amount'];
-                                                                    });
+                                                                    $categoryExpenses = $categoryBreakdown['EXPENSE']['month'];
                                                                 @endphp
                                                                 @foreach ($categoryExpenses as $categoryExpense)
                                                                     <tr>
                                                                         <td>{{ $categoryExpense['name'] }}</td>
-                                                                        <td>{{ $categoryExpense['amount'] }}</td>
+                                                                        <td class="text-end">{{ number_format((float) $categoryExpense['amount'], 2) }}</td>
                                                                     </tr>
                                                                 @endforeach
                                                             </tbody>
@@ -376,16 +348,7 @@
 
                                                         <script>
                                                             @php
-                                                                $categories = App\Models\Category::all();
-                                                                $chartData = [];
-
-                                                                foreach ($categories as $category) {
-                                                                     $amount = App\Models\ExpenseCalculation::where('types', 'EXPENSE')->where('category_id', $category->id)->whereMonth('date', date('m'))->whereYear('date', date('Y'))->sum('amount');
-                                                                     if ($amount != 0) {
-                                                                         $chartData[] = ['name' => $category->name, 'amount' => $amount];
-                                                                     }
-                                                                }
-                                                                usort($chartData, fn($a, $b) => $b['amount'] <=> $a['amount']);
+                                                                $chartData = $categoryBreakdown['EXPENSE']['month'];
                                                                 $expenseLabels = array_column($chartData, 'name');
                                                                 $expenseData = array_column($chartData, 'amount');
                                                             @endphp
@@ -478,7 +441,7 @@
                                 <!--modal trigger button for show categories wise all month income-->
                                 <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal"
                                     data-bs-target="#categoriesWiseAllTimeIncomeModal">
-                                    Total Income: {{ $all_time_income }}
+                                    Total Income: {{ number_format((float) $all_time_income, 2) }}
                                 </button>
                                 <!-- Modal -->
                                 <div class="modal fade" id="categoriesWiseAllTimeIncomeModal" tabindex="-1"
@@ -503,30 +466,12 @@
                                                             </thead>
                                                             <tbody>
                                                                 @php
-                                                                    $categories = App\Models\Category::all();
-                                                                    $allTimeIncomes = [];
-                                                                    foreach ($categories as $category) {
-                                                                        $amount = App\Models\ExpenseCalculation::where(
-                                                                            'types',
-                                                                            'income',
-                                                                        )
-                                                                            ->where('category_id', $category->id)
-                                                                             ->sum('amount');
-                                                                         if ($amount != 0) {
-                                                                             $allTimeIncomes[] = [
-                                                                                 'name' => $category->name,
-                                                                                 'amount' => $amount,
-                                                                             ];
-                                                                         }
-                                                                    }
-                                                                    usort($allTimeIncomes, function ($a, $b) {
-                                                                        return $b['amount'] <=> $a['amount'];
-                                                                    });
+                                                                    $allTimeIncomes = $categoryBreakdown['INCOME']['all'];
                                                                 @endphp
                                                                 @foreach ($allTimeIncomes as $allTimeIncome)
                                                                     <tr>
                                                                         <td>{{ $allTimeIncome['name'] }}</td>
-                                                                        <td>{{ $allTimeIncome['amount'] }}</td>
+                                                                        <td class="text-end">{{ number_format((float) $allTimeIncome['amount'], 2) }}</td>
                                                                     </tr>
                                                                 @endforeach
                                                             </tbody>
@@ -547,16 +492,7 @@
 
                                                         <script>
                                                             @php
-                                                                $categories = App\Models\Category::all();
-                                                                $chartData = [];
-
-                                                                foreach ($categories as $category) {
-                                                                     $amount = App\Models\ExpenseCalculation::where('types', 'INCOME')->where('category_id', $category->id)->sum('amount');
-                                                                     if ($amount != 0) {
-                                                                         $chartData[] = ['name' => $category->name, 'amount' => $amount];
-                                                                     }
-                                                                }
-                                                                usort($chartData, fn($a, $b) => $b['amount'] <=> $a['amount']);
+                                                                $chartData = $categoryBreakdown['INCOME']['all'];
                                                                 $allTimeIncomeLabels = array_column($chartData, 'name');
                                                                 $allTimeIncomeData = array_column($chartData, 'amount');
                                                             @endphp
@@ -646,7 +582,7 @@
                                 <!--modal trigger button for show categories wise all time expense-->
                                 <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal"
                                     data-bs-target="#categoriesWiseAllTimeExpenseModal">
-                                    Total Expense: {{ $all_time_expense }}
+                                    Total Expense: {{ number_format((float) $all_time_expense, 2) }}
                                 </button>
 
                                 <!-- Modal -->
@@ -672,30 +608,12 @@
                                                             </thead>
                                                             <tbody>
                                                                 @php
-                                                                    $categories = App\Models\Category::all();
-                                                                    $allTimeExpenses = [];
-                                                                    foreach ($categories as $category) {
-                                                                        $amount = App\Models\ExpenseCalculation::where(
-                                                                            'types',
-                                                                            'expense',
-                                                                        )
-                                                                            ->where('category_id', $category->id)
-                                                                             ->sum('amount');
-                                                                         if ($amount != 0) {
-                                                                             $allTimeExpenses[] = [
-                                                                                 'name' => $category->name,
-                                                                                 'amount' => $amount,
-                                                                             ];
-                                                                         }
-                                                                    }
-                                                                    usort($allTimeExpenses, function ($a, $b) {
-                                                                        return $b['amount'] <=> $a['amount'];
-                                                                    });
+                                                                    $allTimeExpenses = $categoryBreakdown['EXPENSE']['all'];
                                                                 @endphp
                                                                 @foreach ($allTimeExpenses as $allTimeExpense)
                                                                     <tr>
                                                                         <td>{{ $allTimeExpense['name'] }}</td>
-                                                                        <td>{{ $allTimeExpense['amount'] }}</td>
+                                                                        <td class="text-end">{{ number_format((float) $allTimeExpense['amount'], 2) }}</td>
                                                                     </tr>
                                                                 @endforeach
                                                             </tbody>
@@ -716,16 +634,7 @@
 
                                                         <script>
                                                             @php
-                                                                $categories = App\Models\Category::all();
-                                                                $chartData = [];
-
-                                                                foreach ($categories as $category) {
-                                                                     $amount = App\Models\ExpenseCalculation::where('types', 'EXPENSE')->where('category_id', $category->id)->sum('amount');
-                                                                     if ($amount != 0) {
-                                                                         $chartData[] = ['name' => $category->name, 'amount' => $amount];
-                                                                     }
-                                                                }
-                                                                usort($chartData, fn($a, $b) => $b['amount'] <=> $a['amount']);
+                                                                $chartData = $categoryBreakdown['EXPENSE']['all'];
                                                                 $allTimeExpenseLabels = array_column($chartData, 'name');
                                                                 $allTimeExpenseData = array_column($chartData, 'amount');
                                                             @endphp

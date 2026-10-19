@@ -2,14 +2,36 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToUser;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 
 class ExpenseCalculation extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToUser;
     protected $guarded = []; // Allow mass assignment
+
+    protected static function booted()
+    {
+        // Keep the cash entry entered alongside this one in step (query update: no event loop).
+        static::updated(function (ExpenseCalculation $expense) {
+            $changes = array_intersect_key($expense->getChanges(), array_flip(HandCash::SHARED_FIELDS));
+            if ($changes) {
+                HandCash::where('expense_calculation_id', $expense->id)->update($changes);
+            }
+        });
+    }
+
+    public function handCashes()
+    {
+        return $this->hasMany(HandCash::class);
+    }
+
+    public function recurringTransaction()
+    {
+        return $this->belongsTo(RecurringTransaction::class);
+    }
 
     public function category()
     {

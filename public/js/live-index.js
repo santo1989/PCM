@@ -127,7 +127,7 @@
     var pending = false;
 
     function userIsBusy() {
-        if (document.querySelector('.modal.show')) return true;
+        if (document.querySelector('.modal.show, .dropdown-menu.show, .offcanvas.show')) return true;
         var f = document.activeElement;
         return !!(f && f.closest && f.closest(regionsSelector) && f.matches('input,select,textarea'));
     }

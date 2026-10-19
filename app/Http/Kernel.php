@@ -37,6 +37,7 @@ class Kernel extends HttpKernel
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \App\Http\Middleware\NormalizeDateFilters::class,
             \App\Http\Middleware\UserActivity::class,
             \App\Http\Middleware\RememberIndexUrl::class,
             \App\Http\Middleware\RunDueRecurringTransactions::class,

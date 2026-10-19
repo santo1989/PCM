@@ -53,8 +53,8 @@
             <i class="bi bi-moon-stars"></i>
         </button>
 
-        {{-- Budget alerts: categories at/over their monthly budget this month --}}
-        <div class="dropdown">
+        {{-- Budget alerts: categories at/over their monthly budget this month (live-refreshed) --}}
+        <div class="dropdown" id="live-budget-bell" data-live-region>
             <button class="app-icon-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false"
                 aria-label="Budget alerts">
                 <i class="bi bi-bell"></i>

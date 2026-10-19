@@ -21,24 +21,24 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// Interactive dashboard
-Route::get('/interactive-dashboard', [App\Http\Controllers\HandCashController::class, 'interactiveDashboard'])->name('interactive.dashboard');
-Route::get('/interactive-dashboard/data/summary', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardSummary']);
-Route::get('/interactive-dashboard/data/monthly-trend', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardMonthlyTrend']);
-Route::get('/interactive-dashboard/data/category-breakdown', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardCategoryBreakdown']);
-Route::get('/interactive-dashboard/data/savings-loans', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardSavingsLoans']);
-Route::get('/interactive-dashboard/data/top-categories', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardTopCategories']);
-Route::get('/interactive-dashboard/data/running-balance', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardRunningBalance']);
-Route::get('/interactive-dashboard/data/recent-transactions', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardRecentTransactions']);
-Route::get('/interactive-dashboard/data/ai-insights', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardAI']);
-
-Route::get('/filter', [ExpenseCalculationController::class, 'filter'])->name('expenseCalculations.filter');
-
-// power_bi_report
-Route::get('/power_bi_report', [HandCashController::class, 'power_bi_report'])->name('power_bi_report');
-
-
 Route::middleware('auth')->group(function () {
+
+    // Moved inside auth: these served financial data to anyone without logging in.
+    // Interactive dashboard
+    Route::get('/interactive-dashboard', [App\Http\Controllers\HandCashController::class, 'interactiveDashboard'])->name('interactive.dashboard');
+    Route::get('/interactive-dashboard/data/summary', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardSummary']);
+    Route::get('/interactive-dashboard/data/monthly-trend', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardMonthlyTrend']);
+    Route::get('/interactive-dashboard/data/category-breakdown', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardCategoryBreakdown']);
+    Route::get('/interactive-dashboard/data/savings-loans', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardSavingsLoans']);
+    Route::get('/interactive-dashboard/data/top-categories', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardTopCategories']);
+    Route::get('/interactive-dashboard/data/running-balance', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardRunningBalance']);
+    Route::get('/interactive-dashboard/data/recent-transactions', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardRecentTransactions']);
+    Route::get('/interactive-dashboard/data/ai-insights', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardAI']);
+
+    Route::get('/filter', [ExpenseCalculationController::class, 'filter'])->name('expenseCalculations.filter');
+
+    // power_bi_report
+    Route::get('/power_bi_report', [HandCashController::class, 'power_bi_report'])->name('power_bi_report');
 
 
     Route::get('/home', function () {

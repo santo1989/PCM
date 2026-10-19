@@ -15,7 +15,7 @@
     </div>
     <div class="list-group list-group-flush">
         @forelse ($upcoming as $rule)
-            @php($isIncome = optional($rule->category)->types === 'INCOME')
+            @php($isIncome = !$rule->isTransfer() && optional($rule->category)->types === 'INCOME')
             <div class="list-group-item d-flex align-items-center gap-3 bg-transparent">
                 <div class="text-center lh-1" style="min-width: 42px;">
                     <div class="small text-muted text-uppercase">{{ $rule->next_run_on->format('M') }}</div>
@@ -23,10 +23,10 @@
                 </div>
                 <div class="flex-grow-1 text-truncate">
                     <div class="fw-semibold text-truncate">{{ $rule->name }}</div>
-                    <div class="small text-muted text-truncate">{{ $rule->category->name ?? '' }}</div>
+                    <div class="small text-muted text-truncate">{{ $rule->targetLabel() }}</div>
                 </div>
-                <div class="fw-semibold text-nowrap {{ $isIncome ? 'text-success' : 'text-danger' }}">
-                    {{ $isIncome ? '+' : '−' }}{{ number_format($rule->amount, 0) }}
+                <div class="fw-semibold text-nowrap {{ $rule->isTransfer() ? '' : ($isIncome ? 'text-success' : 'text-danger') }}">
+                    {{ $rule->isTransfer() ? '' : ($isIncome ? '+' : '−') }}{{ number_format($rule->amount, 0) }}
                 </div>
             </div>
         @empty

@@ -38,11 +38,15 @@ class ExpenseCalculationController extends Controller
         }
 
         if ($search_name) {
-            $query->where('name', 'like', '%' . $search_name . '%');
+            $query->where('name', 'like', $this->likeTerm($search_name));
         }
 
-        if ($search_entry_date_start && $search_entry_date_end) {
-            $query->whereBetween('date', [$search_entry_date_start, $search_entry_date_end]);
+        // Either bound alone also filters (previously both were required).
+        if ($search_entry_date_start) {
+            $query->whereDate('date', '>=', $search_entry_date_start);
+        }
+        if ($search_entry_date_end) {
+            $query->whereDate('date', '<=', $search_entry_date_end);
         }
 
         // If export requested, run query once and stream the export view. If no date
@@ -135,15 +139,14 @@ class ExpenseCalculationController extends Controller
             if ($amt === null || $amt === '') continue; // skip empty
 
             $catId = $categoryIds[$i] ?? null;
-            $expenseRows[] = [
+            // Keyed by form row so row i's expense and cash entries can be linked.
+            $expenseRows[$i] = [
                 'category_id' => $catId,
                 'name' => isset($names[$i]) ? strtoupper($names[$i]) : null,
                 'date' => $dates[$i] ?? null,
                 'amount' => $amt,
                 'types' => isset($categoriesMap[$catId]) ? strtoupper($categoriesMap[$catId]->types) : null,
                 'rules' => isset($categoriesMap[$catId]) ? strtoupper($categoriesMap[$catId]->rules) : null,
-                'created_at' => now(),
-                'updated_at' => now(),
             ];
         }
 
@@ -158,24 +161,25 @@ class ExpenseCalculationController extends Controller
         for ($i = 0; $i < $handCount; $i++) {
             $amt = $handAmounts[$i] ?? null;
             if ($amt === null || $amt === '') continue;
-            $handRows[] = [
+            $handRows[$i] = [
                 'rules' => isset($handRules[$i]) ? strtoupper($handRules[$i]) : null,
                 'types' => isset($handTypes[$i]) ? strtoupper($handTypes[$i]) : null,
                 'name' => isset($handNames[$i]) ? strtoupper($handNames[$i]) : null,
                 'date' => $handDates[$i] ?? null,
                 'amount' => $amt,
-                'created_at' => now(),
-                'updated_at' => now(),
             ];
         }
 
-        // Use transaction and bulk inserts for performance and atomicity
+        // One transaction; rows are created individually (not bulk-inserted) so each
+        // cash entry can reference the expense entry from the same form row, and
+        // user_id is stamped by the models.
         DB::transaction(function () use ($expenseRows, $handRows) {
-            if (!empty($expenseRows)) {
-                ExpenseCalculation::insert($expenseRows);
+            $expenseIds = [];
+            foreach ($expenseRows as $i => $row) {
+                $expenseIds[$i] = ExpenseCalculation::create($row)->id;
             }
-            if (!empty($handRows)) {
-                HandCash::insert($handRows);
+            foreach ($handRows as $i => $row) {
+                HandCash::create($row + ['expense_calculation_id' => $expenseIds[$i] ?? null]);
             }
         });
 
