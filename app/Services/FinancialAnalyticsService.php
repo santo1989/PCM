@@ -250,6 +250,16 @@ class FinancialAnalyticsService
             $categoryNames = Category::whereIn('id', $currentSpend->keys())->pluck('name', 'id');
             $rows = [];
 
+            // All categories' prior-month totals in one grouped query (was one query per category per month).
+            $history = ExpenseCalculation::where('types', 'EXPENSE')
+                ->whereIn('category_id', $currentSpend->keys())
+                ->whereBetween('date', [$periodStart->copy()->subMonths($historyMonths)->toDateString(), $periodStart->copy()->subDay()->toDateString()])
+                ->groupBy('category_id', DB::raw("DATE_FORMAT(date, '%Y-%m')"))
+                ->selectRaw("category_id, DATE_FORMAT(date, '%Y-%m') as ym, SUM(amount) as total")
+                ->get()
+                ->groupBy('category_id')
+                ->map(fn($g) => $g->pluck('total', 'ym'));
+
             foreach ($currentSpend as $categoryId => $amount) {
                 $currentPace = $daysElapsed > 0 ? (float) $amount / $daysElapsed : 0;
 
@@ -258,10 +268,7 @@ class FinancialAnalyticsService
                 $historicalDailyPaces = [];
                 for ($i = 1; $i <= $historyMonths; $i++) {
                     $cursor = $periodStart->copy()->subMonths($i);
-                    $monthTotal = (float) ExpenseCalculation::where('types', 'EXPENSE')
-                        ->where('category_id', $categoryId)
-                        ->whereYear('date', $cursor->year)->whereMonth('date', $cursor->month)
-                        ->sum('amount');
+                    $monthTotal = (float) ($history[$categoryId][$cursor->format('Y-m')] ?? 0);
 
                     if ($monthTotal > 0) {
                         $historicalDailyPaces[] = $monthTotal / $cursor->daysInMonth;

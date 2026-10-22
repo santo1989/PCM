@@ -214,6 +214,7 @@ class AnalyticsController extends Controller
             'totalPotentialSaving' => array_sum(array_column($anomalySuggestions, 'potential_saving')),
             'aiSummary' => $aiInsights['summary'],
             'aiRecommendations' => $aiInsights['recommendations'],
+            'aiOutlook' => MLPipeline::run(Carbon::parse($startDate)->startOfDay(), Carbon::parse($endDate)->endOfDay())['outlook'] ?? null,
             'generated_at' => now()->toDateTimeString(),
         ];
     }

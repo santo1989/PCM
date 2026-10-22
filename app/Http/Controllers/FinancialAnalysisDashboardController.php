@@ -37,6 +37,7 @@ class FinancialAnalysisDashboardController extends Controller
             'filters' => $filters,
             'transactions' => $transactions,
             'minDataDate' => ExpenseCalculation::min('date'),
+            'outlook' => MLPipeline::run($range['start'], $range['end'])['outlook'] ?? null,
         ]);
     }
 

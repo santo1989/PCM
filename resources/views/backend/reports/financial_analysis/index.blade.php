@@ -13,6 +13,8 @@
 
         @include('backend.reports.financial_analysis.partials._insights')
 
+        @include('backend.reports.partials._ai_outlook', ['outlook' => $outlook ?? null])
+
         @include('backend.reports.financial_analysis.partials._tables')
 
     </div>
@@ -72,6 +74,8 @@
 
         function updateExportLink() {
             exportLink.href = `${exportUrl}?${buildParams().toString()}`;
+            // Keep the filters in the address bar so reload/share shows the same view.
+            history.replaceState(null, '', `${location.pathname}?${buildParams().toString()}`);
         }
 
         async function fetchDashboard() {

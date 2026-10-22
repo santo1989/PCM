@@ -65,6 +65,8 @@ class MLPipeline
                     'seasonal_notes' => $seasonal,
                 ],
                 'recommendations' => $recommendations,
+                // Range-driven income/expense/net forecast, budgets and cost-cutting ideas.
+                'outlook' => ForecastingEngine::rangeOutlook($start, $end),
                 'generated_at' => now()->toDateTimeString(),
             ];
         });

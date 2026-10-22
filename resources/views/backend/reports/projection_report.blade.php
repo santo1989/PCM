@@ -11,41 +11,15 @@
 
         @include('backend.reports.partials.report_nav')
 
-        <div class="card mb-4 no-print">
-            <div class="card-body">
-                <form method="GET" action="{{ route('Budge_Projection') }}" class="row g-2 align-items-end">
-                    <div class="col-md-3">
-                        <label class="form-label small mb-1">Start Date</label>
-                        <input type="date" name="start_date" class="form-control" value="{{ $startDate }}"
-                            min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label small mb-1">End Date</label>
-                        <input type="date" name="end_date" class="form-control" value="{{ $endDate }}"
-                            min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
-                    </div>
-                    <div class="col-md-6 d-flex flex-wrap gap-2 justify-content-md-end">
-                        <button type="submit" class="btn btn-outline-info">
-                            <i class="fas fa-search"></i> Search
-                        </button>
-                        <a href="{{ route('Budge_Projection') }}" class="btn btn-outline-danger">
-                            <i class="fas fa-rotate-right"></i> Reset
-                        </a>
-                        @include('backend.reports.partials.export_toolbar', [
-                            'excelRoute' => 'Budge_Projection.export_excel',
-                            'excelParams' => ['start_date' => $startDate, 'end_date' => $endDate],
-                        ])
-                    </div>
-                    <div class="col-12">
-                        <div class="small text-muted">
-                            Filters the "Avg Expense" column and the AI Insights panel below. Everything else on this
-                            page (this month's income, last month's expense, next month's projection) always uses the
-                            current/adjacent calendar month.
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
+        <x-backend.date-range-filter :start="$startDate" :end="$endDate" :min="$minDataDate"
+            note="Filters the Avg Expense column and the AI panel. This month's income, last month's expense and next month's projection always use the current/adjacent calendar month.">
+                <a href="{{ route('Budge_Projection.export_excel', ['start_date' => $startDate, 'end_date' => $endDate]) }}" class="btn btn-outline-success flex-fill flex-md-grow-0">
+                    <i class="bi bi-file-earmark-excel"></i> Excel
+                </a>
+                <button type="button" class="btn btn-outline-secondary flex-fill flex-md-grow-0" onclick="window.print()">
+                    <i class="bi bi-printer"></i> Print / PDF
+                </button>
+        </x-backend.date-range-filter>
 
         <!-- Forecasted budget (linear regression on the last 6 completed months) -->
         <div class="card mb-4">

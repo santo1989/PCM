@@ -17,39 +17,12 @@
             </div>
         </div>
 
-        <div class="card mb-4 no-print">
-            <div class="card-body">
-                <form method="GET" action="{{ route('predictive_budget') }}" class="row g-2 align-items-end">
-                    <div class="col-md-3">
-                        <label class="form-label small mb-1">Start Date</label>
-                        <input type="date" name="start_date" class="form-control" value="{{ $startDate }}"
-                            min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label small mb-1">End Date</label>
-                        <input type="date" name="end_date" class="form-control" value="{{ $endDate }}"
-                            min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
-                    </div>
-                    <div class="col-md-6 d-flex flex-wrap gap-2 justify-content-md-end">
-                        <button type="submit" class="btn btn-outline-info">
-                            <i class="fas fa-search"></i> Apply
-                        </button>
-                        <a href="{{ route('predictive_budget') }}" class="btn btn-outline-danger">
-                            <i class="fas fa-rotate-right"></i> Reset
-                        </a>
-                        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
-                            <i class="bi bi-printer"></i> Print / Save as PDF
-                        </button>
-                    </div>
-                    <div class="col-12">
-                        <div class="small text-muted">
-                            History window used for the regression; the forecast predicts the month right after End
-                            Date.
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
+        <x-backend.date-range-filter :start="$startDate" :end="$endDate" :min="$minDataDate"
+            note="History window used for the forecast; it predicts the month right after the end date.">
+                <button type="button" class="btn btn-outline-secondary flex-fill flex-md-grow-0" onclick="window.print()">
+                    <i class="bi bi-printer"></i> Print / PDF
+                </button>
+        </x-backend.date-range-filter>
 
         @if (empty($rows))
             <div class="alert alert-info">Not enough expense history yet to build a forecast.</div>

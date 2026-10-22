@@ -8,36 +8,14 @@
 
         <h2 class="text-center mb-4">Monthly Financial Analysis</h2>
 
-        <div class="card mb-4 no-print">
-            <div class="card-body">
-                <form method="GET" class="row g-2 align-items-end">
-                    <div class="col-md-3">
-                        <label class="form-label small mb-1">Start Date</label>
-                        <input type="date" name="start_date" class="form-control" value="{{ $startDate }}"
-                            min="{{ $minDate }}" max="{{ now()->toDateString() }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label small mb-1">End Date</label>
-                        <input type="date" name="end_date" class="form-control" value="{{ $endDate }}"
-                            min="{{ $minDate }}" max="{{ now()->toDateString() }}">
-                    </div>
-                    <div class="col-md-6 d-flex flex-wrap gap-2 justify-content-md-end">
-                        <button type="submit" class="btn btn-outline-secondary">
-                            <i class="bi bi-filter"></i> Filter
-                        </button>
-                        <a href="{{ route('Monthly_invest') }}" class="btn btn-outline-danger">
-                            <i class="bi bi-arrow-counterclockwise"></i> Reset
-                        </a>
-                        <a href="{{ route('Monthly_invest.export_excel', ['start_date' => $startDate, 'end_date' => $endDate]) }}" class="btn btn-outline-success">
-                            <i class="bi bi-file-earmark-excel"></i> Download Excel
-                        </a>
-                        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
-                            <i class="bi bi-printer"></i> Print / Save as PDF
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+        <x-backend.date-range-filter :start="$startDate" :end="$endDate" :min="$minDate">
+                <a href="{{ route('Monthly_invest.export_excel', ['start_date' => $startDate, 'end_date' => $endDate]) }}" class="btn btn-outline-success flex-fill flex-md-grow-0">
+                    <i class="bi bi-file-earmark-excel"></i> Excel
+                </a>
+                <button type="button" class="btn btn-outline-secondary flex-fill flex-md-grow-0" onclick="window.print()">
+                    <i class="bi bi-printer"></i> Print / PDF
+                </button>
+        </x-backend.date-range-filter>
 
         <!-- Detailed Analysis Section -->
         <div class="row mb-4">
@@ -61,9 +39,9 @@
             <div class="col-md-2 col-6 mb-2">
                 <div class="card text-center h-100">
                     <div class="card-body p-2">
-                        <div class="text-muted small">Current Investment Rate</div>
+                        <div class="text-muted small">Investment Target</div>
                         <div class="fw-bold">{{ number_format($analysis['investmentRatePercent'], 1) }}%</div>
-                        <div class="small text-muted">{{ $analysis['yearsInvesting'] }} yrs active</div>
+                        <div class="small text-muted">of salary</div>
                     </div>
                 </div>
             </div>
@@ -86,37 +64,83 @@
             </div>
         </div>
 
-        <!-- Summary Section -->
-        <div class="row mb-4">
-            <div class="col-md-12">
-                <div class="card">
-                    <div class="card-header bg-primary text-white">
-                        <h4>Allocation Summary</h4>
-                    </div>
-                    <div class="card-body">
-                        <table class="table table-bordered">
-                            <thead class="thead-dark">
-                                <tr>
-                                    <th>Total Income</th>
-                                    <th>Investment (30% + 10%/yr)</th>
-                                    <th>Needs (50%)</th>
-                                    <th>Wants (10%)</th>
-                                    <th>Future Goals (10%)</th>
+        <!-- 70/20/10 salary rule: target vs actual -->
+        @php
+            $buckets = [
+                'needs' => ['Needs', 'of 70% expense: 50%'],
+                'wants' => ['Wants', 'of 70% expense: 30%'],
+                'installments' => ['FD / DPS installments', 'of 70% expense: 20%'],
+                'savings' => ['Savings (Bank, DPS, FD)', ''],
+                'invest' => ['Invest (Stocks)', ''],
+            ];
+            $t = $allocation['total'];
+            // Over target is bad for spending (needs/wants), good for saving buckets (FD/DPS installments, savings, invest).
+            $isGood = fn($key, $actual, $target) => in_array($key, ['installments', 'savings', 'invest'], true) ? $actual >= $target : $actual <= $target;
+        @endphp
+        <div class="card mb-4">
+            <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <span><i class="bi bi-pie-chart"></i> Salary rule: 70% expense · 20% savings · 10% invest</span>
+                <span class="small text-muted">Salary in range: <strong>{{ number_format($t['salary'], 2) }}</strong></span>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 mb-3">
+                    @foreach ($buckets as $key => [$label, $hint])
+                        @php
+                            $target = $t['target'][$key];
+                            $actual = $t['actual'][$key];
+                            $pct = $t['salary'] > 0 ? $actual / $t['salary'] * 100 : 0;
+                            $good = $isGood($key, $actual, $target);
+                        @endphp
+                        <div class="col-6 col-lg">
+                            <div class="border rounded-3 p-3 h-100">
+                                <div class="small text-muted">{{ $label }}</div>
+                                <div class="small text-muted">Target {{ round($allocation['share'][$key] * 100) }}% {{ $hint ? '(' . $hint . ')' : '' }}</div>
+                                <div class="fs-5 fw-bold {{ $good ? 'text-success' : 'text-danger' }}">{{ number_format($actual, 0) }}</div>
+                                <div class="small">of {{ number_format($target, 0) }} · {{ number_format($pct, 1) }}% of salary</div>
+                                <div class="progress mt-2" style="height: 6px;" role="progressbar" aria-label="{{ $label }} vs target"
+                                    aria-valuenow="{{ $target > 0 ? min(round($actual / $target * 100), 100) : 0 }}" aria-valuemin="0" aria-valuemax="100">
+                                    <div class="progress-bar {{ $good ? 'bg-success' : 'bg-danger' }}"
+                                        style="width: {{ $target > 0 ? max(min($actual / $target * 100, 100), 0) : 0 }}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle mb-0 table-responsive-cards">
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th class="text-end">Salary</th>
+                                @foreach ($buckets as $key => [$label])
+                                    <th class="text-end">{{ $label }}<div class="small text-muted fw-normal">actual / target</div></th>
+                                @endforeach
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (array_merge($allocation['months'], ['total' => $t]) as $key => $row)
+                                <tr class="{{ $key === 'total' ? 'fw-bold table-light' : '' }}">
+                                    <td data-label="Month">{{ $row['label'] }}</td>
+                                    <td data-label="Salary" class="text-end">{{ number_format($row['salary'], 0) }}</td>
+                                    @foreach ($buckets as $bucket => [$label])
+                                        @php
+                                            $good = $isGood($bucket, $row['actual'][$bucket], $row['target'][$bucket]);
+                                        @endphp
+                                        <td data-label="{{ $label }}" class="text-end text-md-nowrap">
+                                            <span class="{{ $row['salary'] > 0 ? ($good ? 'text-success' : 'text-danger') : '' }}">{{ number_format($row['actual'][$bucket], 0) }}</span>
+                                            <span class="text-muted">/ {{ number_format($row['target'][$bucket], 0) }}</span>
+                                        </td>
+                                    @endforeach
                                 </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>{{ number_format($incomes->sum('amount'), 2) }}</td>
-                                    <td class="bg-success text-white">
-                                        {{ number_format($incomes->sum('investment'), 2) }}
-                                    </td>
-                                    <td>{{ number_format($incomes->sum('needs'), 2) }}</td>
-                                    <td>{{ number_format($incomes->sum('wants'), 2) }}</td>
-                                    <td>{{ number_format($incomes->sum('future'), 2) }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                <div class="small text-muted mt-2">
+                    Actuals: Needs / Wants / FD-DPS installments = expense entries by 50/30/20 rule; Invest = net deposits into
+                    the Investment (stocks) account; Savings = salary − all expenses − invest (what stayed in Bank/DPS/FD).
+                    Green = on track: needs/wants at or under target, FD/DPS installments, savings and invest at or above it.
                 </div>
             </div>
         </div>
@@ -135,10 +159,11 @@
                                 <tr>
                                     <th>Date</th>
                                     <th>Amount</th>
-                                    <th>Investment</th>
-                                    <th>Needs</th>
-                                    <th>Wants</th>
-                                    <th>Future</th>
+                                    <th>Invest 10%</th>
+                                    <th>Needs 35%</th>
+                                    <th>Wants 21%</th>
+                                    <th>FD/DPS 14%</th>
+                                    <th>Savings 20%</th>
                                 </tr> 
                             </thead>
                             <tbody>
@@ -152,6 +177,7 @@
                                         <td>{{ number_format($income['needs'], 2) }}</td>
                                         <td>{{ number_format($income['wants'], 2) }}</td>
                                         <td>{{ number_format($income['future'], 2) }}</td>
+                                        <td>{{ number_format($income['savings'], 2) }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>

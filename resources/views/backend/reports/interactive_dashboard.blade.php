@@ -7,33 +7,19 @@
 
         <h3>Interactive Financial Dashboard</h3>
 
-        <div class="card mb-4 no-print">
-            <div class="card-body">
-                <div class="row align-items-end">
-                    <div class="col-md-3">
-                        <label for="startDateInput" class="form-label small mb-1">Start Date</label>
-                        <input type="date" id="startDateInput" class="form-control"
-                            min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label for="endDateInput" class="form-label small mb-1">End Date</label>
-                        <input type="date" id="endDateInput" class="form-control"
-                            min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
-                    </div>
-                    <div class="col-md-6 d-flex flex-wrap align-items-end gap-2 justify-content-md-end">
-                        <button id="refreshBtn" class="btn btn-primary">
-                            <i class="bi bi-arrow-clockwise"></i> Refresh
-                        </button>
-                        <a id="exportExcelBtn" class="btn btn-outline-success" href="{{ route('interactive.dashboard.export_excel') }}">
-                            <i class="bi bi-file-earmark-excel"></i> Excel
-                        </a>
-                        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
-                            <i class="bi bi-printer"></i> Print
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <x-backend.date-range-filter :start="$startDate" :end="$endDate" :min="$minDataDate"
+            start-id="startDateInput" end-id="endDateInput"
+            note="Changing a date refreshes the dashboard instantly; Apply also saves the range in the address bar.">
+            <button type="button" id="refreshBtn" class="btn btn-outline-secondary flex-fill flex-md-grow-0">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+            <a id="exportExcelBtn" class="btn btn-outline-success flex-fill flex-md-grow-0" href="{{ route('interactive.dashboard.export_excel') }}">
+                <i class="bi bi-file-earmark-excel"></i> Excel
+            </a>
+            <button type="button" class="btn btn-outline-secondary flex-fill flex-md-grow-0" onclick="window.print()">
+                <i class="bi bi-printer"></i> Print
+            </button>
+        </x-backend.date-range-filter>
 
         <div id="budgetAlerts"></div>
 
@@ -119,6 +105,8 @@
             </div>
         </div>
 
+        @include('backend.reports.partials._ai_outlook', ['outlook' => $outlook ?? null])
+
     </div>
 
     <!-- Chart.js -->
@@ -135,8 +123,9 @@
             const firstOfMonth = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
             const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
             const lastOfMonth = `${lastDay.getFullYear()}-${pad(lastDay.getMonth() + 1)}-${pad(lastDay.getDate())}`;
-            startDateInput.value = firstOfMonth;
-            endDateInput.value = lastOfMonth;
+            // Only when the page was opened without a range in the URL.
+            if (!startDateInput.value) startDateInput.value = firstOfMonth;
+            if (!endDateInput.value) endDateInput.value = lastOfMonth;
         })();
 
         let trendChart = null;
@@ -515,8 +504,16 @@
         // initial load
         refreshAll();
         refreshBtn.addEventListener('click', refreshAll);
-        startDateInput.addEventListener('change', refreshAll);
-        endDateInput.addEventListener('change', refreshAll);
+
+        // Keep the chosen range in the address bar so reload/share shows the same report.
+        function syncRangeToUrl(startEl, endEl) {
+            const params = new URLSearchParams(location.search);
+            params.set('start_date', startEl.value);
+            params.set('end_date', endEl.value);
+            history.replaceState(null, '', location.pathname + '?' + params.toString());
+        }
+        startDateInput.addEventListener('change', () => { syncRangeToUrl(startDateInput, endDateInput); refreshAll(); });
+        endDateInput.addEventListener('change', () => { syncRangeToUrl(startDateInput, endDateInput); refreshAll(); });
 
         // near-real-time: re-poll every 30s (matches the app-wide AJAX-polling
         // approach chosen over WebSockets, since no Pusher/Echo/websocket

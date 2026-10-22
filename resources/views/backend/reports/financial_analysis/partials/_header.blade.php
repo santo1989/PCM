@@ -55,7 +55,7 @@
                     <option value="120">Every 120s</option>
                 </select>
             </div>
-            <div class="col-md-2 d-flex flex-wrap gap-2 justify-content-md-end">
+            <div class="col-12 col-md-2 d-flex flex-wrap gap-2 justify-content-md-end">
                 <a href="#" id="exportLink" class="btn btn-outline-success btn-sm">
                     <i class="bi bi-file-earmark-excel"></i> Export
                 </a>
@@ -65,6 +65,9 @@
                 <button type="button" id="refreshBtn" class="btn btn-outline-secondary btn-sm">
                     <i class="bi bi-arrow-clockwise"></i> Refresh
                 </button>
+                <a href="{{ route('financial_analysis.index') }}" class="btn btn-outline-danger btn-sm">
+                    <i class="bi bi-arrow-counterclockwise"></i> Reset
+                </a>
             </div>
         </div>
     </div>

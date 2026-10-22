@@ -57,4 +57,15 @@ return [
         'INVESTMENT' => 'Investment',
     ],
 
+    // Monthly Investment page: how each month's salary should be split (shares of salary).
+    // Expense 70%, itself split 50/30/20 into needs / wants / FD-DPS installments
+    // (= 35 / 21 / 14 % of salary); savings 20% (Bank, DPS, FD); invest 10% (stocks).
+    'income_allocation' => [
+        'needs' => 0.70 * 0.50,
+        'wants' => 0.70 * 0.30,
+        'installments' => 0.70 * 0.20,
+        'savings' => 0.20,
+        'invest' => 0.10,
+    ],
+
 ];

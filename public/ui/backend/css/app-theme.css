@@ -617,3 +617,7 @@ body.app {
     border-top: 1px solid #dee2e6;
   }
 }
+
+/* Bootstrap has no responsive nowrap; keep numbers on one line from md up only */
+@media (min-width: 768px) { .text-md-nowrap { white-space: nowrap !important; } }
+@media (max-width: 767.98px) { table.table-responsive-cards td { flex-wrap: wrap; } }

@@ -67,9 +67,16 @@ class HandCashController extends Controller
             $exportRangeEnd = $entryDateEnd;
 
             if (!$entryDateStart && !$entryDateEnd) {
-                $exportRangeStart = now()->startOfMonth()->toDateString();
-                $exportRangeEnd = now()->toDateString();
-                $exportQuery->whereBetween('date', [$exportRangeStart, $exportRangeEnd]);
+                // No transaction dates: export the Balance date range if one is set,
+                // otherwise the current month (not the entire history).
+                $exportRangeStart = request('balance_date_start');
+                $exportRangeEnd = request('balance_date_end');
+                if (!$exportRangeStart && !$exportRangeEnd) {
+                    $exportRangeStart = now()->startOfMonth()->toDateString();
+                    $exportRangeEnd = now()->toDateString();
+                }
+                $exportQuery->when($exportRangeStart, fn($q) => $q->whereDate('date', '>=', $exportRangeStart))
+                    ->when($exportRangeEnd, fn($q) => $q->whereDate('date', '<=', $exportRangeEnd));
             }
 
             $search_cashes = $exportQuery->get();
@@ -953,6 +960,69 @@ class HandCashController extends Controller
     }
 
 
+    /**
+     * Salary split per the 70/20/10 rule (config finance.income_allocation), target vs.
+     * actual for each month in the range plus a total row.
+     * Actuals: needs/wants/installments = EXPENSE entries by rule NEEDS/WANTS/SAVINGS;
+     * invest = net deposits into the INVESTMENT (stocks) account;
+     * savings = salary - expenses - invest (what stayed in Bank/DPS/FD).
+     */
+    private function incomeAllocation(string $startDate, string $endDate): array
+    {
+        $share = config('finance.income_allocation');
+        $ym = DB::raw("DATE_FORMAT(date, '%Y-%m')");
+
+        $salary = ExpenseCalculation::where('types', 'INCOME')->where('category_id', 1)
+            ->whereBetween('date', [$startDate, $endDate])
+            ->groupBy($ym)->selectRaw("DATE_FORMAT(date, '%Y-%m') as ym, SUM(amount) as total")
+            ->pluck('total', 'ym');
+        $expense = ExpenseCalculation::where('types', 'EXPENSE')
+            ->whereBetween('date', [$startDate, $endDate])
+            ->groupBy($ym, 'rules')->selectRaw("DATE_FORMAT(date, '%Y-%m') as ym, rules, SUM(amount) as total")
+            ->get()->groupBy('ym');
+        $invest = HandCash::where('rules', 'INVESTMENT')
+            ->whereBetween('date', [$startDate, $endDate])
+            ->groupBy($ym)
+            ->selectRaw("DATE_FORMAT(date, '%Y-%m') as ym, SUM(CASE WHEN types = 'SAVE' THEN amount ELSE -amount END) as total")
+            ->pluck('total', 'ym');
+
+        $rows = [];
+        $cursor = Carbon::parse($startDate)->startOfMonth();
+        while ($cursor->lte(Carbon::parse($endDate))) {
+            $key = $cursor->format('Y-m');
+            $byRule = collect($expense[$key] ?? [])->pluck('total', 'rules');
+            $income = (float) ($salary[$key] ?? 0);
+            $actual = [
+                'needs' => (float) ($byRule['NEEDS'] ?? 0),
+                'wants' => (float) ($byRule['WANTS'] ?? 0),
+                'installments' => (float) ($byRule['SAVINGS'] ?? 0),
+                'invest' => (float) ($invest[$key] ?? 0),
+            ];
+            $totalExpense = (float) collect($expense[$key] ?? [])->sum('total');
+            $actual['savings'] = $income - $totalExpense - $actual['invest'];
+            $actual['expense'] = $totalExpense;
+
+            $rows[$key] = [
+                'label' => $cursor->format('M Y'),
+                'salary' => $income,
+                'target' => array_map(fn($p) => $income * $p, $share) + ['expense' => $income * ($share['needs'] + $share['wants'] + $share['installments'])],
+                'actual' => $actual,
+            ];
+            $cursor->addMonth();
+        }
+
+        $sum = fn(string $part, string $k) => array_sum(array_map(fn($r) => $r[$part][$k], $rows));
+        $keys = ['needs', 'wants', 'installments', 'expense', 'savings', 'invest'];
+        $total = [
+            'label' => 'Total',
+            'salary' => array_sum(array_column($rows, 'salary')),
+            'target' => array_combine($keys, array_map(fn($k) => $sum('target', $k), $keys)),
+            'actual' => array_combine($keys, array_map(fn($k) => $sum('actual', $k), $keys)),
+        ];
+
+        return ['share' => $share, 'months' => $rows, 'total' => $total];
+    }
+
     public function Monthly_invest()
     {
         // Date range handling
@@ -975,19 +1045,17 @@ class HandCashController extends Controller
             ->get()
             ->map(function ($item) {
                 $amount = (float) $item->amount;
-                $years = max(now()->year - self::INVESTMENT_START_YEAR, 0);
+                $share = config('finance.income_allocation');
 
-                // Calculate investment percentage with 10% yearly increase
-                $baseInvestmentPercent = 0.3;
-                $investmentPercent = min($baseInvestmentPercent * pow(1.1, $years), 0.8);
-
+                // 70/20/10 rule (expense 70% split 50/30/20), see config/finance.php.
                 return [
                     'date' => $item->date,
                     'amount' => $amount,
-                    'investment' => $amount * $investmentPercent,
-                    'needs' => $amount * 0.5,
-                    'wants' => $amount * 0.1,
-                    'future' => $amount * 0.1,
+                    'investment' => $amount * $share['invest'],
+                    'needs' => $amount * $share['needs'],
+                    'wants' => $amount * $share['wants'],
+                    'future' => $amount * $share['installments'],
+                    'savings' => $amount * $share['savings'],
                 ];
             });
 
@@ -1009,11 +1077,12 @@ class HandCashController extends Controller
         $totalExpenses = $expenses->flatten()->sum('amount');
 
         $investmentGrowth = $this->calculateInvestmentGrowth();
+        $allocation = $this->incomeAllocation($startDate, $endDate);
 
         // ---- Detailed analysis ----
         $totalIncome = (float) $incomes->sum('amount');
         $totalInvestment = (float) $incomes->sum('investment');
-        $currentInvestmentPercent = min(0.3 * pow(1.1, max(now()->year - self::INVESTMENT_START_YEAR, 0)), 0.8) * 100;
+        $currentInvestmentPercent = config('finance.income_allocation.invest') * 100;
 
         // Which expense "rule" (Needs/Wants/Savings) dominates spending in the period
         $expenseRuleTotals = $expenses->map(fn($group) => $group->sum('amount'))->sortDesc();
@@ -1089,7 +1158,7 @@ class HandCashController extends Controller
 
         return view(
             'backend.reports.Monthly_invest',
-            compact('incomes', 'expenses', 'startDate', 'endDate', 'investmentGrowth', 'totalExpenses', 'analysis', 'aiInsights', 'minDate')
+            compact('incomes', 'expenses', 'startDate', 'endDate', 'investmentGrowth', 'totalExpenses', 'analysis', 'aiInsights', 'minDate', 'allocation')
         );
     }
 
@@ -1364,6 +1433,12 @@ class HandCashController extends Controller
     {
         return view('backend.reports.interactive_dashboard', [
             'minDataDate' => ExpenseCalculation::min('date'),
+            'startDate' => request('start_date', now()->startOfMonth()->toDateString()),
+            'endDate' => request('end_date', now()->toDateString()),
+            'outlook' => MLPipeline::run(
+                Carbon::parse(request('start_date', now()->startOfMonth()->toDateString()))->startOfDay(),
+                Carbon::parse(request('end_date', now()->toDateString()))->endOfDay()
+            )['outlook'] ?? null,
         ]);
     }
 

@@ -87,4 +87,18 @@ class ExpenseCalculation extends Model
             // don't block workflow if cache clearing fails
         }
     }
+
+    /**
+     * amount is a text column; a typed "5,315" once broke PHP totals (and MySQL SUM
+     * reads it as 5). Store digits only, and always read it back as a number.
+     */
+    public function setAmountAttribute($value)
+    {
+        $this->attributes['amount'] = is_string($value) ? str_replace([',', ' '], '', trim($value)) : $value;
+    }
+
+    public function getAmountAttribute($value)
+    {
+        return $value === null || $value === '' ? $value : (float) str_replace([',', ' '], '', $value);
+    }
 }

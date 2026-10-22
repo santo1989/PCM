@@ -63,3 +63,5 @@
         </div>
     </div>
 </div>
+
+@include('backend.reports.partials._ai_outlook', ['outlook' => $aiInsights['outlook'] ?? null])

@@ -12,37 +12,17 @@
             <div class="small">Live view of where this month's spending is running hot — auto-refreshes every 30s.</div>
         </div>
 
-        <div class="card mb-4 no-print">
-            <div class="card-body">
-                <div class="row g-2 align-items-end">
-                    <div class="col-md-3">
-                        <label class="form-label small mb-1">Start Date</label>
-                        <input type="date" id="costOptStartDate" class="form-control" value="{{ $startDate }}"
-                            min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label small mb-1">End Date</label>
-                        <input type="date" id="costOptEndDate" class="form-control" value="{{ $endDate }}"
-                            min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
-                    </div>
-                    <div class="col-md-6 d-flex flex-wrap align-items-center justify-content-md-end gap-2">
-                        <div class="small text-muted me-auto me-md-0" id="costOptUpdatedAt"></div>
-                        <button type="button" id="refreshCostOptBtn" class="btn btn-outline-secondary">
-                            <i class="bi bi-arrow-clockwise"></i> Refresh
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
-                            <i class="bi bi-printer"></i> Print / Save as PDF
-                        </button>
-                    </div>
-                    <div class="col-12">
-                        <div class="small text-muted">
-                            Analyzes the calendar month the End Date falls in — pace vs. historical daily rate, and
-                            full-month totals vs. each category's typical month.
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <x-backend.date-range-filter :start="$startDate" :end="$endDate" :min="$minDataDate"
+            start-id="costOptStartDate" end-id="costOptEndDate"
+            note="Analyzes the calendar month the end date falls in: pace vs. historical daily rate, and full-month totals vs. each category's typical month.">
+            <span class="small text-muted align-self-center" id="costOptUpdatedAt"></span>
+            <button type="button" id="refreshCostOptBtn" class="btn btn-outline-secondary flex-fill flex-md-grow-0">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+            <button type="button" class="btn btn-outline-secondary flex-fill flex-md-grow-0" onclick="window.print()">
+                <i class="bi bi-printer"></i> Print / PDF
+            </button>
+        </x-backend.date-range-filter>
 
         <h5 class="mb-3"><i class="bi bi-speedometer2"></i> Spending Pace This Month</h5>
         <div id="paceSection">
@@ -57,7 +37,7 @@
         <h5 class="mb-3 mt-4"><i class="bi bi-robot"></i> AI Insight</h5>
         <div id="aiSection">
             @include('backend.reports.partials._ai_insights_panel', [
-                'aiInsights' => ['summary' => $aiSummary, 'recommendations' => $aiRecommendations],
+                'aiInsights' => ['summary' => $aiSummary, 'recommendations' => $aiRecommendations, 'outlook' => $aiOutlook ?? null],
                 'title' => 'AI Recommendations',
                 'showAnomalies' => false,
             ])
@@ -223,8 +203,16 @@
         }
 
         document.getElementById('refreshCostOptBtn').addEventListener('click', refreshCostOptimisation);
-        costOptStartDate.addEventListener('change', refreshCostOptimisation);
-        costOptEndDate.addEventListener('change', refreshCostOptimisation);
+
+        // Keep the chosen range in the address bar so reload/share shows the same report.
+        function syncRangeToUrl(startEl, endEl) {
+            const params = new URLSearchParams(location.search);
+            params.set('start_date', startEl.value);
+            params.set('end_date', endEl.value);
+            history.replaceState(null, '', location.pathname + '?' + params.toString());
+        }
+        costOptStartDate.addEventListener('change', () => { syncRangeToUrl(costOptStartDate, costOptEndDate); refreshCostOptimisation(); });
+        costOptEndDate.addEventListener('change', () => { syncRangeToUrl(costOptStartDate, costOptEndDate); refreshCostOptimisation(); });
         setInterval(refreshCostOptimisation, 30000);
     </script>
 </x-backend.layouts.master>

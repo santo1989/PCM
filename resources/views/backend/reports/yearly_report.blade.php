@@ -8,42 +8,15 @@
 
         @include('backend.reports.partials.report_nav')
 
-        <div class="card mb-4 no-print">
-            <div class="card-body">
-                <form method="GET" action="{{ route('Yearly_report') }}" class="row g-2 align-items-end">
-                    <div class="col-md-3">
-                        <label class="form-label small mb-1">Start Date</label>
-                        <input type="date" name="start_date" class="form-control" value="{{ $startDate }}"
-                            min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label small mb-1">End Date</label>
-                        <input type="date" name="end_date" class="form-control" value="{{ $endDate }}"
-                            min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
-                    </div>
-                    <div class="col-md-2 d-flex gap-2">
-                        <button type="submit" class="btn btn-outline-info">
-                            <i class="fas fa-search"></i> Apply
-                        </button>
-                        <a href="{{ route('Yearly_report') }}" class="btn btn-outline-danger">
-                            <i class="fas fa-rotate-right"></i> Reset
-                        </a>
-                    </div>
-                    <div class="col-md-4">
-                        @include('backend.reports.partials.export_toolbar', [
-                            'excelRoute' => 'Yearly_report.export_excel',
-                            'excelParams' => ['start_date' => $startDate, 'end_date' => $endDate],
-                        ])
-                    </div>
-                    <div class="col-12">
-                        <div class="small text-muted">
-                            Every section below — cards, chart, and the month-by-month table — covers exactly the
-                            Start/End Date range selected, one row per calendar month it touches.
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
+        <x-backend.date-range-filter :start="$startDate" :end="$endDate" :min="$minDataDate"
+            note="Every section below covers exactly the selected range, one row per calendar month it touches.">
+                <a href="{{ route('Yearly_report.export_excel', ['start_date' => $startDate, 'end_date' => $endDate]) }}" class="btn btn-outline-success flex-fill flex-md-grow-0">
+                    <i class="bi bi-file-earmark-excel"></i> Excel
+                </a>
+                <button type="button" class="btn btn-outline-secondary flex-fill flex-md-grow-0" onclick="window.print()">
+                    <i class="bi bi-printer"></i> Print / PDF
+                </button>
+        </x-backend.date-range-filter>
 
         <div id="printable">
             <h2 class="text-center">Report: {{ \Carbon\Carbon::parse($startDate)->format('M d, Y') }} &ndash;

@@ -8,36 +8,14 @@
 
         @include('backend.reports.partials.report_nav')
 
-        <div class="card mb-4 no-print">
-            <div class="card-body">
-                <form action="{{ route('Monthly_report') }}" method="get" id="Monthly_report" class="row g-2 align-items-end">
-                    <div class="col-md-3">
-                        <label for="start_date" class="form-label small mb-1">Start Date</label>
-                        <input type="date" name="start_date" id="start_date" class="form-control" required
-                            value="{{ $startDate ?? '' }}" min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label for="end_date" class="form-label small mb-1">End Date</label>
-                        <input type="date" name="end_date" id="end_date" class="form-control" required
-                            value="{{ $endDate ?? '' }}" min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
-                    </div>
-                    <div class="col-md-6 d-flex flex-wrap gap-2 justify-content-md-end">
-                        <button type="submit" class="btn btn-outline-secondary">
-                            <i class="fas fa-search"></i> Search
-                        </button>
-                        <a href="{{ route('Monthly_report') }}" class="btn btn-outline-danger">
-                            <i class="fas fa-sync-alt"></i> Refresh
-                        </a>
-                        <a href="{{ route('Monthly_report.export_excel', ['start_date' => $startDate, 'end_date' => $endDate]) }}" class="btn btn-outline-success">
-                            <i class="bi bi-file-earmark-excel"></i> Download Excel
-                        </a>
-                        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
-                            <i class="bi bi-printer"></i> Print / Save as PDF
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+        <x-backend.date-range-filter :start="$startDate" :end="$endDate" :min="$minDataDate">
+                <a href="{{ route('Monthly_report.export_excel', ['start_date' => $startDate, 'end_date' => $endDate]) }}" class="btn btn-outline-success flex-fill flex-md-grow-0">
+                    <i class="bi bi-file-earmark-excel"></i> Excel
+                </a>
+                <button type="button" class="btn btn-outline-secondary flex-fill flex-md-grow-0" onclick="window.print()">
+                    <i class="bi bi-printer"></i> Print / PDF
+                </button>
+        </x-backend.date-range-filter>
 
         <div id="printable" class="row justify-content-center">
             <div class="col-md-12 text-center">
