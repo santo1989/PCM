@@ -17,6 +17,8 @@ class Kernel extends ConsoleKernel
     {
         $schedule->command('recurring:run')->dailyAt('00:10');
         $schedule->command('db:backup')->dailyAt('02:00');
+        $schedule->command('backup:health')->hourly();
+        $schedule->command('backup:restore-test')->monthlyOn(1, '05:00')->withoutOverlapping();
     }
 
     /**
