@@ -14,52 +14,131 @@
 
     <section class="content">
         <div class="container-fluid">
-            @if (session('message'))
-                <div class="alert alert-success">
-                    <span class="close" data-dismiss="alert">&times;</span>
-                    <strong>{{ session('message') }}.</strong>
-                </div>
-            @endif
-
+            <x-backend.layouts.elements.message :message="session('message')" />
             <x-backend.layouts.elements.errors />
+
+            <x-backend.insights-panel :insights="\App\Services\InsightEngine::dashboardSummary()" />
 
             <div class="row">
                 <div class="col-12">
-                    <div class="card">
+                    <div class="card mb-4 no-print">
                         <div class="card-header">
-
                             <x-backend.form.anchor :href="route('handCashes.create')" type="create" />
                             <x-backend.form.anchor :href="route('handCashes_transfer_create')" type="Transfer" />
-
                         </div>
-                        <!-- /.card-header -->
-                        <div class="card-body justify-content-between">
-                            {{-- Date Filter Form --}}
-                            <div class="row mb-4">
-                                <div class="col-md-12">
-                                    <form action="{{ route('handCashes.index') }}" method="GET"
-                                        class="form-inline justify-content-center">
-                                        <div class="form-group mr-3">
-                                            <label for="balance_date_start" class="mr-2">From:</label>
-                                            <input type="date" name="balance_date_start" id="balance_date_start"
-                                                class="form-control" value="{{ request('balance_date_start') }}">
-                                        </div>
-                                        <div class="form-group mr-3">
-                                            <label for="balance_date_end" class="mr-2">To:</label>
-                                            <input type="date" name="balance_date_end" id="balance_date_end"
-                                                class="form-control" value="{{ request('balance_date_end') }}">
-                                        </div>
-                                        <button type="submit" class="btn btn-primary mr-2">
-                                            <i class="bi bi-filter"></i> Filter
-                                        </button>
-                                        <a href="{{ route('handCashes.index') }}" class="btn btn-secondary">
-                                            <i class="bi bi-x-circle"></i> Clear
-                                        </a>
-                                    </form>
+                        <div class="card-body">
+                            <form action="{{ route('handCashes.index') }}" method="GET" data-live-filter class="row g-2 align-items-end">
+                                <div class="col-md-2">
+                                    <label class="form-label small mb-1">Balance Start</label>
+                                    <input type="date" name="balance_date_start" class="form-control"
+                                        value="{{ request('balance_date_start') }}" min="{{ $minDataDate }}"
+                                        max="{{ now()->toDateString() }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small mb-1">Balance End</label>
+                                    <input type="date" name="balance_date_end" class="form-control"
+                                        value="{{ request('balance_date_end') }}" min="{{ $minDataDate }}"
+                                        max="{{ now()->toDateString() }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small mb-1">Txn Start</label>
+                                    <input type="date" name="handCashes_date_start" class="form-control"
+                                        value="{{ request('handCashes_date_start') }}" min="{{ $minDataDate }}"
+                                        max="{{ now()->toDateString() }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small mb-1">Txn End</label>
+                                    <input type="date" name="handCashes_date_end" class="form-control"
+                                        value="{{ request('handCashes_date_end') }}" min="{{ $minDataDate }}"
+                                        max="{{ now()->toDateString() }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small mb-1">Name</label>
+                                    <input type="text" name="handCashes_name" class="form-control"
+                                        value="{{ request('handCashes_name') }}" placeholder="Search name...">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small mb-1">Type</label>
+                                    @php
+                                        $selectedHandCashTypes = array_map(
+                                            'strtoupper',
+                                            (array) request('handCashes_type', request('types', [])),
+                                        );
+                                    @endphp
+                                    <select class="form-select select2" name="handCashes_type[]" multiple
+                                        data-placeholder="All Types">
+                                        <option value="SAVE"
+                                            {{ in_array('SAVE', $selectedHandCashTypes) ? 'selected' : '' }}>
+                                            Savings</option>
+                                        <option value="WIDROWS"
+                                            {{ in_array('WIDROWS', $selectedHandCashTypes) ? 'selected' : '' }}>
+                                            Withdraws</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small mb-1">Rules</label>
+                                    @php
+                                        $selectedHandCashRules = (array) request(
+                                            'handCashes_rule',
+                                            request('rules', []),
+                                        );
+                                    @endphp
+                                    <select class="form-select select2" name="handCashes_rule[]" multiple
+                                        data-placeholder="All Rules">
+                                        @foreach (config('finance.handcash_rules') as $ruleKey => $ruleLabel)
+                                            <option value="{{ $ruleKey }}"
+                                                {{ in_array($ruleKey, array_map('strtoupper', $selectedHandCashRules)) ? 'selected' : '' }}>
+                                                {{ $ruleLabel }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-md-2"><x-backend.per-page :default="20" /></div>
+                                <div class="col-md-8 d-flex flex-wrap gap-2 justify-content-md-end">
+                                    <button type="submit" class="btn btn-outline-info">
+                                        <i class="bi bi-filter"></i> Filter / Search
+                                    </button>
+                                    <a href="{{ route('handCashes.index') }}" class="btn btn-outline-danger">
+                                        <i class="bi bi-x-circle"></i> Clear
+                                    </a>
+                                    <a data-live-export href="{{ route('handCashes.index', array_merge(request()->query(), ['export_format' => 'xlsx'])) }}"
+                                        class="btn btn-outline-success">
+                                        <i class="bi bi-file-earmark-excel"></i> Excel
+                                    </a>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+                                        <i class="bi bi-printer"></i> Print / PDF
+                                    </button>
+                                    <a data-live-export="balance_xlsx" href="{{ route('handCashes.index', array_merge(request()->query(), ['export_format' => 'balance_xlsx'])) }}"
+                                        class="btn btn-outline-success">
+                                        <i class="bi bi-file-earmark-spreadsheet"></i> Balance Excel
+                                    </a>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="printBalanceSummary()">
+                                        <i class="bi bi-printer"></i> Print Balance / PDF
+                                    </button>
+                                </div>
+                                <div class="col-12">
+                                    <div class="small text-muted">
+                                        Balance Start/End scopes the account-balance summaries below; Txn Start/End,
+                                        Name, Type, and Rules scope the "All Cash Handlings" transaction table
+                                        further down. Excel export requires at least one transaction filter to be
+                                        applied first.
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div id="live-handcash" data-live-region>
+                    <div class="card">
+                        <div class="card-body justify-content-between" id="balance-summary">
+                            {{-- handCash Table goes here --}}
+                            <div class="d-none d-print-block text-center mb-3">
+                                <h3 class="mb-0">Hand Cash Balance Summary</h3>
+                                <div class="small text-muted">
+                                    Balance period:
+                                    {{ request('balance_date_start') && request('balance_date_end') ? request('balance_date_start') . ' to ' . request('balance_date_end') : 'All Time' }}
+                                    &mdash; Printed {{ now()->format('d M Y, h:i A') }}
                                 </div>
                             </div>
-
-                            {{-- handCash Table goes here --}}
 
                             <div class="row justify-content-between text-center">
                                 <div class="col-md-12">
@@ -112,7 +191,7 @@
                                             </table>
                                         </div>
                                         <div class="col-md-3">
-                                            <h4>Loan To Other</h4>
+                                            <h4>Loan To Other ( Receivable by Me )</h4>
                                             <table class="table table-bordered table-hover">
                                                 <thead>
                                                     <tr>
@@ -127,7 +206,7 @@
 
                                                 </tbody>
                                             </table>
-                                            <h4>My Loan</h4>
+                                            <h4>My Loan ( Need to Paid by Me )</h4>
                                             <table class="table table-bordered table-hover">
                                                 <thead>
                                                     <tr>
@@ -159,7 +238,7 @@
 
                                         </div>
                                         <div class="col-md-3">
-                                            <h4>Bank Cash Handlings</h4>
+                                            <h6>Bank Savings / Investment in Dhaka Stock Exchanges / DPS / FD Cash Details</h6>
                                             <table class="table table-bordered table-hover">
                                                 <thead>
                                                     <tr>
@@ -185,7 +264,7 @@
                                         </div>
 
                                         <div class="col-md-3">
-                                            <h4>Hand Cash</h4>
+                                            <h4>Cash in Hand</h4>
                                             <table class="table table-bordered table-hover">
                                                 <thead>
                                                     <tr>
@@ -196,7 +275,7 @@
                                                 </thead>
                                                 <tbody>
                                                     <tr>
-                                                        <th>Shanta Hand Cash Balence</th>
+                                                        <th>Locker Cash Balence</th>
                                                         <td>{{ $handCashes_Cash_balence }}</td>
 
                                                     </tr>
@@ -242,122 +321,6 @@
                             <h4>All Cash Handlings</h4>
                         </div>
                         <!-- /.card-header -->
-                        {{-- handCash Table filter here --}}
-                        <div class="card-header text-center">
-                            <form action="{{ route('handCashes.index') }}" method="GET"
-                                class="form-inline justify-content-center">
-                                <div class="form-group mr-3">
-                                    <label for="handCashes_date_start" class="mr-2">From:</label>
-                                    <input type="date" name="handCashes_date_start" id="handCashes_date_start"
-                                        class="form-control" value="{{ request('handCashes_date_start') }}">
-                                </div>
-                                <div class="form-group mr-3">
-                                    <label for="handCashes_date_end" class="mr-2">To:</label>
-                                    <input type="date" name="handCashes_date_end" id="handCashes_date_end"
-                                        class="form-control" value="{{ request('handCashes_date_end') }}">
-                                </div>
-                                <!--Name, Types, Rules filter-->
-                                <div class="form-group mr-3">
-                                    <label for="handCashes_name" class="mr-2">Name:</label>
-                                    <input type="text" name="handCashes_name" id="handCashes_name"
-                                        class="form-control" value="{{ request('handCashes_name') }}">
-                                </div>
-                                <div class="form-group mr-3">
-                                    <label for="handCashes_types[]">HandCash Types</label>
-                                    @php
-                                        $selectedHandCashTypes = array_map(
-                                            'strtoupper',
-                                            (array) request('handCashes_type', request('types', [])),
-                                        );
-                                    @endphp
-                                    <select class="form-control" name="handCashes_type[]" id="handCashes_type" multiple>
-                                        <option value="SAVE"
-                                            {{ in_array('SAVE', $selectedHandCashTypes) ? 'selected' : '' }}>
-                                            Savings</option>
-                                        <option value="WIDROWS"
-                                            {{ in_array('WIDROWS', $selectedHandCashTypes) ? 'selected' : '' }}>
-                                            Withdraws</option>
-                                    </select>
-                                </div>
-                                <div class="form-group mr-3">
-                                    <label for="handCashes_rule">Cash Rules</label>
-                                    @php
-                                        $selectedHandCashRules = (array) request(
-                                            'handCashes_rule',
-                                            request('rules', []),
-                                        );
-                                    @endphp
-                                    <select class="form-control" name="handCashes_rule[]" id="handCashes_rule" multiple>
-                                        <option value="Peti"
-                                            {{ in_array('Peti', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            Peti Cash</option>
-                                        <option value="Cash"
-                                            {{ in_array('Cash', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            Cash</option>
-                                        <option value="City_Bank"
-                                            {{ in_array('City_Bank', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            City Bank</option>
-                                        <option value="City_Bank_Islamic"
-                                            {{ in_array('City_Bank_Islamic', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            City Bank Islamic</option>
-                                        <option value="FD"
-                                            {{ in_array('FD', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            FD</option>
-                                        <option value="DPS"
-                                            {{ in_array('DPS', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            DPS</option>
-                                        <option value="Islamic_DPS"
-                                            {{ in_array('Islamic_DPS', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            Islamic DPS</option>
-                                        <option value="MyLoan"
-                                            {{ in_array('MyLoan', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            MyLoan</option>
-                                        <option value="DPSLoan"
-                                            {{ in_array('DPSLoan', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            DPS Loan</option>
-                                        <option value="loan"
-                                            {{ in_array('loan', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            Loan To Other</option>
-                                        <option value="CreditCard"
-                                            {{ in_array('CreditCard', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            Credit Card</option>
-                                        <option value="Sonali_Bank_Gulshan"
-                                            {{ in_array('Sonali_Bank_Gulshan', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            Sonali Bank Gulshan</option>
-                                        <option value="Sonali_Bank_Tongi"
-                                            {{ in_array('Sonali_Bank_Tongi', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            Sonali Bank Tongi</option>
-                                        <option value="DBBL"
-                                            {{ in_array('DBBL', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            Dutch Bangla Bank</option>
-                                        <option value="PBL"
-                                            {{ in_array('PBL', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            Prime Bank Ltd</option>
-                                        <option value="Mobile_Nagad"
-                                            {{ in_array('Mobile_Nagad', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            Nagad</option>
-                                        <option value="Mobile_Bkash"
-                                            {{ in_array('Mobile_Bkash', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            Bkash</option>
-                                        <option value="Mobile_Rocket"
-                                            {{ in_array('Mobile_Rocket', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            Rocket</option>
-                                        <option value="investment"
-                                            {{ in_array('investment', $selectedHandCashRules) ? 'selected' : '' }}>
-                                            Investment</option>
-                                    </select>
-
-                                </div>
-                                <button type="submit" class="btn btn-primary mr-2">
-                                    <i class="bi bi-filter"></i> Filter
-                                </button>
-                                <a href="{{ route('handCashes.index') }}" class="btn btn-secondary">
-                                    <i class="bi bi-x-circle"></i> Clear
-                                </a>
-                            </form>
-
-                        </div>
-                        <!-- /.card-header -->
                         <div class="card-body">
 
 
@@ -400,18 +363,11 @@
                                                             'handCash' => $handCash->id,
                                                         ])" type="show" />
 
-                                                        <form style="display:inline"
-                                                            action="{{ route('handCashes.destroy', ['handCash' => $handCash->id]) }}"
-                                                            method="POST">
-                                                            @csrf
-                                                            @method('delete')
-
-                                                            <button
-                                                                onclick="return confirm('Are you sure want to delete ?')"
-                                                                class="btn btn-outline-danger my-1 mx-1 inline btn-sm"
-                                                                type="submit"><i class="bi bi-trash"></i>
-                                                                Delete</button>
-                                                        </form>
+                                                        <button type="button"
+                                                            onclick="confirmDelete('{{ route('handCashes.destroy', ['handCash' => $handCash->id]) }}')"
+                                                            class="btn btn-outline-danger my-1 mx-1 inline btn-sm">
+                                                            <i class="bi bi-trash"></i> Delete
+                                                        </button>
 
                                                     </td>
                                                 </tr>
@@ -420,7 +376,7 @@
                                         </tbody>
                                     </table>
                                     <div class="d-flex justify-content-center mt-3">
-                                        {{ $handCashes->links() }}
+                                        <x-backend.pager :paginator="$handCashes" />
                                     </div>
                                 </div>
 
@@ -429,6 +385,7 @@
                         <!-- /.card-body -->
                     </div>
                     <!-- /.card -->
+                    </div>
 
 
                     <!-- /.card -->
@@ -440,9 +397,26 @@
         <!-- /.container-fluid -->
     </section>
 
-    <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        @media print {
+            /* "Print Balance / PDF" prints only the balance summary tables. */
+            body.print-balance-only * { visibility: hidden; }
+            body.print-balance-only #balance-summary,
+            body.print-balance-only #balance-summary * { visibility: visible; }
+            body.print-balance-only #balance-summary { position: absolute; left: 0; top: 0; width: 100%; }
+            body.print-balance-only #balance-summary .col-md-3 { flex: 0 0 50%; max-width: 50%; }
+        }
+    </style>
 
     <script>
+        function printBalanceSummary() {
+            document.body.classList.add('print-balance-only');
+            window.addEventListener('afterprint', function () {
+                document.body.classList.remove('print-balance-only');
+            }, { once: true });
+            window.print();
+        }
+
         function confirmDelete(url) {
             Swal.fire({
                 title: 'Are you sure?',

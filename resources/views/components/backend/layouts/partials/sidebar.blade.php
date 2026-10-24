@@ -1,224 +1,117 @@
-<div id="layoutSidenav_nav">
-    <nav class="sb-sidenav accordion sb-sidenav-light" id="sidenavAccordion" style="color:#0078D7;">
-        <div class="sb-sidenav-menu">
-            <div class="nav">
-                <!-- Admin Only Sections -->
-                @can('Admin')
-                    <div class="sb-sidenav-menu-heading text-dark">Personal Expense Calculator</div>
+@php
+    $isActive = fn(array $item) => request()->routeIs($item['match'] ?? $item['route']);
 
-                    <!-- Main Links (collapsed) -->
-                    <a class="nav-link collapsed text-dark" href="#" data-bs-toggle="collapse"
-                        data-bs-target="#collapseMainNav" aria-expanded="false" aria-controls="collapseMainNav">
-                        <div class="sb-nav-link-icon"><i class="fas fa-home"></i></div>
-                        <span class="fw-semibold">Home</span>
-                        <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
-                    </a>
+    // Yearly Summary: one grouped query (was 2 queries per year + 2 per category per year).
+    $yearRows = \App\Models\ExpenseCalculation::query()
+        ->whereIn('types', ['INCOME', 'EXPENSE'])
+        ->whereNotNull('date')
+        ->groupBy(\DB::raw('YEAR(date)'), 'types', 'category_id')
+        ->select(\DB::raw('YEAR(date) as y'), 'types', 'category_id', \DB::raw('SUM(amount) as total'))
+        ->get();
+    $categoryNames = \App\Models\Category::pluck('name', 'id');
 
-                    <div class="collapse" id="collapseMainNav" aria-labelledby="headingMain"
-                        data-bs-parent="#sidenavAccordion">
-                        <nav class="sb-sidenav-menu-nested nav">
-                            <a class="nav-link" href="{{ route('home') }}">
-                                <div class="sb-nav-link-icon"><i class="fas fa-home"></i></div>
-                                Home
-                            </a>
-                            <a class="nav-link" href="{{ route('categories.index') }}">
-                                <div class="sb-nav-link-icon"><i class="fas fa-tags"></i></div>
-                                Category Management
-                            </a>
-                            <a class="nav-link" href="{{ route('interactive.dashboard') }}">
-                                <div class="sb-nav-link-icon"><i class="fas fa-chart-bar"></i></div>
-                                Interactive Dashboard
-                            </a>
-                        </nav>
-                    </div>
+    $years = [];
+    foreach ($yearRows as $row) {
+        $type = strtolower($row->types);
+        $name = $categoryNames[$row->category_id] ?? 'Uncategorized';
+        $years[$row->y][$type . 'Total'] = ($years[$row->y][$type . 'Total'] ?? 0) + $row->total;
+        $years[$row->y][$type][$name] = ($years[$row->y][$type][$name] ?? 0) + $row->total;
+    }
+    krsort($years);
+@endphp
 
-                    <a class="nav-link text-dark" href="{{ route('expenseCalculations.index') }}">
-                        <div class="sb-nav-link-icon"><i class="fas fa-money-bill-wave"></i></div>
-                        Expense Management
-                    </a>
+<aside class="offcanvas-lg offcanvas-start app-sidebar no-print" tabindex="-1" id="appSidebar" aria-label="Main menu">
+    <div class="offcanvas-header border-bottom d-lg-none">
+        <a class="app-brand" href="{{ route('home') }}">
+            <span class="app-brand-mark"><i class="bi bi-wallet2"></i></span> Personal Cost
+        </a>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#appSidebar"
+            aria-label="Close menu"></button>
+    </div>
 
-                    <a class="nav-link text-dark" href="{{ route('handCashes.index') }}">
-                        <div class="sb-nav-link-icon"><i class="fas fa-cash-register"></i></div>
-                        Cash Management
-                    </a>
-
-                    <!-- User Management -->
-                    <a class="nav-link collapsed text-dark" href="#" data-bs-toggle="collapse"
-                        data-bs-target="#collapseLayouts" aria-expanded="false" aria-controls="collapseLayouts">
-                        <div class="sb-nav-link-icon"><i class="fas fa-users"></i></div>
-                        <span class="fw-semibold">User Management</span>
-                        <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
-                    </a>
-
-                    <div class="collapse" id="collapseLayouts" aria-labelledby="headingOne"
-                        data-bs-parent="#sidenavAccordion">
-                        <nav class="sb-sidenav-menu-nested nav">
-                            <a class="nav-link" href="{{ route('roles.index') }}">
-                                <div class="sb-nav-link-icon"><i class="fas fa-user-tag"></i></div>
-                                Role
-                            </a>
-                            <a class="nav-link" href="{{ route('users.index') }}">
-                                <div class="sb-nav-link-icon"><i class="fas fa-users-cog"></i></div>
-                                Users
-                            </a>
-                            <a class="nav-link" href="{{ route('online_user') }}">
-                                <div class="sb-nav-link-icon"><i class="fas fa-user-clock"></i></div>
-                                Online User List
-                            </a>
-                        </nav>
-                    </div>
-                @endcan
-
-                <!-- Yearly Summary - Visible to all users -->
-                @php
-                    // Moved PHP code here for better organization
-                    $categories = App\Models\Category::all();
-
-                    $incomeYears = App\Models\ExpenseCalculation::selectRaw('DISTINCT YEAR(created_at) as year')
-                        ->where('types', 'INCOME')
-                        ->get()
-                        ->pluck('year');
-
-                    $expenseYears = App\Models\ExpenseCalculation::selectRaw('DISTINCT YEAR(created_at) as year')
-                        ->where('types', 'EXPENSE')
-                        ->get()
-                        ->pluck('year');
-
-                    $years = $incomeYears->merge($expenseYears)->unique()->sortDesc();
-                @endphp
-
-                @if ($years->count() > 0)
-                    <div class="sb-sidenav-menu-heading mt-3 text-dark">Yearly Summary</div>
-                    <div class="px-3">
-                        <div class="table-responsive">
-                            <table class="table table-sm table-borderless text-dark small mb-0">
-                                <thead>
-                                    <tr>
-                                        <th class="ps-0">Year</th>
-                                        <th class="text-end">Income</th>
-                                        <th class="text-end pe-0">Expense</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($years as $year)
-                                        @php
-                                            $totalIncome = App\Models\ExpenseCalculation::where('types', 'INCOME')
-                                                ->whereYear('created_at', $year)
-                                                ->sum('amount');
-
-                                            $totalExpense = App\Models\ExpenseCalculation::where('types', 'EXPENSE')
-                                                ->whereYear('created_at', $year)
-                                                ->sum('amount');
-                                        @endphp
-                                        <tr>
-                                            <td class="ps-0">{{ $year }}</td>
-                                            <td class="text-end">
-                                                @if ($totalIncome > 0)
-                                                    <button type="button"
-                                                        class="btn btn-link p-0 text-decoration-none text-primary"
-                                                        data-bs-toggle="modal"
-                                                        data-bs-target="#incomeDetailsModal{{ $year }}">
-                                                        {{ number_format($totalIncome, 2) }}
-                                                    </button>
-                                                @else
-                                                    <span class="text-muted">0.00</span>
-                                                @endif
-                                            </td>
-                                            <td class="text-end pe-0">
-                                                @if ($totalExpense > 0)
-                                                    <button type="button"
-                                                        class="btn btn-link p-0 text-decoration-none text-primary"
-                                                        data-bs-toggle="modal"
-                                                        data-bs-target="#expenseDetailsModal{{ $year }}">
-                                                        {{ number_format($totalExpense, 2) }}
-                                                    </button>
-                                                @else
-                                                    <span class="text-muted">0.00</span>
-                                                @endif
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+    <div class="offcanvas-body">
+        <nav class="nav flex-column">
+            @foreach (config('navigation.groups') as $group)
+                @if (empty($group['can']) || Gate::allows($group['can']))
+                    <div class="app-nav-heading">{{ $group['label'] }}</div>
+                    @foreach ($group['items'] as $item)
+                        <a class="app-nav-link {{ $isActive($item) ? 'active' : '' }}" href="{{ route($item['route']) }}"
+                            @if ($isActive($item)) aria-current="page" @endif>
+                            <i class="bi {{ $item['icon'] }}"></i> {{ $item['label'] }}
+                        </a>
+                    @endforeach
                 @endif
-            </div>
-        </div>
+            @endforeach
+        </nav>
 
-        <!-- Footer -->
-        <div class="sb-sidenav-footer" style="color:#0078D7;">
-            <div class="small">Logged in as:</div>
-            <span class="fw-semibold">{{ auth()->user()->role->name ?? 'User' }}</span>
-        </div>
-    </nav>
-</div>
+        @if ($years)
+            <div class="app-nav-heading">Yearly Summary</div>
+            <table class="table table-sm table-borderless small mb-2">
+                <thead>
+                    <tr class="text-muted">
+                        <th class="ps-2 fw-normal">Year</th>
+                        <th class="text-end fw-normal">Income</th>
+                        <th class="text-end pe-2 fw-normal">Expense</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($years as $year => $data)
+                        <tr>
+                            <td class="ps-2">{{ $year }}</td>
+                            @foreach (['income' => 'success', 'expense' => 'danger'] as $type => $color)
+                                <td class="text-end {{ $type === 'expense' ? 'pe-2' : '' }}">
+                                    @if (($data[$type . 'Total'] ?? 0) > 0)
+                                        <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none text-{{ $color }}"
+                                            data-bs-toggle="modal" data-bs-target="#{{ $type }}DetailsModal{{ $year }}">
+                                            {{ number_format($data[$type . 'Total'], 0) }}
+                                        </button>
+                                    @else
+                                        <span class="text-muted">0</span>
+                                    @endif
+                                </td>
+                            @endforeach
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
 
-<!-- Modals - Placed outside the sidebar for proper rendering -->
-@foreach ($years as $year)
-    <!-- Income Details Modal -->
-    <div class="modal fade" id="incomeDetailsModal{{ $year }}" tabindex="-1"
-        aria-labelledby="incomeDetailsModalLabel{{ $year }}" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title" id="incomeDetailsModalLabel{{ $year }}">
-                        <i class="fas fa-money-bill-wave me-2"></i>Income Details for {{ $year }}
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                        aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover table-striped">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Category</th>
-                                    <th class="text-end">Total Income</th>
-                                </tr>
+        <div class="app-sidebar-footer">
+            Signed in as <span class="fw-semibold">{{ auth()->user()->role->name ?? 'User' }}</span>
+        </div>
+    </div>
+</aside>
+
+{{-- Year detail modals live outside the offcanvas so they stack above it correctly --}}
+@foreach ($years as $year => $data)
+    @foreach (['income' => ['Income', 'text-success'], 'expense' => ['Expense', 'text-danger']] as $type => [$title, $color])
+        @continue(empty($data[$type]))
+        @php(arsort($data[$type]))
+        <div class="modal fade" id="{{ $type }}DetailsModal{{ $year }}" tabindex="-1"
+            aria-labelledby="{{ $type }}DetailsModalLabel{{ $year }}" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-scrollable modal-fullscreen-sm-down">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="{{ $type }}DetailsModalLabel{{ $year }}">{{ $title }} details · {{ $year }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <table class="table table-hover table-striped mb-0">
+                            <thead>
+                                <tr><th>Category</th><th class="text-end">Total {{ $title }}</th></tr>
                             </thead>
                             <tbody>
-                                @php
-                                    // Collect category incomes and sort by amount descending
-                                    $categoryIncomes = [];
-                                    foreach ($categories as $category) {
-                                        $amount = App\Models\ExpenseCalculation::where('types', 'INCOME')
-                                            ->where('category_id', $category->id)
-                                            ->whereYear('date', $year)
-                                            ->sum('amount');
-                                        if ($amount > 0) {
-                                            $categoryIncomes[] = [
-                                                'name' => $category->name,
-                                                'amount' => $amount,
-                                            ];
-                                        }
-                                    }
-                                    // Sort by amount descending (highest to lowest)
-                                    usort($categoryIncomes, function ($a, $b) {
-                                        return $b['amount'] <=> $a['amount'];
-                                    });
-                                @endphp
-
-                                @foreach ($categoryIncomes as $categoryIncome)
+                                @foreach ($data[$type] as $name => $amount)
                                     <tr>
-                                        <td>{{ $categoryIncome['name'] }}</td>
-                                        <td class="text-end fw-semibold text-success">
-                                            {{ number_format($categoryIncome['amount'], 2) }}
-                                        </td>
+                                        <td>{{ $name }}</td>
+                                        <td class="text-end fw-semibold {{ $color }}">{{ number_format($amount, 2) }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
-                            <tfoot class="table-primary">
-                                <tr>
-                                    <td class="fw-bold">Total</td>
-                                    <td class="text-end fw-bold">
-                                        @php
-                                            $yearTotalIncome = App\Models\ExpenseCalculation::where('types', 'INCOME')
-                                                ->whereYear('date', $year)
-                                                ->sum('amount');
-                                        @endphp
-                                        {{ number_format($yearTotalIncome, 2) }}
-                                    </td>
+                            <tfoot>
+                                <tr class="fw-bold">
+                                    <td>Total</td>
+                                    <td class="text-end">{{ number_format($data[$type . 'Total'], 2) }}</td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -226,117 +119,5 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- Expense Details Modal -->
-    <div class="modal fade" id="expenseDetailsModal{{ $year }}" tabindex="-1"
-        aria-labelledby="expenseDetailsModalLabel{{ $year }}" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header bg-warning text-dark">
-                    <h5 class="modal-title" id="expenseDetailsModalLabel{{ $year }}">
-                        <i class="fas fa-shopping-cart me-2"></i>Expense Details for {{ $year }}
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover table-striped">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Category</th>
-                                    <th class="text-end">Total Expense</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @php
-                                    // Collect category expenses and sort by amount descending
-                                    $categoryExpenses = [];
-                                    foreach ($categories as $category) {
-                                        $amount = App\Models\ExpenseCalculation::where('types', 'EXPENSE')
-                                            ->where('category_id', $category->id)
-                                            ->whereYear('date', $year)
-                                            ->sum('amount');
-                                        if ($amount > 0) {
-                                            $categoryExpenses[] = [
-                                                'name' => $category->name,
-                                                'amount' => $amount,
-                                            ];
-                                        }
-                                    }
-                                    // Sort by amount descending (highest to lowest)
-                                    usort($categoryExpenses, function ($a, $b) {
-                                        return $b['amount'] <=> $a['amount'];
-                                    });
-                                @endphp
-
-                                @foreach ($categoryExpenses as $categoryExpense)
-                                    <tr>
-                                        <td>{{ $categoryExpense['name'] }}</td>
-                                        <td class="text-end fw-semibold text-danger">
-                                            {{ number_format($categoryExpense['amount'], 2) }}
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                            <tfoot class="table-warning">
-                                <tr>
-                                    <td class="fw-bold">Total</td>
-                                    <td class="text-end fw-bold">
-                                        @php
-                                            $yearTotalExpense = App\Models\ExpenseCalculation::where('types', 'EXPENSE')
-                                                ->whereYear('date', $year)
-                                                ->sum('amount');
-                                        @endphp
-                                        {{ number_format($yearTotalExpense, 2) }}
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    @endforeach
 @endforeach
-
-<!-- Include Font Awesome for icons -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-<!-- Optional: Add custom CSS for better sidebar styling -->
-<style>
-    .sb-sidenav {
-        transition: all 0.3s ease;
-    }
-
-    .sb-sidenav .nav-link {
-        transition: all 0.2s ease;
-    }
-
-    .sb-sidenav .nav-link:hover {
-        background-color: rgba(0, 120, 215, 0.1);
-        padding-left: 1.5rem !important;
-    }
-
-    .sb-sidenav-menu-heading {
-        font-size: 0.875rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .table-sm th,
-    .table-sm td {
-        padding: 0.25rem 0.5rem;
-    }
-
-    .btn-link {
-        font-weight: 500;
-    }
-
-    .sb-sidenav-footer {
-        border-top: 1px solid rgba(0, 0, 0, 0.1);
-        padding-top: 1rem;
-        padding-bottom: 1rem;
-    }
-</style>

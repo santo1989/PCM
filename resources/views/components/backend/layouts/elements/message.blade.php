@@ -1,8 +1,13 @@
-@props(['message'])
+@props(['message', 'type' => 'success'])
 
 @if ($message)
-<div class="alert alert-success">
-    <span class="close" data-dismiss="alert">&times;</span>
-    <strong>{{ $message }}.</strong>
-</div>
+    <script>
+        Swal.fire({
+            icon: @json($type),
+            title: @json(ucfirst($type)),
+            text: @json($message),
+            timer: 2500,
+            showConfirmButton: false,
+        });
+    </script>
 @endif

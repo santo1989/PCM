@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\ExpenseCalculation;
+use App\Services\BudgetService;
 use App\Models\HandCash;
 use Illuminate\Http\Request;
 use App\Http\Requests\ExpenseCalculationRequest;
@@ -22,29 +23,45 @@ class ExpenseCalculationController extends Controller
         // Build base query and apply filters in a single place to avoid repeated queries and session misuse
         $query = ExpenseCalculation::with('category')->orderBy('date', 'desc');
 
-        $search_category_id = request('category_id');
-        $search_types = request('types');
+        $search_category_id = array_values(array_filter((array) request('category_id', [])));
+        $search_types = array_values(array_filter(array_map('strtoupper', (array) request('types', []))));
         $search_entry_date_start = request('entry_date_start');
         $search_entry_date_end = request('entry_date_end');
+        $search_name = request('name');
 
-        if ($search_category_id) {
-            $query->where('category_id', $search_category_id);
+        if (!empty($search_category_id)) {
+            $query->whereIn('category_id', $search_category_id);
         }
 
-        if ($search_types) {
-            $query->where('types', strtoupper($search_types));
+        if (!empty($search_types)) {
+            $query->whereIn('types', $search_types);
         }
 
-        if ($search_entry_date_start && $search_entry_date_end) {
-            $query->whereBetween('date', [$search_entry_date_start, $search_entry_date_end]);
+        if ($search_name) {
+            $query->where('name', 'like', $this->likeTerm($search_name));
         }
 
-        // If export requested, run query once and stream the export view
+        // Either bound alone also filters (previously both were required).
+        if ($search_entry_date_start) {
+            $query->whereDate('date', '>=', $search_entry_date_start);
+        }
+        if ($search_entry_date_end) {
+            $query->whereDate('date', '<=', $search_entry_date_end);
+        }
+
+        // If export requested, run query once and stream the export view. If no date
+        // filter was applied, default the export to the current calendar month rather
+        // than dumping the entire all-time history (the on-screen table still shows
+        // everything by default — this default only applies to the export).
         $format = strtolower(request('export_format', ''));
         if ($format === 'xlsx') {
+            if (!$search_entry_date_start && !$search_entry_date_end) {
+                $query->whereBetween('date', [now()->startOfMonth()->toDateString(), now()->toDateString()]);
+            }
+
             $search_cashes = $query->get();
             if ($search_cashes->isEmpty()) {
-                return redirect()->route('expenseCalculations.index')->withErrors('First search the data then export');
+                return $this->redirectToIndex('expenseCalculations.index')->withErrors('No transactions found for the selected filters to export.');
             }
 
             $viewContent = View::make('backend.library.expenseCalculations.export', compact('search_cashes'))->render();
@@ -57,7 +74,7 @@ class ExpenseCalculationController extends Controller
             return response()->make($viewContent, 200, $headers);
         }
 
-        $expenseCalculations = $query->paginate(50)->withQueryString();
+        $expenseCalculations = $query->paginate($this->perPage(50))->withQueryString();
 
         // Efficient category usage sorting with single query using left join and count
         $categories = Category::leftJoin('expense_calculations', 'categories.id', '=', 'expense_calculations.category_id')
@@ -69,7 +86,10 @@ class ExpenseCalculationController extends Controller
         // No session-based search_cashes by default (we only use it for export above)
         $search_cashes = null;
 
-        return view('backend.library.expenseCalculations.index', compact('expenseCalculations', 'search_cashes', 'categories', 'search_category_id', 'search_types', 'search_entry_date_start', 'search_entry_date_end'));
+        // Bounds for the date filter inputs: earliest transaction on record through today.
+        $minDataDate = ExpenseCalculation::min('date');
+
+        return view('backend.library.expenseCalculations.index', compact('expenseCalculations', 'search_cashes', 'categories', 'search_category_id', 'search_types', 'search_name', 'search_entry_date_start', 'search_entry_date_end', 'minDataDate'));
     }
 
 
@@ -77,10 +97,8 @@ class ExpenseCalculationController extends Controller
 
     public function create()
     {
-
-        $expenseCalculations = ExpenseCalculation::all();
-        $categories = Category::all();
-        return view('backend.library.expenseCalculations.create', compact('expenseCalculations', 'categories'));
+        // Create happens via the modal on the index page, not a standalone form.
+        return $this->redirectToIndex('expenseCalculations.index');
     }
 
 
@@ -102,7 +120,7 @@ class ExpenseCalculationController extends Controller
             }
         }
         if (!$hasRow) {
-            return redirect()->route('expenseCalculations.index')->withErrors('All fields are null, Please fill up at least one field');
+            return $this->redirectToIndex('expenseCalculations.index')->withErrors('All fields are null, Please fill up at least one field');
         }
 
         // Preload categories to avoid N+1
@@ -121,15 +139,14 @@ class ExpenseCalculationController extends Controller
             if ($amt === null || $amt === '') continue; // skip empty
 
             $catId = $categoryIds[$i] ?? null;
-            $expenseRows[] = [
+            // Keyed by form row so row i's expense and cash entries can be linked.
+            $expenseRows[$i] = [
                 'category_id' => $catId,
                 'name' => isset($names[$i]) ? strtoupper($names[$i]) : null,
                 'date' => $dates[$i] ?? null,
                 'amount' => $amt,
                 'types' => isset($categoriesMap[$catId]) ? strtoupper($categoriesMap[$catId]->types) : null,
                 'rules' => isset($categoriesMap[$catId]) ? strtoupper($categoriesMap[$catId]->rules) : null,
-                'created_at' => now(),
-                'updated_at' => now(),
             ];
         }
 
@@ -144,63 +161,34 @@ class ExpenseCalculationController extends Controller
         for ($i = 0; $i < $handCount; $i++) {
             $amt = $handAmounts[$i] ?? null;
             if ($amt === null || $amt === '') continue;
-            $handRows[] = [
+            $handRows[$i] = [
                 'rules' => isset($handRules[$i]) ? strtoupper($handRules[$i]) : null,
                 'types' => isset($handTypes[$i]) ? strtoupper($handTypes[$i]) : null,
                 'name' => isset($handNames[$i]) ? strtoupper($handNames[$i]) : null,
                 'date' => $handDates[$i] ?? null,
                 'amount' => $amt,
-                'created_at' => now(),
-                'updated_at' => now(),
             ];
         }
 
-        // Use transaction and bulk inserts for performance and atomicity
+        // One transaction; rows are created individually (not bulk-inserted) so each
+        // cash entry can reference the expense entry from the same form row, and
+        // user_id is stamped by the models.
         DB::transaction(function () use ($expenseRows, $handRows) {
-            if (!empty($expenseRows)) {
-                ExpenseCalculation::insert($expenseRows);
+            $expenseIds = [];
+            foreach ($expenseRows as $i => $row) {
+                $expenseIds[$i] = ExpenseCalculation::create($row)->id;
             }
-            if (!empty($handRows)) {
-                HandCash::insert($handRows);
+            foreach ($handRows as $i => $row) {
+                HandCash::create($row + ['expense_calculation_id' => $expenseIds[$i] ?? null]);
             }
         });
 
         // Invalidate dashboard caches for affected periods
-        try {
-            $years = [];
-            $months = [];
-            foreach ($expenseRows as $r) {
-                if (!empty($r['date'])) {
-                    $y = date('Y', strtotime($r['date']));
-                    $m = date('m', strtotime($r['date']));
-                    $years[$y] = true;
-                    $months[$y . ':' . $m] = true;
-                }
-            }
-            foreach ($handRows as $r) {
-                if (!empty($r['date'])) {
-                    $y = date('Y', strtotime($r['date']));
-                    $m = date('m', strtotime($r['date']));
-                    $years[$y] = true;
-                    $months[$y . ':' . $m] = true;
-                }
-            }
-            // forget common keys
-            Cache::forget('dashboard:monthly_trend:last12');
-            foreach (array_keys($years) as $y) {
-                Cache::forget("dashboard:category_breakdown:{$y}:all");
-                Cache::forget("dashboard:top_categories:{$y}");
-            }
-            foreach (array_keys($months) as $ym) {
-                [$y, $m] = explode(':', $ym);
-                Cache::forget("dashboard:summary:{$y}:{$m}");
-                Cache::forget("dashboard:category_breakdown:{$y}:{$m}");
-            }
-        } catch (\Exception $e) {
-            // don't block workflow if cache clearing fails
-        }
+        ExpenseCalculation::flushReportCaches(array_merge(array_column($expenseRows, 'date'), array_column($handRows, 'date')));
 
-        return redirect()->route('expenseCalculations.index')->withMessages('ExpenseCalculation and related data are added successfully!');
+        BudgetService::flashWarnings(array_column($expenseRows, 'category_id'));
+
+        return $this->redirectToIndex('expenseCalculations.index')->withMessage('ExpenseCalculation and related data are added successfully!');
     }
 
 
@@ -215,9 +203,8 @@ class ExpenseCalculationController extends Controller
 
     public function edit($id)
     {
-        $expenseCalculations = ExpenseCalculation::findOrFail($id);
-        $categories = Category::all();
-        return view('backend.library.expenseCalculations.edit', compact('expenseCalculations', 'categories'));
+        // Edit happens via the per-row modal on the index page, not a standalone form.
+        return $this->redirectToIndex('expenseCalculations.index');
     }
 
 
@@ -241,20 +228,12 @@ class ExpenseCalculationController extends Controller
         $expenseCalculations->save();
 
         // Clear cache for this record's period
-        try {
-            if ($expenseCalculations->date) {
-                $y = date('Y', strtotime($expenseCalculations->date));
-                $m = date('m', strtotime($expenseCalculations->date));
-                Cache::forget('dashboard:monthly_trend:last12');
-                Cache::forget("dashboard:summary:{$y}:{$m}");
-                Cache::forget("dashboard:category_breakdown:{$y}:all");
-                Cache::forget("dashboard:category_breakdown:{$y}:{$m}");
-            }
-        } catch (\Exception $e) {
-        }
+        ExpenseCalculation::flushReportCaches([$expenseCalculations->date]);
+
+        BudgetService::flashWarnings([$expenseCalculations->category_id]);
 
         // Redirect
-        return redirect()->route('expenseCalculations.index')->withMessages('ExpenseCalculation and related data are updated successfully!');
+        return $this->redirectToIndex('expenseCalculations.index')->withMessage('ExpenseCalculation and related data are updated successfully!');
     }
 
 
@@ -264,19 +243,9 @@ class ExpenseCalculationController extends Controller
         $date = $expenseCalculations->date;
         $expenseCalculations->delete();
 
-        try {
-            if ($date) {
-                $y = date('Y', strtotime($date));
-                $m = date('m', strtotime($date));
-                Cache::forget('dashboard:monthly_trend:last12');
-                Cache::forget("dashboard:summary:{$y}:{$m}");
-                Cache::forget("dashboard:category_breakdown:{$y}:all");
-                Cache::forget("dashboard:category_breakdown:{$y}:{$m}");
-            }
-        } catch (\Exception $e) {
-        }
+        ExpenseCalculation::flushReportCaches([$date]);
 
-        return redirect()->route('expenseCalculations.index')->withMessage('ExpenseCalculation and related data are deleted successfully!');
+        return $this->redirectToIndex('expenseCalculations.index')->withMessage('ExpenseCalculation and related data are deleted successfully!');
     }
     public function filter(Request $request)
     {

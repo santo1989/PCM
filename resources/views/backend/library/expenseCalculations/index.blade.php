@@ -3,10 +3,11 @@
         Cash
     </x-slot>
 
+    <x-backend.layouts.elements.message :message="session('message')" />
     <x-backend.layouts.elements.errors />
 
     <!-- Chart.js Library -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 
 
     <section class="content">
@@ -14,120 +15,138 @@
 
             <div class="row">
                 <div class="col-md-12 col-sm-12 col-xl-12">
-                    <div class="card" style="background-color: #40c47c;">
-
-
-                        <div class="card-header" style="background: rgba(0, 0, 0, 0.4); color: #f1f1f1; ">
-
-                            <form method="GET" action="{{ route('expenseCalculations.index') }}">
+                    <div class="card mb-3 no-print">
+                        <div class="card-body">
+                            <form method="GET" action="{{ route('expenseCalculations.index') }}" data-live-filter class="row g-2 align-items-end">
                                 @csrf
-                                <div class="row">
-                                    <div class="col-md-12 col-sm-12">
-                                        <table
-                                            class="table table-borderless table-responsive text-center text-light font-weight-bold">
-                                            <tr>
-
-
-                                                <div class="form-group">
-                                                    <td>Types:</td>
-                                                    <td>
-                                                        <select class="form-control" name="types" id="types">
-                                                            <option value="">Select Types</option>
-
-                                                            @php
-                                                                $types = App\Models\ExpenseCalculation::select('types')
-                                                                    ->distinct()
-                                                                    ->get();
-                                                            @endphp
-                                                            @foreach ($types as $type)
-                                                                <option value="{{ $type->types }}"
-                                                                    {{ $type->types == $search_types ? 'selected' : '' }}>
-                                                                    {{ $type->types }}
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
-                                                    </td>
-                                                </div>
-
-                                                <div class="form-group">
-                                                    <td>Category:</td>
-                                                    <td>
-                                                        <select class="form-control" name="category_id"
-                                                            id="category_id">
-                                                            <option value="">Select Category</option>
-                                                            @foreach ($categories as $category)
-                                                                <option value="{{ $category->id }}"
-                                                                    {{ $category->id == $search_category_id ? 'selected' : '' }}>
-                                                                    {{ $category->name }}
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
-                                                    </td>
-                                                </div>
-
-                                                <div class="form-group">
-                                                    <td>Date:</td>
-                                                    <td>
-                                                        <input type="date" name="entry_date_start"
-                                                            id="entry_date_start" class="form-control"
-                                                            value="{{ $search_entry_date_start }}">
-                                                    </td>
-                                                    <td>-</td>
-                                                    <td>
-                                                        <input type="date" name="entry_date_end" id="entry_date_end"
-                                                            class="form-control" value="{{ $search_entry_date_end }}">
-                                                    </td>
-                                                </div>
-                                                <td>
-                                                    <button class="btn btn-outline-info btn-sm"
-                                                        onclick="validateForm()"><i class="fa fa-search"></i>
-                                                        Search</button>
-
-                                                </td>
-
-                                                <td>
-                                                    <a href="{{ route('expenseCalculations.index') }}"
-                                                        class="btn btn-outline-danger btn-sm"><i
-                                                            class="fa fa-refresh"></i> Reset</a>
-                                                </td>
-                                            </tr>
-                                        </table>
-                                    </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small mb-1">Types</label>
+                                    @php
+                                        $types = App\Models\ExpenseCalculation::select('types')
+                                            ->distinct()
+                                            ->get();
+                                    @endphp
+                                    <select class="form-select select2" name="types[]" id="types"
+                                        multiple data-placeholder="All Types">
+                                        @foreach ($types as $type)
+                                            <option value="{{ $type->types }}"
+                                                {{ in_array($type->types, $search_types) ? 'selected' : '' }}>
+                                                {{ $type->types }}
+                                            </option>
+                                        @endforeach
+                                    </select>
                                 </div>
 
+                                <div class="col-md-3">
+                                    <label class="form-label small mb-1">Category</label>
+                                    <select class="form-select select2" name="category_id[]"
+                                        id="category_id" multiple data-placeholder="All Categories">
+                                        @foreach ($categories as $category)
+                                            <option value="{{ $category->id }}"
+                                                {{ in_array((string) $category->id, array_map('strval', $search_category_id), true) ? 'selected' : '' }}>
+                                                {{ $category->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="col-md-2">
+                                    <label class="form-label small mb-1">Name</label>
+                                    @php
+                                        $listId = 'dl_search_name';
+                                        $nameSuggestions = \App\Services\AutocompleteSource::values(\App\Models\ExpenseCalculation::class, 'name');
+                                    @endphp
+                                    <input list="{{ $listId }}" type="text" name="name" class="form-control"
+                                        autocomplete="off" value="{{ $search_name }}" placeholder="Search name...">
+                                    <datalist id="{{ $listId }}">
+                                        @foreach ($nameSuggestions as $suggestion)
+                                            <option value="{{ $suggestion }}"></option>
+                                        @endforeach
+                                    </datalist>
+                                </div>
+
+                                <div class="col-md-2">
+                                    <label class="form-label small mb-1">Start Date</label>
+                                    <input type="date" name="entry_date_start"
+                                        id="entry_date_start" class="form-control"
+                                        value="{{ $search_entry_date_start }}"
+                                        min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small mb-1">End Date</label>
+                                    <input type="date" name="entry_date_end" id="entry_date_end"
+                                        class="form-control" value="{{ $search_entry_date_end }}"
+                                        min="{{ $minDataDate }}" max="{{ now()->toDateString() }}">
+                                </div>
+
+                                <div class="col-md-1"><x-backend.per-page :default="50" /></div>
+                                <div class="col-md-3 d-flex flex-wrap gap-2 justify-content-md-end">
+                                    <button class="btn btn-outline-info" onclick="validateForm()">
+                                        <i class="fas fa-search"></i> Search
+                                    </button>
+                                    <a href="{{ route('expenseCalculations.index') }}" class="btn btn-outline-danger">
+                                        <i class="fas fa-rotate-right"></i> Reset
+                                    </a>
+                                    <a data-live-export href="{{ route('expenseCalculations.index', array_merge(request()->query(), ['export_format' => 'xlsx'])) }}"
+                                        class="btn btn-outline-success">
+                                        <i class="fas fa-file-excel"></i> Excel
+                                    </a>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+                                        <i class="bi bi-printer"></i> Print / PDF
+                                    </button>
+                                </div>
                             </form>
-
-
                         </div>
-
                     </div>
 
                     <div class="row pt-1">
                         <div class="col-md-2 col-sm-12">
                             <a type="button" class="btn btn-outline-dark" data-bs-toggle="modal"
-                                data-bs-target="#CashEntryModal"><i class="fa fa-plus" aria-hidden="true"></i>
+                                data-bs-target="#CashEntryModal"><i class="fas fa-plus" aria-hidden="true"></i>
                                 Create
                             </a>
 
                             @php
-                                $this_month_income = App\Models\ExpenseCalculation::where('types', 'income')
+                                $this_month_income = App\Models\ExpenseCalculation::where('types', 'INCOME')
                                     ->whereMonth('date', date('m'))
                                     ->whereYear('date', date('Y'))
                                     ->sum('amount');
                                 // dd($this_month_income);
-                                $this_month_expense = App\Models\ExpenseCalculation::where('types', 'expense')
+                                $this_month_expense = App\Models\ExpenseCalculation::where('types', 'EXPENSE')
                                     ->whereMonth('date', date('m'))
                                     ->whereYear('date', date('Y'))
                                     ->sum('amount');
                                 // dd($this_month_expense);
-                                $all_time_income = App\Models\ExpenseCalculation::where('types', 'income')->sum(
+                                $all_time_income = App\Models\ExpenseCalculation::where('types', 'INCOME')->sum(
                                     'amount',
                                 );
                                 // dd($all_time_income);
-                                $all_time_expense = App\Models\ExpenseCalculation::where('types', 'expense')->sum(
+                                $all_time_expense = App\Models\ExpenseCalculation::where('types', 'EXPENSE')->sum(
                                     'amount',
                                 );
                                 // dd($all_time_expense);
+
+                                // Category totals for the four breakdown modals + charts below, from one
+                                // grouped query (was one query per category per table/chart).
+                                $categoryTotals = App\Models\ExpenseCalculation::whereIn('types', ['INCOME', 'EXPENSE'])
+                                    ->groupBy('types', 'category_id')
+                                    ->selectRaw('types, category_id, SUM(amount) as all_total, SUM(CASE WHEN date BETWEEN ? AND ? THEN amount ELSE 0 END) as month_total', [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()])
+                                    ->get();
+                                $categoryBreakdown = [];
+                                foreach (['INCOME', 'EXPENSE'] as $breakdownType) {
+                                    foreach (['month' => 'month_total', 'all' => 'all_total'] as $period => $column) {
+                                        $rowsForType = $categoryTotals->where('types', $breakdownType)->keyBy('category_id');
+                                        $list = [];
+                                        foreach (App\Models\Category::orderBy('id')->get(['id', 'name']) as $category) {
+                                            $amount = $rowsForType[$category->id]->{$column} ?? 0;
+                                            if ($amount != 0) {
+                                                $list[] = ['name' => $category->name, 'amount' => $amount];
+                                            }
+                                        }
+                                        usort($list, fn($a, $b) => $b['amount'] <=> $a['amount']);
+                                        $categoryBreakdown[$breakdownType][$period] = $list;
+                                    }
+                                }
                             @endphp
                         </div>
                         <div class="col-md-2 col-sm-12">
@@ -135,7 +154,7 @@
                                 <!--modal trigger button for show categories wise this month income-->
                                 <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal"
                                     data-bs-target="#categoriesWiseIncomeModal">
-                                    This Month Income: {{ $this_month_income }}
+                                    This Month Income: {{ number_format((float) $this_month_income, 2) }}
                                 </button>
                                 <!-- Modal -->
                                 <div class="modal fade" id="categoriesWiseIncomeModal" tabindex="-1"
@@ -160,32 +179,12 @@
                                                             </thead>
                                                             <tbody>
                                                                 @php
-                                                                    $categories = App\Models\Category::all();
-                                                                    $categoryIncomes = [];
-                                                                    foreach ($categories as $category) {
-                                                                        $amount = App\Models\ExpenseCalculation::where(
-                                                                            'types',
-                                                                            'income',
-                                                                        )
-                                                                            ->where('category_id', $category->id)
-                                                                            ->whereMonth('date', date('m'))
-                                                                            ->whereYear('date', date('Y'))
-                                                                            ->sum('amount');
-                                                                        if ($amount > 0) {
-                                                                            $categoryIncomes[] = [
-                                                                                'name' => $category->name,
-                                                                                'amount' => $amount,
-                                                                            ];
-                                                                        }
-                                                                    }
-                                                                    usort($categoryIncomes, function ($a, $b) {
-                                                                        return $b['amount'] <=> $a['amount'];
-                                                                    });
+                                                                    $categoryIncomes = $categoryBreakdown['INCOME']['month'];
                                                                 @endphp
                                                                 @foreach ($categoryIncomes as $categoryIncome)
                                                                     <tr>
                                                                         <td>{{ $categoryIncome['name'] }}</td>
-                                                                        <td>{{ $categoryIncome['amount'] }}</td>
+                                                                        <td class="text-end">{{ number_format((float) $categoryIncome['amount'], 2) }}</td>
                                                                     </tr>
                                                                 @endforeach
                                                             </tbody>
@@ -206,19 +205,10 @@
 
                                                         <script>
                                                             @php
-                                                                $categories = App\Models\Category::all();
-                                                                $incomeLabels = [];
-                                                                $incomeData = [];
-                                                                $totalIncome = 0;
-
-                                                                foreach ($categories as $category) {
-                                                                    $amount = App\Models\ExpenseCalculation::where('types', 'income')->where('category_id', $category->id)->whereMonth('date', date('m'))->whereYear('date', date('Y'))->sum('amount');
-                                                                    if ($amount > 0) {
-                                                                        $incomeLabels[] = $category->name;
-                                                                        $incomeData[] = $amount;
-                                                                        $totalIncome += $amount;
-                                                                    }
-                                                                }
+                                                                $chartData = $categoryBreakdown['INCOME']['month'];
+                                                                $totalIncome = array_sum(array_column($chartData, 'amount'));
+                                                                $incomeLabels = array_column($chartData, 'name');
+                                                                $incomeData = array_column($chartData, 'amount');
                                                             @endphp
 
                                                             // This Month Income Bar Chart
@@ -306,7 +296,7 @@
                                 <!--modal trigger button for show categories wise this month expense-->
                                 <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal"
                                     data-bs-target="#categoriesWiseExpenseModal">
-                                    This Month Expense: {{ $this_month_expense }}
+                                    This Month Expense: {{ number_format((float) $this_month_expense, 2) }}
                                 </button>
 
                                 <!-- Modal -->
@@ -332,32 +322,12 @@
                                                             </thead>
                                                             <tbody>
                                                                 @php
-                                                                    $categories = App\Models\Category::all();
-                                                                    $categoryExpenses = [];
-                                                                    foreach ($categories as $category) {
-                                                                        $amount = App\Models\ExpenseCalculation::where(
-                                                                            'types',
-                                                                            'expense',
-                                                                        )
-                                                                            ->where('category_id', $category->id)
-                                                                            ->whereMonth('date', date('m'))
-                                                                            ->whereYear('date', date('Y'))
-                                                                            ->sum('amount');
-                                                                        if ($amount > 0) {
-                                                                            $categoryExpenses[] = [
-                                                                                'name' => $category->name,
-                                                                                'amount' => $amount,
-                                                                            ];
-                                                                        }
-                                                                    }
-                                                                    usort($categoryExpenses, function ($a, $b) {
-                                                                        return $b['amount'] <=> $a['amount'];
-                                                                    });
+                                                                    $categoryExpenses = $categoryBreakdown['EXPENSE']['month'];
                                                                 @endphp
                                                                 @foreach ($categoryExpenses as $categoryExpense)
                                                                     <tr>
                                                                         <td>{{ $categoryExpense['name'] }}</td>
-                                                                        <td>{{ $categoryExpense['amount'] }}</td>
+                                                                        <td class="text-end">{{ number_format((float) $categoryExpense['amount'], 2) }}</td>
                                                                     </tr>
                                                                 @endforeach
                                                             </tbody>
@@ -378,17 +348,9 @@
 
                                                         <script>
                                                             @php
-                                                                $categories = App\Models\Category::all();
-                                                                $expenseLabels = [];
-                                                                $expenseData = [];
-
-                                                                foreach ($categories as $category) {
-                                                                    $amount = App\Models\ExpenseCalculation::where('types', 'expense')->where('category_id', $category->id)->whereMonth('date', date('m'))->whereYear('date', date('Y'))->sum('amount');
-                                                                    if ($amount > 0) {
-                                                                        $expenseLabels[] = $category->name;
-                                                                        $expenseData[] = $amount;
-                                                                    }
-                                                                }
+                                                                $chartData = $categoryBreakdown['EXPENSE']['month'];
+                                                                $expenseLabels = array_column($chartData, 'name');
+                                                                $expenseData = array_column($chartData, 'amount');
                                                             @endphp
 
                                                             // This Month Expense Bar Chart
@@ -479,7 +441,7 @@
                                 <!--modal trigger button for show categories wise all month income-->
                                 <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal"
                                     data-bs-target="#categoriesWiseAllTimeIncomeModal">
-                                    Total Income: {{ $all_time_income }}
+                                    Total Income: {{ number_format((float) $all_time_income, 2) }}
                                 </button>
                                 <!-- Modal -->
                                 <div class="modal fade" id="categoriesWiseAllTimeIncomeModal" tabindex="-1"
@@ -504,30 +466,12 @@
                                                             </thead>
                                                             <tbody>
                                                                 @php
-                                                                    $categories = App\Models\Category::all();
-                                                                    $allTimeIncomes = [];
-                                                                    foreach ($categories as $category) {
-                                                                        $amount = App\Models\ExpenseCalculation::where(
-                                                                            'types',
-                                                                            'income',
-                                                                        )
-                                                                            ->where('category_id', $category->id)
-                                                                            ->sum('amount');
-                                                                        if ($amount > 0) {
-                                                                            $allTimeIncomes[] = [
-                                                                                'name' => $category->name,
-                                                                                'amount' => $amount,
-                                                                            ];
-                                                                        }
-                                                                    }
-                                                                    usort($allTimeIncomes, function ($a, $b) {
-                                                                        return $b['amount'] <=> $a['amount'];
-                                                                    });
+                                                                    $allTimeIncomes = $categoryBreakdown['INCOME']['all'];
                                                                 @endphp
                                                                 @foreach ($allTimeIncomes as $allTimeIncome)
                                                                     <tr>
                                                                         <td>{{ $allTimeIncome['name'] }}</td>
-                                                                        <td>{{ $allTimeIncome['amount'] }}</td>
+                                                                        <td class="text-end">{{ number_format((float) $allTimeIncome['amount'], 2) }}</td>
                                                                     </tr>
                                                                 @endforeach
                                                             </tbody>
@@ -548,17 +492,9 @@
 
                                                         <script>
                                                             @php
-                                                                $categories = App\Models\Category::all();
-                                                                $allTimeIncomeLabels = [];
-                                                                $allTimeIncomeData = [];
-
-                                                                foreach ($categories as $category) {
-                                                                    $amount = App\Models\ExpenseCalculation::where('types', 'income')->where('category_id', $category->id)->sum('amount');
-                                                                    if ($amount > 0) {
-                                                                        $allTimeIncomeLabels[] = $category->name;
-                                                                        $allTimeIncomeData[] = $amount;
-                                                                    }
-                                                                }
+                                                                $chartData = $categoryBreakdown['INCOME']['all'];
+                                                                $allTimeIncomeLabels = array_column($chartData, 'name');
+                                                                $allTimeIncomeData = array_column($chartData, 'amount');
                                                             @endphp
 
                                                             // All Time Income Bar Chart
@@ -646,7 +582,7 @@
                                 <!--modal trigger button for show categories wise all time expense-->
                                 <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal"
                                     data-bs-target="#categoriesWiseAllTimeExpenseModal">
-                                    Total Expense: {{ $all_time_expense }}
+                                    Total Expense: {{ number_format((float) $all_time_expense, 2) }}
                                 </button>
 
                                 <!-- Modal -->
@@ -672,30 +608,12 @@
                                                             </thead>
                                                             <tbody>
                                                                 @php
-                                                                    $categories = App\Models\Category::all();
-                                                                    $allTimeExpenses = [];
-                                                                    foreach ($categories as $category) {
-                                                                        $amount = App\Models\ExpenseCalculation::where(
-                                                                            'types',
-                                                                            'expense',
-                                                                        )
-                                                                            ->where('category_id', $category->id)
-                                                                            ->sum('amount');
-                                                                        if ($amount > 0) {
-                                                                            $allTimeExpenses[] = [
-                                                                                'name' => $category->name,
-                                                                                'amount' => $amount,
-                                                                            ];
-                                                                        }
-                                                                    }
-                                                                    usort($allTimeExpenses, function ($a, $b) {
-                                                                        return $b['amount'] <=> $a['amount'];
-                                                                    });
+                                                                    $allTimeExpenses = $categoryBreakdown['EXPENSE']['all'];
                                                                 @endphp
                                                                 @foreach ($allTimeExpenses as $allTimeExpense)
                                                                     <tr>
                                                                         <td>{{ $allTimeExpense['name'] }}</td>
-                                                                        <td>{{ $allTimeExpense['amount'] }}</td>
+                                                                        <td class="text-end">{{ number_format((float) $allTimeExpense['amount'], 2) }}</td>
                                                                     </tr>
                                                                 @endforeach
                                                             </tbody>
@@ -716,17 +634,9 @@
 
                                                         <script>
                                                             @php
-                                                                $categories = App\Models\Category::all();
-                                                                $allTimeExpenseLabels = [];
-                                                                $allTimeExpenseData = [];
-
-                                                                foreach ($categories as $category) {
-                                                                    $amount = App\Models\ExpenseCalculation::where('types', 'expense')->where('category_id', $category->id)->sum('amount');
-                                                                    if ($amount > 0) {
-                                                                        $allTimeExpenseLabels[] = $category->name;
-                                                                        $allTimeExpenseData[] = $amount;
-                                                                    }
-                                                                }
+                                                                $chartData = $categoryBreakdown['EXPENSE']['all'];
+                                                                $allTimeExpenseLabels = array_column($chartData, 'name');
+                                                                $allTimeExpenseData = array_column($chartData, 'amount');
                                                             @endphp
 
                                                             // All Time Expense Bar Chart
@@ -812,36 +722,14 @@
 
 
                         </div>
-                        <div class="col-md-2 col-sm-12 text-md-end">
-                            @if ($search_cashes == !null)
-                                <form method="GET" action="{{ route('expenseCalculations.index') }}">
-                                    @csrf
-
-                                    <div class="row">
-                                        <div class="col-md-12 col-sm-12">
-                                            <div class="form-group" id="hide_div">
-                                                <label for="export_format">Export Format:</label>
-                                                <select name="export_format" id="export_format" class="form-control">
-                                                    <option value="xlsx">Excel (XLS)</option>
-                                                </select>
-                                            </div>
-                                            <button type="submit" class="btn btn-outline-info">
-                                                <i class="fa fa-file-excel" aria-hidden="true"></i> Export
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                </form>
-                            @endif
-                        </div>
                     </div>
 
 
                 </div>
                 <!-- /.card-header -->
                 <div class="card-body">
-                    <!--  Table goes here id="datatablesSimple" -->
-                    <table class="table table-bordered table-hover" id="myTable">
+                    <div id="live-expense-table" data-live-region>
+                    <table class="table table-bordered table-hover table-responsive-cards" id="myTable">
                         <thead>
                             <tr>
 
@@ -858,31 +746,28 @@
                             @forelse ($expenseCalculations as $cash)
                                 <tr>
 
-                                    <td>
-                                        <button type="button" class="btn btn-outline-info" data-toggle="modal"
-                                            data-target="#exampleModalCenter{{ $cash->id }}">
+                                    <td data-label="Sl#">
+                                        <button type="button" class="btn btn-outline-info" data-bs-toggle="modal"
+                                            data-bs-target="#exampleModalCenter{{ $cash->id }}">
                                             {{ $cash->id }}
                                         </button>
                                     </td>
-                                    <td>{{ $cash->date ? \Carbon\Carbon::parse($cash->date)->format('d-M-Y') : '' }}
+                                    <td data-label="Date">{{ $cash->date ? \Carbon\Carbon::parse($cash->date)->format('d-M-Y') : '' }}
                                     </td>
-                                    <td>{{ $cash->name }}</td>
-                                    <td>{{ $cash->types }}</td>
-                                    <td>
-                                        @php
-                                            $category =
-                                                App\Models\Category::find($cash->category_id) == null
-                                                    ? ''
-                                                    : App\Models\Category::find($cash->category_id)->name;
-                                        @endphp
-                                        {{ $category }}
-                                    </td>
-                                    <td>{{ $cash->amount }}</td>
-                                    <td>
+                                    <td data-label="Name">{{ $cash->name }}</td>
+                                    <td data-label="Category Name">{{ optional($cash->category)->name }}</td>
+                                    <td data-label="Category Types">{{ $cash->types }}</td>
+                                    <td data-label="Amount">{{ $cash->amount }}</td>
+                                    <td data-label="Actions">
 
                                         <a type="button" class="btn btn-outline-info" data-bs-toggle="modal"
                                             data-bs-target="#CashEditModal{{ $cash->id }}">Edit</a>
 
+                                        <button type="button"
+                                            onclick="confirmDelete('{{ route('expenseCalculations.destroy', ['cash' => $cash->id]) }}')"
+                                            class="btn btn-outline-danger btn-sm">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </button>
 
                                     </td>
                                 </tr>
@@ -899,7 +784,8 @@
                         </tbody>
                     </table>
 
-                    {{ $expenseCalculations->links() }}
+                    <x-backend.pager :paginator="$expenseCalculations" />
+                    </div>
 
 
 
@@ -930,8 +816,8 @@
     <div class="modal fade" id="CashEntryModal" data-bs-backdrop="static" tabindex="-1"
         aria-labelledby="CashEntryModal" aria-hidden="true">
         <div class="modal-dialog modal-lg" style="min-width:90%;">
-            <div class="modal-content" style="background-color: rgba(0,0,0,0.5); min-width:90%;">
-                <div class="modal-header" style="background: rgba(0, 0, 0, 0.5); color: #f1f1f1; min-width:90%;">
+            <div class="modal-content" style="background-color: #fff; min-width:90%;">
+                <div class="modal-header" style="background: var(--grad-primary); color: #fff; min-width:90%;">
                     <h5 class="modal-title text-center" id="CashEntryModal"> Data Entry</h5>
                     <button type="button" class="btn btn-light btn-close" data-bs-dismiss="modal"
                         aria-label="Close" style="background-color: white; border-color: white; color: black;"
@@ -939,284 +825,137 @@
                         onmouseout="this.classList.remove('btn-danger')"></button>
 
                 </div>
-                <div class="modal-body" style="background: rgba(0, 0, 0, 0.5); color: #f1f1f1; min-width:90%;">
-                    <!-- Your x-guest-layout code here -->
-
-                    <div class="container-fluid justify-content-center"
-                        style="background: rgba(0, 0, 0, 0.5); color: #f1f1f1; min-width:90%;">
+                <div class="modal-body" style="background: #fff; min-width:90%;">
+                    <div class="container-fluid justify-content-center">
                         <div class="row justify-content-between">
                             <div class="col-md-12">
-                                <div>
-                                    <div class=" p-4 p-md-5">
-                                        <!-- Validation Errors -->
-                                        <x-auth-validation-errors class="mb-4" :errors="$errors" />
+                                <div class="p-4 p-md-5">
 
-                                        <form method="POST" action="{{ route('expenseCalculations.store') }}"
-                                            enctype="multipart/form-data">
-                                            @csrf
-                                            <!-- row-1 start -->
-                                            <div class="row justify-content-between">
-                                                <!--  Date start  -->
-                                                <div class="col-md-2">
-                                                    <div class="mt-3">
-                                                        <x-label for="date" :value="__('Date')" class="ml-2 " />
-                                                        <div class="row">
-                                                            <div class="col-12">
-                                                                <input type="date" name="date[]"
-                                                                    class="form-control" value="{{ date('Y-m-d') }}">
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <!--  Date end -->
+                                    <form method="POST" action="{{ route('expenseCalculations.store') }}">
+                                        @csrf
 
-                                                <!--  Category start -->
-                                                <div class="col-md-2">
-                                                    <div class="mt-3 ">
-                                                        <x-label for="category_id" :value="__('Category')" class="ml-2 " />
-                                                        <div class="row">
-                                                            <div class="col-12">
-                                                                <select name="category_id[]" class="form-control">
-                                                                    <option value="">Select Category</option>
-                                                                    @foreach ($categories as $category)
-                                                                        <option value="{{ $category->id }}">
-                                                                            {{ $category->name }}</option>
-                                                                    @endforeach
-                                                                </select>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <!--  Category end -->
-                                                <!-- Name start -->
-                                                <div class="col-md-2">
-                                                    <div class="mt-3">
-                                                        <x-label for="name" :value="__('Name')" class="ml-2" />
-                                                        <div class="row">
-                                                            <div class="col-12">
-                                                                @php
-                                                                    $nameList = App\Models\ExpenseCalculation::select(
-                                                                        'name',
-                                                                    )
-                                                                        ->distinct()
-                                                                        ->pluck('name');
-
-                                                                    $nameList = $nameList->sortByDesc(function ($name) {
-                                                                        return App\Models\ExpenseCalculation::where(
-                                                                            'name',
-                                                                            $name,
-                                                                        )->count();
-                                                                    });
-                                                                @endphp
-
-                                                                <input list="nameList" name="name[]"
-                                                                    class="form-control" />
-
-                                                                <datalist id="nameList">
-                                                                    @foreach ($nameList as $n)
-                                                                        <option value="{{ $n }}">
-                                                                            {{ $n }}</option>
-                                                                    @endforeach
-                                                                </datalist>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <!-- Name end -->
-
-                                                <!--  Amount start -->
-                                                <div class="col-md-2">
-                                                    <div class="mt-3 ">
-                                                        <x-label for="amount" :value="__('Amount')" class="ml-2 " />
-                                                        <div class="row">
-                                                            <div class="col-12">
-                                                                <x-input name="amount[]" class="form-control"
-                                                                    autofocus />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <!--  Amount end -->
-                                                <div class="col-md-2">
-                                                    <div class="mt-3 ">
-                                                        <label for="types[]">HandCash Types</label>
-                                                        <select class="form-control" name="types[]">
-                                                            <option value="Widrows">Withdraws</option>
-                                                            <option value="Save">Savings</option>
-
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <!--  HandCash Types end -->
-                                                <div class="col-md-2">
-                                                    <div class="mt-3 ">
-                                                        <label for="rules[]">Cash Rules</label>
-                                                        <select class="form-control" name="rules[]">
-                                                            <option value="Peti">Peti Cash</option>
-                                                            <option value="City_Bank">City Bank</option>
-                                                            <option value="Cash">Cash</option>
-                                                            <option value="Mobile_Bkash">Bkash</option>
-                                                            <option value="Mobile_Rocket">Rocket</option>
-                                                            <option value="Sonali_Bank_Gulshan">Sonali Bank Gulshan
-                                                            </option>
-                                                            <option value="Sonali_Bank_Tongi">Sonali Bank Tongi
-                                                            </option>
-                                                            <option value="City_Bank_Islamic">City Bank Islamic
-                                                            </option>
-                                                            <option value="DBBL">Dutch Bangla Bank</option>
-                                                            <option value="PBL">Prime Bank Ltd</option>
-                                                            <option value="Mobile_Nagad">Nagad</option>
-                                                            <option value="loan">Loan To Other </option>
-                                                            <option value="CreditCard">Credit Card</option>
-                                                            <option value="FD">FD</option>
-                                                            <option value="DPS">DPS</option>
-                                                            <option value="MyLoan">MyLoan</option>
-                                                            <option value="investment">Investment</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <!--  Cash Rules end -->
+                                        <!-- row-1: always-present first entry -->
+                                        <div class="row g-2 align-items-end">
+                                            <div class="col-md-2">
+                                                <x-backend.form.input name="date[]" type="date" label="Date"
+                                                    value="{{ date('Y-m-d') }}" />
                                             </div>
-                                            <!--  row-1 end -->
-
-                                            <!--  Dynamic input fields -->
-                                            <div id="dynamic-fields-container"></div>
-
-                                            <!--  Add and remove buttons -->
-                                            <div class="mt-3">
-                                                <button type="button" id="add-field-btn" class="btn btn-primary">Add
-                                                    Field</button>
-                                                <button type="button" id="remove-field-btn"
-                                                    class="btn btn-danger">Remove Field</button>
+                                            <div class="col-md-2">
+                                                <x-backend.form.select name="category_id[]" label="Category"
+                                                    class="select2"
+                                                    :options="$categories->pluck('name', 'id')" />
                                             </div>
-
-                                            <!--  Submit button -->
-                                            <div style="margin-top: 50px;">
-                                                <button type="submit"
-                                                    class="btn btn-outline-light ml-2 mx-auto d-block">Create</button>
+                                            <div class="col-md-2">
+                                                <x-backend.form.autocomplete-input name="name[]" label="Name"
+                                                    model="App\Models\ExpenseCalculation" column="name" />
                                             </div>
-                                        </form>
+                                            <div class="col-md-2">
+                                                <x-backend.form.input name="amount[]" type="number" step="any"
+                                                    label="Amount" />
+                                            </div>
+                                            <div class="col-md-2">
+                                                {{-- Withdraws listed first and pre-selected: the usual entry here --}}
+                                                <x-backend.form.select name="types[]" label="HandCash Types"
+                                                    class="select2" selected="WIDROWS"
+                                                    :options="['WIDROWS' => config('finance.handcash_types.WIDROWS')] + config('finance.handcash_types')" />
+                                            </div>
+                                            <div class="col-md-2">
+                                                <x-backend.form.select name="rules[]" label="Cash Rules"
+                                                    class="select2"
+                                                    :options="\App\Services\AutocompleteSource::ranked(config('finance.handcash_rules'), \App\Models\HandCash::class, 'rules')" />
+                                            </div>
+                                        </div>
+                                        <!-- row-1 end -->
 
-                                        <script>
-                                            // JavaScript/jQuery code to handle dynamic fields
+                                        <!--  Dynamic input fields -->
+                                        <div id="dynamic-fields-container"></div>
 
-                                            // Function to add a new set of input fields
-                                            function addField() {
-                                                var container = document.getElementById('dynamic-fields-container');
+                                        <!--  Add and remove buttons -->
+                                        <div class="mt-3">
+                                            <button type="button" id="add-field-btn"
+                                                class="btn btn-sm btn-outline-primary"><i class="bi bi-plus-lg"></i>
+                                                Add Field</button>
+                                            <button type="button" id="remove-field-btn"
+                                                class="btn btn-sm btn-outline-danger"><i class="bi bi-dash-lg"></i>
+                                                Remove Field</button>
+                                        </div>
 
-                                                var fieldTemplate = `
-            <div class="row justify-content-between mt-3">
+                                        <!--  Submit button -->
+                                        <div class="mt-4 text-center">
+                                            <button type="submit" class="btn btn-primary px-4">Create</button>
+                                        </div>
+                                    </form>
+
+                                    <script>
+                                        function addField() {
+                                            var container = document.getElementById('dynamic-fields-container');
+
+                                            var fieldTemplate = `
+            <div class="row g-2 align-items-end mt-2">
                 <div class="col-md-2">
-                    <div class="mt-3">
-                        <x-label for="date" :value="__('Date')" class="ml-2" />
-                        <div class="row">
-                            <div class="col-12">
-                                <input type="date" name="date[]" class="form-control" value="{{ date('Y-m-d') }}">
-                            </div>
-                        </div>
-                    </div>
+                    <input type="date" name="date[]" class="form-control" value="{{ date('Y-m-d') }}">
                 </div>
                 <div class="col-md-2">
-                    <div class="mt-3 ">
-                        <x-label for="category_id" :value="__('Category')" class="ml-2" />
-                        <div class="row">
-                            <div class="col-12">
-                                <select name="category_id[]" class="form-control">
-                                    <option value="">Select Category</option>
-                                    @foreach ($categories as $category)
-                                        <option value="{{ $category->id }}">{{ $category->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="mt-3">
-                        <x-label for="name" :value="__('Name')" class="ml-2" />
-                        <div class="row">
-                            <div class="col-12">
-                                <x-input name="name[]" class="form-control" autofocus />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="mt-3 ">
-                        <x-label for="amount" :value="__('Amount')" class="ml-2" />
-                        <div class="row">
-                            <div class="col-12">
-                                <x-input name="amount[]" class="form-control" autofocus />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="mt-3 ">
-                    <label for="types[]">HandCash Types</label>
-                    <select class="form-control" name="types[]">
-                         <option value="Widrows">Withdraws</option>
-                        <option value="Save">Savings</option>                      
-                    </select>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="mt-3 ">
-                    <label for="rules[]">Cash Rules</label>
-                    <select class="form-control" name="rules[]">
-                         <option value="Peti">Peti Cash</option>
-                                                        <option value="City_Bank">City Bank</option>
-                                                        <option value="Cash">Cash</option>
-                                                        <option value="Mobile_Bkash">Bkash</option>
-                                                        <option value="Mobile_Rocket">Rocket</option>
-                                                        <option value="Sonali_Bank_Gulshan">Sonali Bank Gulshan
-                                                            </option>
-                                                            <option value="Sonali_Bank_Tongi">Sonali Bank Tongi</option>
-                                                            <option value="City_Bank_Islamic">City Bank Islamic</option>
-                                                        <option value="DBBL">Dutch Bangla Bank</option>
-                                                        <option value="PBL">Prime Bank Ltd</option>
-                                                        <option value="Mobile_Nagad">Nagad</option>
-                                                        <option value="loan">Loan To Other </option>
-                                                        <option value="CreditCard">Credit Card</option>
-                                                        <option value="FD">FD</option>
-                                                        <option value="DPS">DPS</option>
-                                                        <option value="MyLoan">MyLoan</option>
-                                                        <option value="investment">Investment</option>
+                    <select name="category_id[]" class="form-select select2">
+                        <option value="">Select Category</option>
+                        @foreach ($categories as $category)
+                            <option value="{{ $category->id }}">{{ $category->name }}</option>
+                        @endforeach
                     </select>
                 </div>
+                <div class="col-md-2">
+                    <input type="text" list="dl_App_Models_ExpenseCalculation_name" name="name[]" class="form-control" autocomplete="off" placeholder="Name">
+                </div>
+                <div class="col-md-2">
+                    <input type="number" step="any" name="amount[]" class="form-control" placeholder="Amount">
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select select2" name="types[]">
+                        @foreach (['WIDROWS' => config('finance.handcash_types.WIDROWS')] + config('finance.handcash_types') as $key => $value)
+                            <option value="{{ $key }}" {{ $key === 'WIDROWS' ? 'selected' : '' }}>{{ $value }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select select2" name="rules[]">
+                        @foreach (\App\Services\AutocompleteSource::ranked(config('finance.handcash_rules'), \App\Models\HandCash::class, 'rules') as $key => $value)
+                            <option value="{{ $key }}">{{ $value }}</option>
+                        @endforeach
+                    </select>
                 </div>
             </div>
         `;
 
-                                                container.insertAdjacentHTML('beforeend', fieldTemplate);
+                                            container.insertAdjacentHTML('beforeend', fieldTemplate);
+
+                                            // The global Select2 init already ran on page load, before this
+                                            // row existed — initialize it on just the new row's selects.
+                                            var newRow = container.lastElementChild;
+                                            if (window.jQuery && jQuery.fn.select2) {
+                                                jQuery(newRow).find('.select2').select2({
+                                                    theme: 'bootstrap-5',
+                                                    width: '100%'
+                                                });
                                             }
+                                        }
 
-                                            // Function to remove the last set of input fields
-                                            function removeField() {
-                                                var container = document.getElementById('dynamic-fields-container');
-                                                var fields = container.getElementsByClassName('row');
+                                        function removeField() {
+                                            var container = document.getElementById('dynamic-fields-container');
+                                            var fields = container.getElementsByClassName('row');
 
-                                                if (fields.length > 1) {
-                                                    fields[fields.length - 1].remove();
-                                                }
+                                            if (fields.length > 0) {
+                                                fields[fields.length - 1].remove();
                                             }
+                                        }
 
-                                            // Add event listeners to the buttons
-                                            document.getElementById('add-field-btn').addEventListener('click', addField);
-                                            document.getElementById('remove-field-btn').addEventListener('click', removeField);
-                                        </script>
+                                        document.getElementById('add-field-btn').addEventListener('click', addField);
+                                        document.getElementById('remove-field-btn').addEventListener('click', removeField);
+                                    </script>
 
-                                    </div>
                                 </div>
                             </div>
-
                         </div>
-
                     </div>
-
-
-
-
                 </div>
             </div>
         </div>
@@ -1226,139 +965,58 @@
 
     <!--  end model for Data Entry -->
 
+    <div id="live-expense-modals" data-live-region>
     <!--  start model for Data Edit -->
     @foreach ($expenseCalculations as $cash)
         <div class="modal fade" id="CashEditModal{{ $cash->id }}" tabindex="-1"
             aria-labelledby="CashEditModal{{ $cash->id }}Label" aria-hidden="true" data-bs-backdrop="static"
             data-bs-keyboard="false">
             <div class="modal-dialog modal-xl" style="min-width:90%;">
-                <div class="modal-content" style="background-color: rgba(0,0,0,0.5); min-width:90%;">
-                    <div class="modal-header" style="background: rgba(0, 0, 0, 0.5); color: #f1f1f1; min-width:90%;">
+                <div class="modal-content" style="background-color: #fff; min-width:90%;">
+                    <div class="modal-header" style="background: var(--grad-primary); color: #fff; min-width:90%;">
                         <h5 class="modal-title text-center" id="CashEditModalLabel">Data Edit</h5>
                         <button type="button" class="btn btn-outline-secondary"
                             data-bs-dismiss="modal">Close</button>
                     </div>
-                    <div class="modal-body" style="background: rgba(0, 0, 0, 0.5); color: #f1f1f1; min-width:90%;">
-                        <!-- Your x-guest-layout code here -->
-
-
-                        <div class="container-fluid justify-content-center"
-                            style="background: rgba(0, 0, 0, 0.5); color: #f1f1f1; min-width:90%;">
+                    <div class="modal-body" style="background: #fff; min-width:90%;">
+                        <div class="container-fluid justify-content-center">
                             <div class="row justify-content-between">
                                 <div class="col-md-12">
-                                    <div>
-                                        <div class=" p-4 p-md-5">
-                                            <!-- Validation Errors -->
-                                            <x-auth-validation-errors class="mb-4" :errors="$errors" />
+                                    <div class="p-4 p-md-5">
 
-                                            <form method="POST"
-                                                action="{{ route('expenseCalculations.update', $cash) }}"
-                                                enctype="multipart/form-data">
-                                                @csrf
-                                                @method('PUT')
+                                        <form method="POST" action="{{ route('expenseCalculations.update', $cash) }}">
+                                            @csrf
+                                            @method('PUT')
 
-                                                <!--  Rest of your form elements -->
-                                                <!--  row-1 start -->
-                                                <div class="row justify-content-between">
-                                                    <!--  Date start  -->
-                                                    <div class="col-md-3">
-
-
-                                                        <div class="mt-3">
-
-                                                            <x-label for="date" :value="__('Date')"
-                                                                class="ml-2 " />
-
-                                                            <div class="row">
-                                                                <div class="col-12">
-                                                                    <input type="date" name="date"
-                                                                        id="date" class="form-control"
-                                                                        value="{{ $cash->date }}">
-                                                                </div>
-
-                                                            </div>
-                                                        </div>
-
-                                                    </div>
-                                                    <!--  Date end -->
-
-                                                    <!--  Category start -->
-                                                    <div class="col-md-3">
-
-                                                        <div class="mt-3 ">
-                                                            <x-label for="category_id" :value="__('Category')"
-                                                                class="ml-2 " />
-
-                                                            <div class="row">
-                                                                <div class="col-12">
-                                                                    <select name="category_id" id="category_id"
-                                                                        class="form-control">
-                                                                        <option value="">Select Category</option>
-                                                                        @foreach ($categories as $category)
-                                                                            <option value="{{ $category->id }}"
-                                                                                @if ($category->id == $cash->category_id) selected @endif>
-                                                                                {{ $category->name }}</option>
-                                                                        @endforeach
-                                                                    </select>
-                                                                </div>
-
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <!--  Category end -->
-                                                    <!--  Name start -->
-                                                    <div class="col-md-3">
-
-
-                                                        <div class="mt-3">
-
-                                                            <x-label for="name" :value="__('Name')"
-                                                                class="ml-2 " />
-
-                                                            <div class="row">
-                                                                <div class="col-12">
-                                                                    <input type="text" name="name"
-                                                                        id="name" value="{{ $cash->name }}"
-                                                                        class="form-control">
-                                                                </div>
-
-                                                            </div>
-                                                        </div>
-
-
-
-                                                    </div>
-                                                    <!--  Name end -->
-
-                                                    <!--  Amount start -->
-                                                    <div class="col-md-3">
-
-                                                        <div class="mt-3 ">
-                                                            <x-label for="amount" :value="__('Amount')"
-                                                                class="ml-2 " />
-                                                            <div class="row">
-                                                                <div class="col-12">
-                                                                    <input type="number" name="amount"
-                                                                        id="amount" value="{{ $cash->amount }}"
-                                                                        class="form-control">
-                                                                </div>
-
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <!--  Amount end -->
-
+                                            <div class="row g-2 align-items-end">
+                                                <div class="col-md-3">
+                                                    <x-backend.form.input name="date" :id="'edit_date_' . $cash->id"
+                                                        type="date" label="Date" :value="$cash->date" />
                                                 </div>
-                                                <!--  row-1 end -->
-                                                <div style="margin-top:50px;">
-
-                                                    <button type="submit"
-                                                        class="btn btn-outline-light ml-2 mx-auto d-block">Save</button>
+                                                <div class="col-md-3">
+                                                    <x-backend.form.select name="category_id"
+                                                        :id="'edit_category_id_' . $cash->id" label="Category"
+                                                        class="select2"
+                                                        :options="$categories->pluck('name', 'id')"
+                                                        :selected="$cash->category_id" />
                                                 </div>
+                                                <div class="col-md-3">
+                                                    <x-backend.form.autocomplete-input name="name" label="Name"
+                                                        model="App\Models\ExpenseCalculation" column="name"
+                                                        :value="$cash->name" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <x-backend.form.input name="amount"
+                                                        :id="'edit_amount_' . $cash->id" type="number" step="any"
+                                                        label="Amount" :value="$cash->amount" />
+                                                </div>
+                                            </div>
 
-                                            </form>
+                                            <div class="mt-4 text-center">
+                                                <button type="submit" class="btn btn-primary px-4">Save</button>
+                                            </div>
+                                        </form>
 
-                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1377,115 +1035,37 @@
         <div class="modal fade" id="exampleModalCenter{{ $cash->id }}" tabindex="-1" data-bs-backdrop="static"
             aria-labelledby="registerModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-lg" style="min-width:90%;">
-                <div class="modal-content" style="background-color: rgba(0,0,0,0.5); min-width:90%;">
-                    <div class="modal-header" style="background: rgba(0, 0, 0, 0.5); color: #f1f1f1; min-width:90%;">
-                        <h5 class="modal-title text-center" id="registerModalLabel"> Data Show of
-                            {{ $cash->serial_number }}</h5>
+                <div class="modal-content" style="background-color: #fff; min-width:90%;">
+                    <div class="modal-header" style="background: var(--grad-primary); color: #fff; min-width:90%;">
+                        <h5 class="modal-title text-center" id="registerModalLabel">{{ $cash->name }}</h5>
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">X</button>
-
                     </div>
-                    <div class="modal-body" style="background: rgba(0, 0, 0, 0.5); color: #f1f1f1; min-width:90%;">
+                    <div class="modal-body" style="background: #fff; min-width:90%;">
                         <div class="container-fluid">
-                            <!--  row-1 start -->
-                            <div class="row justify-content-between">
-                                <!--  Date start  -->
+                            <div class="row g-2">
                                 <div class="col-md-3">
-
-
-                                    <div class="mt-3">
-
-                                        <x-label for="date" :value="__('Date')" class="ml-2 " />
-
-                                        <div class="row">
-                                            <div class="col-12">
-                                                <input type="date" name="date" id="date"
-                                                    class="form-control" value="{{ $cash->date }}" readonly>
-                                            </div>
-
-                                        </div>
-                                    </div>
-
+                                    <x-backend.form.input name="date" type="date" label="Date" :value="$cash->date"
+                                        readonly />
                                 </div>
-                                <!--  Date end -->
-
-                                <!--  Category start -->
                                 <div class="col-md-3">
-
-                                    <div class="mt-3 ">
-                                        <x-label for="category_id" :value="__('Category')" class="ml-2 " />
-
-                                        <div class="row">
-                                            <div class="col-12">
-                                                <select name="category_id" id="category_id" class="form-control">
-                                                    <option value="">Select Category</option>
-                                                    @foreach ($categories as $category)
-                                                        <option value="{{ $category->id }}"
-                                                            @if ($category->id == $cash->category_id) selected @endif readonly>
-                                                            {{ $category->name }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-
-                                        </div>
-                                    </div>
+                                    <x-backend.form.input name="category" type="text" label="Category"
+                                        :value="optional($cash->category)->name" readonly />
                                 </div>
-                                <!--  Category end -->
-                                <!--  Name start -->
                                 <div class="col-md-3">
-
-
-                                    <div class="mt-3">
-
-                                        <x-label for="name" :value="__('Name')" class="ml-2 " />
-
-                                        <div class="row">
-                                            <div class="col-12">
-                                                <x-input name="name" id="name" class="form-control" autofocus
-                                                    value="{{ $cash->name }}" readonly />
-                                            </div>
-
-                                        </div>
-                                    </div>
-
-
-
+                                    <x-backend.form.input name="name" type="text" label="Name" :value="$cash->name"
+                                        readonly />
                                 </div>
-                                <!--  Name end -->
-
-                                <!--  Amount start -->
                                 <div class="col-md-3">
-
-                                    <div class="mt-3 ">
-                                        <x-label for="amount" :value="__('Amount')" class="ml-2 " />
-
-                                        <div class="row">
-                                            <div class="col-12">
-                                                <x-input name="amount" id="amount" class="form-control" autofocus
-                                                    value="{{ $cash->amount }}" readonly />
-                                            </div>
-
-                                        </div>
-                                    </div>
+                                    <x-backend.form.input name="amount" type="number" label="Amount"
+                                        :value="$cash->amount" readonly />
                                 </div>
-                                <!--  Amount end -->
-
                             </div>
-                            <!--  row-1 end -->
                         </div>
-
-
                     </div>
                     <div class="modal-footer">
-
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                         <a type="button" class="btn btn-outline-info" data-bs-toggle="modal"
-                            data-bs-target="#CashEditModal{{ $cash->id }}" data-bs-dismiss="modal"
-                            onclick="closeAndShowModal('{{ $cash->id }}')">Edit</a>
-
-
-
-
-
+                            data-bs-target="#CashEditModal{{ $cash->id }}" data-bs-dismiss="modal">Edit</a>
                     </div>
                 </div>
             </div>
@@ -1493,135 +1073,14 @@
     @endforeach
 
     <!--  End model for Data details -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        $(document).ready(function() {
-            // Single Delete
-            $('.delete-button').on('click', function() {
-                var cashId = $(this).data('cash-id');
-
-                Swal.fire({
-                    title: 'Are you sure?',
-                    text: 'This action cannot be undone!',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#d33',
-                    cancelButtonColor: '#3085d6',
-                    confirmButtonText: 'Yes, delete it!'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        deleteCash(cashId);
-                    }
-                });
-            });
-
-            // Delete Selected
-            $('#delete-selected').on('click', function() {
-                var selectedCashes = $('input[name="selected_cashes[]"]:checked').map(function() {
-                    return $(this).val();
-                }).get();
-
-                if (selectedCashes.length > 0) {
-                    Swal.fire({
-                        title: 'Are you sure?',
-                        text: 'This action cannot be undone!',
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#d33',
-                        cancelButtonColor: '#3085d6',
-                        confirmButtonText: 'Yes, delete them all!'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            deleteCashes(selectedCashes);
-                        }
-                    });
-                } else {
-                    Swal.fire('No data Selected', 'Please select at least one data to delete.', 'warning');
-                }
-            });
-
-            function deleteCash(cashId) {
-                var deleteForm = $('#delete-form-' + cashId);
-                deleteForm.submit();
-            }
-
-            function deleteCashes(cashIds) {
-                var totalDeleted = 0;
-                var deletedCount = 0;
-
-                cashIds.forEach(function(cashId) {
-                    var deleteForm = $('#delete-form-' + cashId);
-                    var csrfToken = deleteForm.find('input[name="_token"]').val();
-
-                    $.ajax({
-                        url: deleteForm.attr('action'),
-                        type: 'POST',
-                        data: {
-                            _method: 'DELETE',
-                            _token: csrfToken
-                        },
-                        success: function() {
-                            deletedCount++;
-                            if (deletedCount === totalDeleted) {
-                                Swal.fire({
-                                    title: 'Deleted!',
-                                    text: 'Total ' + deletedCount +
-                                        ' cash(es) have been deleted.',
-                                    icon: 'success'
-                                }).then(() => {
-                                    location.reload(); // Reload the page
-                                });
-                            }
-                        },
-                        error: function() {
-                            Swal.fire('Error', 'An error occurred while deleting the cash(es).',
-                                'error');
-                        }
-                    });
-
-                    totalDeleted++;
-                });
-            }
-        });
-
-        $(document).ready(function() {
-            $("#hide_div").hide();
-        });
-
-
-
-        function closeAndShowModal(cashId) {
-            closePreviousModal(); // Close previous modal
-
-            // Show the new modal using its ID
-            var newModal = document.querySelector('#CashEditModal' + cashId);
-            var modalInstance = new bootstrap.Modal(newModal);
-            modalInstance.show();
-        }
-
-        function closePreviousModal() {
-            // Find the previous modal using its class and trigger the click event on the "Close" button
-            var previousModal = document.querySelector('.modal.show');
-            if (previousModal) { // Check if previousModal exists
-                var closeButton = previousModal.querySelector('[data-dismiss="modal"]');
-                if (closeButton) { // Check if closeButton exists
-                    if (typeof closeButton.click === 'function') { // Check if closeButton.click is a function
-                        closeButton.click();
-                    }
-                }
-            }
-        }
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
+    </div>
     <script>
         function validateForm() {
             var incCategory = document.getElementById("types").value;
             var entryDateStart = document.getElementById("entry_date_start").value;
             var entryDateEnd = document.getElementById("entry_date_end").value;
 
-            if (incCategory === "" && companyId === "" && entryDateStart === "" && entryDateEnd === "") {
+            if (incCategory === "" && entryDateStart === "" && entryDateEnd === "") {
                 Swal.fire({
                     title: "Warning",
                     text: "Please fill in at least one field to search",
@@ -1632,6 +1091,27 @@
             } else {
                 // Submit the form or perform further processing
             }
+        }
+
+        function confirmDelete(url) {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: 'This action cannot be undone.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = url;
+                    form.innerHTML = `@csrf @method('delete')`;
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
         }
     </script>
 

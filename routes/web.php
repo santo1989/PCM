@@ -1,10 +1,16 @@
 <?php
 
+use App\Http\Controllers\AnalyticsController;
+use App\Http\Controllers\BackupController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ExpenseCalculationController;
+use App\Http\Controllers\FinancialAnalysisDashboardController;
 use App\Http\Controllers\HandCashController;
+use App\Http\Controllers\LiveController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\RecurringTransactionController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\UserController;
 use App\Models\Notification;
 use Illuminate\Support\Facades\Artisan;
@@ -15,23 +21,24 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// Interactive dashboard
-Route::get('/interactive-dashboard', [App\Http\Controllers\HandCashController::class, 'interactiveDashboard'])->name('interactive.dashboard');
-Route::get('/interactive-dashboard/data/summary', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardSummary']);
-Route::get('/interactive-dashboard/data/monthly-trend', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardMonthlyTrend']);
-Route::get('/interactive-dashboard/data/category-breakdown', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardCategoryBreakdown']);
-Route::get('/interactive-dashboard/data/savings-loans', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardSavingsLoans']);
-Route::get('/interactive-dashboard/data/top-categories', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardTopCategories']);
-Route::get('/interactive-dashboard/data/running-balance', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardRunningBalance']);
-Route::get('/interactive-dashboard/data/recent-transactions', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardRecentTransactions']);
-
-Route::get('/filter', [ExpenseCalculationController::class, 'filter'])->name('expenseCalculations.filter');
-
-// power_bi_report
-Route::get('/power_bi_report', [HandCashController::class, 'power_bi_report'])->name('power_bi_report');
-
-
 Route::middleware('auth')->group(function () {
+
+    // Moved inside auth: these served financial data to anyone without logging in.
+    // Interactive dashboard
+    Route::get('/interactive-dashboard', [App\Http\Controllers\HandCashController::class, 'interactiveDashboard'])->name('interactive.dashboard');
+    Route::get('/interactive-dashboard/data/summary', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardSummary']);
+    Route::get('/interactive-dashboard/data/monthly-trend', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardMonthlyTrend']);
+    Route::get('/interactive-dashboard/data/category-breakdown', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardCategoryBreakdown']);
+    Route::get('/interactive-dashboard/data/savings-loans', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardSavingsLoans']);
+    Route::get('/interactive-dashboard/data/top-categories', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardTopCategories']);
+    Route::get('/interactive-dashboard/data/running-balance', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardRunningBalance']);
+    Route::get('/interactive-dashboard/data/recent-transactions', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardRecentTransactions']);
+    Route::get('/interactive-dashboard/data/ai-insights', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardAI']);
+
+    Route::get('/filter', [ExpenseCalculationController::class, 'filter'])->name('expenseCalculations.filter');
+
+    // power_bi_report
+    Route::get('/power_bi_report', [HandCashController::class, 'power_bi_report'])->name('power_bi_report');
 
 
     Route::get('/home', function () {
@@ -52,8 +59,6 @@ Route::middleware('auth')->group(function () {
     //user
 
     Route::get('/users', [UserController::class, 'index'])->name('users.index');
-    Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
-    Route::post('/users', [UserController::class, 'store'])->name('users.store');
     Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show');
     Route::get(
         '/users/{user}/edit',
@@ -103,38 +108,54 @@ Route::middleware('auth')->group(function () {
     Route::get('/Monthly_report', [HandCashController::class, 'Monthly_report'])->name('Monthly_report');
     Route::get('/Monthly_invest', [HandCashController::class, 'Monthly_invest'])->name('Monthly_invest');
 
-    Route::get('/filter', [HandCashController::class, 'Monthly_report_filter'])->name('Monthly_report_filter');
     Route::get('/Budge_Projection', [HandCashController::class, 'Budge_Projection'])->name('Budge_Projection');
     Route::get('/handCashes_transfer_create', [HandCashController::class, 'handCashes_transfer_create'])->name('handCashes_transfer_create');
     Route::post('/handCashes_transfer', [HandCashController::class, 'handCashes_transfer'])->name('handCashes_transfer');
 
     Route::post('/calculate-and-save-budget', [HandCashController::class, 'calculateAndSaveBudget'])->name('calculate_and_save_budget');
+
+    // report Excel exports
+    Route::get('/Yearly_report/export-excel', [HandCashController::class, 'exportYearlyReport'])->name('Yearly_report.export_excel');
+    Route::get('/Monthly_report/export-excel', [HandCashController::class, 'exportMonthlyReport'])->name('Monthly_report.export_excel');
+    Route::get('/Monthly_invest/export-excel', [HandCashController::class, 'exportMonthlyInvest'])->name('Monthly_invest.export_excel');
+    Route::get('/Budge_Projection/export-excel', [HandCashController::class, 'exportBudgeProjection'])->name('Budge_Projection.export_excel');
+    Route::get('/interactive-dashboard/export-excel', [HandCashController::class, 'exportInteractiveDashboard'])->name('interactive.dashboard.export_excel');
+
+    // Financial analytics: AJAX data endpoints + new pages
+    Route::get('/home/data/kpis', [AnalyticsController::class, 'homeKpis'])->name('home.data.kpis');
+    Route::get('/Budge_Projection/data/forecast', [AnalyticsController::class, 'budgetForecast'])->name('Budge_Projection.data.forecast');
+    Route::get('/Budge_Projection/data/compare-actual', [AnalyticsController::class, 'compareActual'])->name('Budge_Projection.data.compare_actual');
+    Route::get('/interactive-dashboard/data/budget-alerts', [AnalyticsController::class, 'budgetAlerts'])->name('interactive.dashboard.data.budget_alerts');
+    Route::get('/cost-optimisation', [AnalyticsController::class, 'costOptimisation'])->name('cost_optimisation');
+    Route::get('/cost-optimisation/data', [AnalyticsController::class, 'costOptimisationData'])->name('cost_optimisation.data');
+    Route::get('/predictive-budget', [AnalyticsController::class, 'predictiveBudget'])->name('predictive_budget');
+
+    // Financial Analysis Dashboard: consolidated, drillable view over all the reports above
+    Route::get('/financial-analysis', [FinancialAnalysisDashboardController::class, 'index'])->name('financial_analysis.index');
+    Route::get('/financial-analysis/data', [FinancialAnalysisDashboardController::class, 'data'])->name('financial_analysis.data');
+    Route::get('/financial-analysis/export', [FinancialAnalysisDashboardController::class, 'export'])->name('financial_analysis.export');
+    Route::get('/financial-analysis/kpi/{type}', [FinancialAnalysisDashboardController::class, 'kpi'])->name('financial_analysis.kpi');
+    Route::post('/financial-analysis/analyze', [FinancialAnalysisDashboardController::class, 'analyze'])->name('financial_analysis.analyze');
+    Route::get('/financial-analysis/insights', [FinancialAnalysisDashboardController::class, 'insights'])->name('financial_analysis.insights');
+
+    Route::get('/live/signature', [LiveController::class, 'signature'])->name('live.signature');
+
+    // Database backup
+    Route::get('/backup/status', [BackupController::class, 'status'])->name('backup.status');
+    Route::post('/backup/run', [BackupController::class, 'run'])->name('backup.run');
+
+    // Ctrl+K search palette
+    Route::get('/search', SearchController::class)->name('search');
+
+    // Recurring income/expenses
+    Route::get('/recurring', [RecurringTransactionController::class, 'index'])->name('recurring.index');
+    Route::post('/recurring', [RecurringTransactionController::class, 'store'])->name('recurring.store');
+    Route::post('/recurring/run-now', [RecurringTransactionController::class, 'runNow'])->name('recurring.run_now');
+    Route::get('/recurring/{recurring}/edit', [RecurringTransactionController::class, 'edit'])->name('recurring.edit');
+    Route::put('/recurring/{recurring}', [RecurringTransactionController::class, 'update'])->name('recurring.update');
+    Route::post('/recurring/{recurring}/toggle', [RecurringTransactionController::class, 'toggle'])->name('recurring.toggle');
+    Route::delete('/recurring/{recurring}', [RecurringTransactionController::class, 'destroy'])->name('recurring.destroy');
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 Route::get('/read/{notification}', [NotificationController::class, 'read'])->name('notification.read');
@@ -142,53 +163,54 @@ Route::get('/read/{notification}', [NotificationController::class, 'read'])->nam
 
 require __DIR__ . '/auth.php';
 
-//php artisan command
+// Maintenance shortcuts (php artisan ...) are admin-only: /migrate-fresh wipes the database.
+Route::middleware(['auth', 'can:Admin'])->group(function () {
+    Route::get('/foo', function () {
+        Artisan::call('storage:link');
+    });
 
-Route::get('/foo', function () {
-    Artisan::call('storage:link');
-});
+    Route::get('/cleareverything', function () {
+        $clearcache = Artisan::call('cache:clear');
+        echo "Cache cleared<br>";
 
-Route::get('/cleareverything', function () {
-    $clearcache = Artisan::call('cache:clear');
-    echo "Cache cleared<br>";
+        $clearview = Artisan::call('view:clear');
+        echo "View cleared<br>";
 
-    $clearview = Artisan::call('view:clear');
-    echo "View cleared<br>";
+        $clearconfig = Artisan::call('config:cache');
+        echo "Config cleared<br>";
+    });
 
-    $clearconfig = Artisan::call('config:cache');
-    echo "Config cleared<br>";
-});
+    Route::get('/key =', function () {
+        $key =  Artisan::call('key:generate');
+        echo "key:generate<br>";
+    });
 
-Route::get('/key =', function () {
-    $key =  Artisan::call('key:generate');
-    echo "key:generate<br>";
-});
+    Route::get('/migrate', function () {
+        $migrate = Artisan::call('migrate');
+        echo "migration create<br>";
+    });
 
-Route::get('/migrate', function () {
-    $migrate = Artisan::call('migrate');
-    echo "migration create<br>";
-});
+    Route::get('/migrate-fresh', function () {
+        $fresh = Artisan::call('migrate:fresh --seed');
+        echo "migrate:fresh --seed create<br>";
+    });
 
-Route::get('/migrate-fresh', function () {
-    $fresh = Artisan::call('migrate:fresh --seed');
-    echo "migrate:fresh --seed create<br>";
-});
+    Route::get('/optimize', function () {
+        $optimize = Artisan::call('optimize:clear');
+        echo "optimize cleared<br>";
+    });
+    Route::get('/route-clear', function () {
+        $route_clear = Artisan::call('route:clear');
+        echo "route cleared<br>";
+    });
 
-Route::get('/optimize', function () {
-    $optimize = Artisan::call('optimize:clear');
-    echo "optimize cleared<br>";
-});
-Route::get('/route-clear', function () {
-    $route_clear = Artisan::call('route:clear');
-    echo "route cleared<br>";
-});
+    Route::get('/route-cache', function () {
+        $route_cache = Artisan::call('route:cache');
+        echo "route cache<br>";
+    });
 
-Route::get('/route-cache', function () {
-    $route_cache = Artisan::call('route:cache');
-    echo "route cache<br>";
-});
-
-Route::get('/updateapp', function () {
-    $dump_autoload = Artisan::call('dump-autoload');
-    echo 'dump-autoload complete';
+    Route::get('/updateapp', function () {
+        $dump_autoload = Artisan::call('dump-autoload');
+        echo 'dump-autoload complete';
+    });
 });

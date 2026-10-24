@@ -14,3 +14,6 @@ yarn-error.log
 .env
 .env.*
 !.env.example
+
+# Local DB dumps - contain real personal financial data, never commit
+*.sql

@@ -17,6 +17,13 @@ trait CreatesApplication
 
         $app->make(Kernel::class)->bootstrap();
 
+        // Feature tests use RefreshDatabase, which wipes the database. Refuse to run
+        // against anything but a dedicated *_test database so real data can't be lost.
+        $database = (string) $app['config']->get('database.connections.' . $app['config']->get('database.default') . '.database');
+        if (!str_ends_with($database, '_test') && $database !== ':memory:') {
+            throw new \RuntimeException("Refusing to run tests against database '{$database}': use a *_test database (see phpunit.xml).");
+        }
+
         return $app;
     }
 }

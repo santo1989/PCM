@@ -4,200 +4,436 @@
         Yearly Reports Dashboard
     </x-slot>
 
-
     <div class="container">
-        <div class="row justify-content-center pt-4">
-            <div class="col-md-3">
-                <a href="{{ route('Budge_Projection') }}" class="btn btn-sm btn-outline-danger">Budge Projection</a>
-            </div>
 
-            <div class="col-md-3">
-                <a href="{{ route('Yearly_report') }}" class="btn btn-sm btn-outline-danger">Yearly Report</a>
+        @include('backend.reports.partials.report_nav')
 
-            </div>
-            <div class="col-md-3">
-                <a href="{{ route('Monthly_report') }}" class="btn btn-sm btn-outline-danger">Monthly Report</a>
-            </div>
-            <div class="col-md-3">
-                <a href="{{ route('power_bi_report') }}" class="btn btn-sm btn-outline-danger">BI Report</a>
-            </div>
+        <x-backend.date-range-filter :start="$startDate" :end="$endDate" :min="$minDataDate"
+            note="Every section below covers exactly the selected range, one row per calendar month it touches.">
+                <a href="{{ route('Yearly_report.export_excel', ['start_date' => $startDate, 'end_date' => $endDate]) }}" class="btn btn-outline-success flex-fill flex-md-grow-0">
+                    <i class="bi bi-file-earmark-excel"></i> Excel
+                </a>
+                <button type="button" class="btn btn-outline-secondary flex-fill flex-md-grow-0" onclick="window.print()">
+                    <i class="bi bi-printer"></i> Print / PDF
+                </button>
+        </x-backend.date-range-filter>
 
-        </div>
-        <div class="row">
-            <div class="col-md-12 pt-2 pb-2">
+        <div id="printable">
+            <h2 class="text-center">Report: {{ \Carbon\Carbon::parse($startDate)->format('M d, Y') }} &ndash;
+                {{ \Carbon\Carbon::parse($endDate)->format('M d, Y') }}</h2>
 
-                <title>Budget Projection</title>
-                <!-- Include Chart.js library -->
-                <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-                <div>
-                    <canvas id="budgetChart" width="800" height="300"></canvas>
+            {{-- Detailed analysis / insights --}}
+            <div class="row justify-content-center mb-4">
+                <div class="col-md-2 col-6 mb-2">
+                    <div class="card text-center h-100">
+                        <div class="card-body p-2">
+                            <div class="text-muted small">Total Income</div>
+                            <div class="fw-bold text-success">{{ number_format($analysis['totalIncome'], 2) }}</div>
+                        </div>
+                    </div>
                 </div>
+                <div class="col-md-2 col-6 mb-2">
+                    <div class="card text-center h-100">
+                        <div class="card-body p-2">
+                            <div class="text-muted small">Total Expense</div>
+                            <div class="fw-bold text-danger">{{ number_format($analysis['totalExpense'], 2) }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2 col-6 mb-2">
+                    <div class="card text-center h-100">
+                        <div class="card-body p-2">
+                            <div class="text-muted small">Net</div>
+                            <div class="fw-bold {{ $analysis['netTotal'] >= 0 ? 'text-success' : 'text-danger' }}">
+                                {{ number_format($analysis['netTotal'], 2) }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2 col-6 mb-2">
+                    <div class="card text-center h-100">
+                        <div class="card-body p-2">
+                            <div class="text-muted small">Avg Savings Rate</div>
+                            <div class="fw-bold">{{ number_format($analysis['avgSavingsRate'], 1) }}%</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2 col-6 mb-2">
+                    <div class="card text-center h-100">
+                        <div class="card-body p-2">
+                            <div class="text-muted small" title="{{ $analysis['prevRangeStart'] }} to {{ $analysis['prevRangeEnd'] }}">
+                                Income vs Previous Period</div>
+                            <div class="fw-bold">
+                                @if (is_null($analysis['incomeYoyChange']))
+                                    <span class="text-muted">N/A</span>
+                                @else
+                                    <span class="{{ $analysis['incomeYoyChange'] >= 0 ? 'text-success' : 'text-danger' }}">
+                                        {{ $analysis['incomeYoyChange'] >= 0 ? '+' : '' }}{{ number_format($analysis['incomeYoyChange'], 1) }}%
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2 col-6 mb-2">
+                    <div class="card text-center h-100">
+                        <div class="card-body p-2">
+                            <div class="text-muted small" title="{{ $analysis['prevRangeStart'] }} to {{ $analysis['prevRangeEnd'] }}">
+                                Expense vs Previous Period</div>
+                            <div class="fw-bold">
+                                @if (is_null($analysis['expenseYoyChange']))
+                                    <span class="text-muted">N/A</span>
+                                @else
+                                    <span class="{{ $analysis['expenseYoyChange'] <= 0 ? 'text-success' : 'text-danger' }}">
+                                        {{ $analysis['expenseYoyChange'] >= 0 ? '+' : '' }}{{ number_format($analysis['expenseYoyChange'], 1) }}%
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                <script>
-                    // Get the data from PHP and convert it to a JavaScript object
-                    var monthlyData = @json($monthlyData);
+            <h5 class="text-center text-muted mb-3"><i class="bi bi-calendar-range"></i> Seasonal Trends</h5>
+            <div class="row justify-content-center mb-4">
+                <div class="col-md-3 col-6 mb-2">
+                    <div class="alert alert-success mb-0 text-center py-2">
+                        <div class="small">Best Income Month</div>
+                        <strong>{{ $analysis['bestIncomeMonth'] ? $monthlyData[$analysis['bestIncomeMonth']]['label'] : 'N/A' }}</strong>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-2">
+                    <div class="alert alert-warning mb-0 text-center py-2">
+                        <div class="small">Weakest Income Month</div>
+                        <strong>{{ $analysis['worstIncomeMonth'] ? $monthlyData[$analysis['worstIncomeMonth']]['label'] : 'N/A' }}</strong>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-2">
+                    <div class="alert alert-danger mb-0 text-center py-2">
+                        <div class="small">Highest Expense Month</div>
+                        <strong>{{ $analysis['highestExpenseMonth'] ? $monthlyData[$analysis['highestExpenseMonth']]['label'] : 'N/A' }}</strong>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-2">
+                    <div class="alert alert-info mb-0 text-center py-2">
+                        <div class="small">Lowest Expense Month</div>
+                        <strong>{{ $analysis['lowestExpenseMonth'] ? $monthlyData[$analysis['lowestExpenseMonth']]['label'] : 'N/A' }}</strong>
+                    </div>
+                </div>
+            </div>
 
-                    // Extract the income and expenses data for the graph
-                    var incomeData = Object.values(monthlyData).map(data => data.income);
-                    var expenseData = Object.values(monthlyData).map(data => data.expense);
-                    var needsData = Object.values(monthlyData).map(data => data.needs);
-                    var wantsData = Object.values(monthlyData).map(data => data.wants);
-                    var savingsData = Object.values(monthlyData).map(data => data.savings);
-                    var thisMonthneedsData = Object.values(monthlyData).map(data => data.thisMonthneeds);
-                    var thisMonthwantsData = Object.values(monthlyData).map(data => data.thisMonthwants);
-                    var thisMonthsavingsData = Object.values(monthlyData).map(data => data.thisMonthsavings);
+            <!-- What-if slider: pure client-side arithmetic on data already on the page -->
+            <div class="card mb-4">
+                <div class="card-header"><i class="bi bi-sliders"></i> What-If Simulator</div>
+                <div class="card-body">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-5">
+                            <label class="form-label small">Income change: <span id="whatIfIncomeLabel">0%</span></label>
+                            <input type="range" class="form-range" id="whatIfIncome" min="-50" max="50" value="0" step="1">
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label small">Expense change: <span id="whatIfExpenseLabel">0%</span></label>
+                            <input type="range" class="form-range" id="whatIfExpense" min="-50" max="50" value="0" step="1">
+                        </div>
+                        <div class="col-md-2 text-center">
+                            <div class="small text-muted">Simulated Net</div>
+                            <div class="fw-bold fs-5" id="whatIfNet">{{ number_format($analysis['netTotal'], 2) }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                    // Chart.js configuration
-                    var ctx = document.getElementById('budgetChart').getContext('2d');
-                    var budgetChart = new Chart(ctx, {
-                        type: 'bar',
-                        data: {
-                            labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September',
-                                'October', 'November', 'December'
-                            ],
-                            datasets: [{
-                                    label: 'Income',
-                                    borderColor: 'green',
-                                    backgroundColor: 'green',
-                                    data: incomeData
-                                },
-                                {
-                                    label: 'Expenses',
-                                    // borderColor: 'red',
-                                    bacgroundColor: 'red',
-                                    color: 'red',
-                                    data: expenseData
-                                },
-                                // {
-                                //     label: 'Needs',
-                                //     borderColor: 'blue',
-                                //     backgroundColor: 'blue',
-                                //     data: needsData
-                                // },
-                                //  {
-                                //     label: 'This Month Needs',
-                                //     borderColor: 'yellow',
-                                //     backgroundColor: 'yellow',
-                                //     data: thisMonthneedsData
-                                // },
-                                //  {
-                                //     label: 'Wants',
-                                //     borderColor: 'orange',
-                                //     backgroundColor: 'orange',
-                                //     data: wantsData
-                                // },
-                                // {
-                                //     label: 'This Month Wants',
-                                //     borderColor: 'pink',
-                                //     backgroundColor: 'pink',
-                                //     data: thisMonthwantsData
-                                // },
-                                // {
-                                //     label: 'Savings',
-                                //     borderColor: 'purple',
-                                //     backgroundColor: 'purple',
-                                //     data: savingsData
-                                // },
+            <div class="row">
+                <div class="col-md-12 pt-2 pb-2">
+                    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+                    <div>
+                        <canvas id="budgetChart" width="800" height="300"></canvas>
+                    </div>
 
-                                // {
-                                //     label: 'This Month Savings',
-                                //     borderColor: 'black',
-                                //     backgroundColor: 'black',
-                                //     data: thisMonthsavingsData
-                                // }
+                    <script>
+                        var monthlyData = @json($monthlyData);
 
+                        var monthLabels = Object.values(monthlyData).map(data => data.label);
+                        var incomeData = Object.values(monthlyData).map(data => data.income);
+                        var expenseData = Object.values(monthlyData).map(data => data.expense);
+                        var netData = Object.values(monthlyData).map(data => data.net);
 
-                            ]
-                        },
-                        options: {
+                        // What-if simulator: pure arithmetic on totals already rendered on this page.
+                        (function () {
+                            var baseIncome = {{ $analysis['totalIncome'] }};
+                            var baseExpense = {{ $analysis['totalExpense'] }};
+                            var incomeSlider = document.getElementById('whatIfIncome');
+                            var expenseSlider = document.getElementById('whatIfExpense');
+                            var incomeLabel = document.getElementById('whatIfIncomeLabel');
+                            var expenseLabel = document.getElementById('whatIfExpenseLabel');
+                            var netOutput = document.getElementById('whatIfNet');
 
-                            scales: {
+                            function recalc() {
+                                var incomePct = parseInt(incomeSlider.value, 10);
+                                var expensePct = parseInt(expenseSlider.value, 10);
+                                incomeLabel.textContent = (incomePct >= 0 ? '+' : '') + incomePct + '%';
+                                expenseLabel.textContent = (expensePct >= 0 ? '+' : '') + expensePct + '%';
 
-                                y: {
-                                    beginAtZero: true
+                                var simulatedIncome = baseIncome * (1 + incomePct / 100);
+                                var simulatedExpense = baseExpense * (1 + expensePct / 100);
+                                var net = simulatedIncome - simulatedExpense;
+
+                                netOutput.textContent = net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                netOutput.className = 'fw-bold fs-5 ' + (net >= 0 ? 'text-success' : 'text-danger');
+                            }
+
+                            incomeSlider.addEventListener('input', recalc);
+                            expenseSlider.addEventListener('input', recalc);
+                        })();
+
+                        var ctx = document.getElementById('budgetChart').getContext('2d');
+                        var budgetChart = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: monthLabels,
+                                datasets: [{
+                                        label: 'Income',
+                                        backgroundColor: 'rgba(40, 167, 69, 0.7)',
+                                        data: incomeData
+                                    },
+                                    {
+                                        label: 'Expenses',
+                                        backgroundColor: 'rgba(220, 53, 69, 0.7)',
+                                        data: expenseData
+                                    },
+                                    {
+                                        label: 'Net',
+                                        type: 'line',
+                                        borderColor: '#0d6efd',
+                                        backgroundColor: '#0d6efd',
+                                        fill: false,
+                                        data: netData
+                                    }
+                                ]
+                            },
+                            options: {
+                                scales: {
+                                    y: {
+                                        beginAtZero: true
+                                    }
                                 }
                             }
-                        }
-                    });
-                </script>
-
+                        });
+                    </script>
+                </div>
             </div>
 
             {{-- Yearly Monthly Data Start --}}
-            <h1 class="text-center">Full Yearly Report</h1>
-            <table class="table table-bordered table-hover text-center">
-                <thead>
-                    <tr>
-                        <th></th>
-                        <th>Incame / Expense</th>
-                        <th>Balance</th>
-                        <th>Needs</th>
-                        <th>Balance</th>
-                        <th>Wants</th>
-                        <th>Balance</th>
-                        <th>Savings</th>
-                        <th>Balance</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($monthlyData as $month => $data)
+            <h4 class="text-center">Month-by-Month Breakdown</h4>
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover text-center">
+                    <thead>
                         <tr>
+                            <th></th>
+                            <th>Income / Expense</th>
+                            <th>Balance</th>
+                            <th>Needs</th>
+                            <th>Balance</th>
+                            <th>Wants</th>
+                            <th>Balance</th>
+                            <th>Savings</th>
+                            <th>Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($monthlyData as $periodKey => $data)
+                            <tr>
+                                <td rowspan="2">
+                                    {{ $data['label'] }} </td>
+                                <td>
+                                    @if ($data['income'] > 0)
+                                        <button type="button"
+                                            class="btn btn-link p-0 text-decoration-none text-primary"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#monthIncomeDetailsModal_m{{ $periodKey }}">
+                                            {{ number_format($data['income'], 2) }}
+                                        </button>
+                                    @else
+                                        {{ number_format($data['income'], 2) }}
+                                    @endif
+                                </td>
+                                <td rowspan="2" class="bg-info">
+                                    {{ number_format($data['income'] - $data['expense'], 2) }}</td>
+                                <td>{{ number_format($data['needs'], 2) }}</td>
+                                <td rowspan="2" class="bg-info">
+                                    {{ number_format($data['needs'] - $data['thisMonthneeds'], 2) }}</td>
+                                <td>{{ number_format($data['wants'], 2) }}</td>
+                                <td rowspan="2" class="bg-info">
+                                    {{ number_format($data['wants'] - $data['thisMonthwants'], 2) }}</td>
+                                <td>{{ number_format($data['savings'], 2) }}</td>
+                                <td rowspan="2" class="bg-info">
+                                    {{ number_format($data['savings'] - $data['thisMonthsavings'], 2) }}</td>
+                            </tr>
+                            <tr>
+                                <td class="bg-danger">
+                                    @if ($data['expense'] > 0)
+                                        <button type="button"
+                                            class="btn btn-link p-0 text-decoration-none text-primary"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#monthExpenseDetailsModal_m{{ $periodKey }}">
+                                            {{ number_format($data['expense'], 2) }}
+                                        </button>
+                                    @else
+                                        {{ number_format($data['expense'], 2) }}
+                                    @endif
+                                </td>
+                                <td>{{ number_format($data['thisMonthneeds'], 2) }}</td>
+                                <td>{{ number_format($data['thisMonthwants'], 2) }}</td>
+                                <td>{{ number_format($data['thisMonthsavings'], 2) }}</td>
+                            </tr>
+                        @endforeach
+                        <tr class="bg-success">
+                            <th rowspan="2">Total</th>
+                            <td>{{ number_format(array_sum(array_column($monthlyData, 'income')), 2) }}</td>
                             <td rowspan="2">
-                                {{ date('F', mktime(0, 0, 0, $month, 1)) }} </td>
-                            <td>{{ $data['income'] }}</td>
-                            <td rowspan="2" class="bg-info">
-                                {{ $data['income'] - $data['expense'] }}</td>
-                            <td>{{ $data['needs'] }}</td>
-                            <td rowspan="2" class="bg-info">
-                                {{ $data['needs'] - $data['thisMonthneeds'] }}</td>
-                            <td>{{ $data['wants'] }}</td>
-                            <td rowspan="2" class="bg-info">
-                                {{ $data['wants'] - $data['thisMonthwants'] }}</td>
-                            <td>{{ $data['savings'] }}</td>
-                            <td rowspan="2" class="bg-info">
-                                {{ $data['savings'] - $data['thisMonthsavings'] }}</td>
+                                {{ number_format(array_sum(array_column($monthlyData, 'income')) - array_sum(array_column($monthlyData, 'expense')), 2) }}
+                            </td>
+                            <td>{{ number_format(array_sum(array_column($monthlyData, 'needs')), 2) }}</td>
+                            <td rowspan="2">
+                                {{ number_format(array_sum(array_column($monthlyData, 'needs')) - array_sum(array_column($monthlyData, 'thisMonthneeds')), 2) }}
+                            </td>
+                            <td>{{ number_format(array_sum(array_column($monthlyData, 'wants')), 2) }}</td>
+                            <td rowspan="2">
+                                {{ number_format(array_sum(array_column($monthlyData, 'wants')) - array_sum(array_column($monthlyData, 'thisMonthwants')), 2) }}
+                            </td>
+                            <td>{{ number_format(array_sum(array_column($monthlyData, 'savings')), 2) }}</td>
+                            <td rowspan="2">
+                                {{ number_format(array_sum(array_column($monthlyData, 'savings')) - array_sum(array_column($monthlyData, 'thisMonthsavings')), 2) }}
+                            </td>
                         </tr>
-                        <tr>
-                            <td class="bg-danger">{{ $data['expense'] }}</td>
-                            <td>{{ $data['thisMonthneeds'] }}</td>
-                            <td>{{ $data['thisMonthwants'] }}</td>
-                            <td>{{ $data['thisMonthsavings'] }}</td>
+                        <tr class="bg-danger">
+                            <td>{{ number_format(array_sum(array_column($monthlyData, 'expense')), 2) }}</td>
+                            <td>{{ number_format(array_sum(array_column($monthlyData, 'thisMonthneeds')), 2) }}</td>
+                            <td>{{ number_format(array_sum(array_column($monthlyData, 'thisMonthwants')), 2) }}</td>
+                            <td>{{ number_format(array_sum(array_column($monthlyData, 'thisMonthsavings')), 2) }}</td>
                         </tr>
-                    @endforeach
-                    <tr class="bg-success">
-                        <th rowspan="2">Total</th>
-                        <td>{{ array_sum(array_column($monthlyData, 'income')) }}</td>
-                        <td rowspan="2">
-                            {{ array_sum(array_column($monthlyData, 'income')) - array_sum(array_column($monthlyData, 'expense')) }}
-                        </td>
-                        <td>{{ array_sum(array_column($monthlyData, 'needs')) }}</td>
-                        <td rowspan="2">
-                            {{ array_sum(array_column($monthlyData, 'needs')) - array_sum(array_column($monthlyData, 'thisMonthneeds')) }}
-                        </td>
-                        <td>{{ array_sum(array_column($monthlyData, 'wants')) }}</td>
-                        <td rowspan="2">
-                            {{ array_sum(array_column($monthlyData, 'wants')) - array_sum(array_column($monthlyData, 'thisMonthwants')) }}
-                        </td>
-                        <td>{{ array_sum(array_column($monthlyData, 'savings')) }}</td>
-                        <td rowspan="2">
-                            {{ array_sum(array_column($monthlyData, 'savings')) - array_sum(array_column($monthlyData, 'thisMonthsavings')) }}
-                        </td>
-                    </tr>
-                    <tr class="bg-danger">
-                        <td>{{ array_sum(array_column($monthlyData, 'expense')) }}</td>
-                        <td>{{ array_sum(array_column($monthlyData, 'thisMonthneeds')) }}</td>
-                        <td>{{ array_sum(array_column($monthlyData, 'thisMonthwants')) }}</td>
-                        <td>{{ array_sum(array_column($monthlyData, 'thisMonthsavings')) }}</td>
-                    </tr>
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            </div>
 
+            {{-- Print / PDF only: the modals' category breakdowns, which can't be printed from a popup. --}}
+            @php
+                $yearCount = collect($monthlyData)->flatMap(fn($d) => array_keys($d['years']))->unique()->count();
+            @endphp
+            <div class="d-none d-print-block" style="page-break-before: always;">
+                <h4 class="text-center">Category-wise Income / Expense Breakdown</h4>
+                <table style="border-collapse:collapse;width:100%;font-size:12px;">
+                    <tbody>
+                        @include('backend.reports.partials._yearly_category_rows', [
+                            'monthlyData' => $monthlyData,
+                            'colspan' => $yearCount + 2,
+                        ])
+                    </tbody>
+                </table>
+            </div>
 
+            @foreach ($monthlyData as $periodKey => $data)
+                @foreach ([
+                    ['type' => 'income', 'title' => 'Income', 'header' => 'bg-primary text-white', 'close' => 'btn-close-white', 'text' => 'text-success', 'foot' => 'table-primary'],
+                    ['type' => 'expense', 'title' => 'Expense', 'header' => 'bg-warning text-dark', 'close' => '', 'text' => 'text-danger', 'foot' => 'table-warning'],
+                ] as $cfg)
+                    <div class="modal fade" id="month{{ $cfg['title'] }}DetailsModal_m{{ $periodKey }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                            <div class="modal-content">
+                                <div class="modal-header {{ $cfg['header'] }}">
+                                    <h5 class="modal-title">{{ $cfg['title'] }} Details for {{ $data['label'] }}</h5>
+                                    <button type="button" class="btn-close {{ $cfg['close'] }}" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <h6 class="fw-bold">{{ $data['label'] }} &mdash; All Years ({{ implode(', ', array_keys($data['years'])) }})</h6>
+                                    <div class="table-responsive mb-4">
+                                        <table class="table table-hover table-striped">
+                                            <thead class="table-light">
+                                                <tr><th>Category</th><th class="text-end">Total {{ $cfg['title'] }}</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                @forelse ($data[$cfg['type'] . 'ByCategory'] as $name => $amount)
+                                                    <tr>
+                                                        <td>{{ $name }}</td>
+                                                        <td class="text-end fw-semibold {{ $cfg['text'] }}">{{ number_format($amount, 2) }}</td>
+                                                    </tr>
+                                                @empty
+                                                    <tr><td colspan="2" class="text-center text-muted">No records</td></tr>
+                                                @endforelse
+                                            </tbody>
+                                            <tfoot class="{{ $cfg['foot'] }}">
+                                                <tr><td class="fw-bold">Total</td><td class="text-end fw-bold">{{ number_format($data[$cfg['type']], 2) }}</td></tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
 
-
+                                    @foreach ($data['years'] as $yearData)
+                                        <h6 class="fw-bold">
+                                            {{ $data['label'] }} {{ $yearData['year'] }}
+                                            <small class="text-muted fw-normal">({{ $yearData['rangeStart'] }} to {{ $yearData['rangeEnd'] }})</small>
+                                        </h6>
+                                        <div class="table-responsive mb-4">
+                                            <table class="table table-sm table-hover table-striped">
+                                                <thead class="table-light">
+                                                    <tr><th>Category</th><th class="text-end">{{ $cfg['title'] }}</th></tr>
+                                                </thead>
+                                                <tbody>
+                                                    @forelse ($yearData[$cfg['type'] . 'ByCategory'] as $name => $amount)
+                                                        <tr>
+                                                            <td>{{ $name }}</td>
+                                                            <td class="text-end fw-semibold {{ $cfg['text'] }}">{{ number_format($amount, 2) }}</td>
+                                                        </tr>
+                                                    @empty
+                                                        <tr><td colspan="2" class="text-center text-muted">No records</td></tr>
+                                                    @endforelse
+                                                </tbody>
+                                                <tfoot class="{{ $cfg['foot'] }}">
+                                                    <tr><td class="fw-bold">Total</td><td class="text-end fw-bold">{{ number_format($yearData[$cfg['type']], 2) }}</td></tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            @endforeach
         </div>
-        {{-- Yearly Monthly Data End --}}
 
-    </div>
+        @php
+            $yoySlope = $aiInsights['forecast']['overall']['forecast']['slope'] ?? 0;
+            $yoyTrend = $yoySlope > 0 ? 'Upward' : ($yoySlope < 0 ? 'Downward' : 'Stable');
+            $yoyForecast = $aiInsights['forecast']['overall']['forecast']['forecast'][0] ?? 0;
+        @endphp
+        <div class="card border-info mt-4">
+            <div class="card-header bg-info text-white">AI Year-Over-Year Analysis</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <div class="small text-muted">Spending Trend</div>
+                            <h4>{{ $yoyTrend }}</h4>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <div class="small text-muted">Forecast Next Month</div>
+                            <h4>{{ number_format($yoyForecast, 2) }}</h4>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <div class="small text-muted">Savings Rate</div>
+                            <h4>{{ number_format($analysis['avgSavingsRate'], 1) }}%</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @include('backend.reports.partials._ai_insights_panel', [
+            'aiInsights' => $aiInsights,
+            'title' => 'AI Insights for ' . $startDate . ' to ' . $endDate,
+        ])
     </div>
 </x-backend.layouts.master>

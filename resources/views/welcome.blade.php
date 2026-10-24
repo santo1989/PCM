@@ -4,80 +4,65 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
-        <!-- Font Awesome -->
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
-        <!-- Google Fonts -->
-        <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
-        <!-- MDB -->
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/6.0.1/mdb.min.css" rel="stylesheet" />
+        <title>{{ config('app.name', 'Personal Cost Management') }}</title>
 
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        <!-- Bootstrap Icons (replaces Font Awesome + MDB here, matches the rest of the app) -->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+        <link href="{{ asset('ui/backend/css/app-theme.css') }}" rel="stylesheet">
+
+        <style>
+            body.welcome-gradient-bg {
+                background: var(--grad-primary);
+                min-height: 100vh;
+            }
+        </style>
     </head>
 
-    <body>
-        <!-- The video -->
-        {{-- style="background-image: linear-gradient(#40c47c,#40c47c,#40c47c); background-size: cover; background-repeat: repeat; height:100vh;" --}}
-        <div class="container-fluid">
+    <body class="welcome-gradient-bg">
+        <div class="min-vh-100 d-flex flex-column">
+            <div class="flex-grow-1 d-flex align-items-center justify-content-center px-3 py-5">
+                <div class="p-4 p-md-5 text-white text-center" style="background: rgba(0, 0, 0, 0.35); border-radius: 1rem; max-width: 480px; width: 100%;">
+                    <img src="{{ asset('images/assets/logo.png') }}" alt="" class="img rounded mb-4" style="max-height: 160px;">
 
-
-            <div style="margin: 0 auto; position: fixed; background: rgba(0, 0, 0, 0.5); color: #f1f1f1; left:33vw; right:33vw; top:20vh; width: 33vw;"
-                id="glassPanel">
-                <div class="p-5 text-white text-center" id="logo">
-                    <div class="text-center py-5">
-                        <img src="{{ asset('images/assets/logo.png') }}" alt="" heigt=600vh; width=200vw;
-                            class="img rounded text-center text-white">
-                    </div>
-
-                    <div class="flex justify-content-center text-center py-1">
-                        @if (Route::has('login'))
-                            <div class="hidden fixed top-0 right-0 px-6 py-4 sm:block">
-                                @auth
-                                    <a href="{{ url('home') }}" class="btn btn-outline-light btn-lg">Dashboard</a>
-                                @else
-                                    {{-- <a href="{{ route('login') }}" class="btn btn-outline-light btn-lg">Log in</a> --}}
-                                    <a type="button" class="btn btn-outline-light btn-lg" data-bs-toggle="modal"
-                                        data-bs-target="#loginModal" id="loginPanel">
-                                        Log in
-                                    </a>
-
-
-                                    {{-- @if (Route::has('register'))
-                                        <a href="{{ route('register') }}" class="btn btn-outline-light btn-lg">Create New Account</a>
-                                       
-                                    @endif --}}
-                                @endauth
-                            </div>
-                        @endif
-                    </div>
-
+                    @if (Route::has('login'))
+                        @auth
+                            <a href="{{ url('home') }}" class="btn btn-outline-light btn-lg">Dashboard</a>
+                        @else
+                            <a type="button" class="btn btn-outline-light btn-lg" data-bs-toggle="modal"
+                                data-bs-target="#loginModal" id="loginPanel">
+                                Log in
+                            </a>
+                        @endauth
+                    @endif
                 </div>
             </div>
 
-
-        </div>
-        <div class="footer fixed-bottom mt-5 p-4 text-white text-center text-light pt-1" id="footer">
-            {{ now()->year }} -Santo
+            <div class="p-3 text-white text-center small" style="background: rgba(0, 0, 0, 0.2);">
+                {{ now()->year }} -Santo
+            </div>
         </div>
 
         <!-- login Modal start-->
-        <div class="modal fade text-light" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel"
+        <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel"
             data-bs-backdrop="static" aria-hidden="true">
-            <div class="modal-dialog modal-lg text-light"
-                style="margin: 0 auto; position: fixed; left:33%; right:33%; top:10%; width: 33%; opacity: 1; background-color: transparent; background-color: rgba(0,0,0,.5)">
-                <div class="modal-content" style="background-color: transparent; border: 2px solid #40c47c;">
-                    <div class="modal-header text-light">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content text-light" style="background: rgba(20, 20, 30, 0.85); border: 1px solid rgba(255,255,255,0.25);">
+                    <div class="modal-header text-light border-0">
                         <h5 class="modal-title text-center text-light" id="loginModalLabel">Log in</h5>
 
-                        <button type="button" class="btn btn-light btn-close" data-bs-dismiss="modal"
-                            aria-label="Close" style="background-color: white; border-color: white; color: black;"
-                            onmouseover="this.classList.add('btn-danger')"
-                            onmouseout="this.classList.remove('btn-danger')"></button>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                            aria-label="Close"></button>
 
                     </div>
-                    <div class="modal-body text-center text-light" style="background-color: transparent;">
+                    <div class="modal-body text-center text-light">
                         <!-- Your x-guest-layout code here -->
-                        <div class="card p-3 m-3" style="background-color: transparent;">
+                        <div class="card p-3 m-3" style="background-color: transparent; border: none;">
                             <x-slot name="logo">
                                 <a href="/">
                                     <img src="{{ asset('images/assets/logo.png') }}" alt="" heigt=600px;

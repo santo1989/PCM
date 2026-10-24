@@ -9,8 +9,19 @@ class CategoryController extends Controller
 {
     public function index()
     {
-        $categories = Category::all();
-        return view('backend.library.categories.index', compact('categories'));
+        $query = Category::query()->orderBy("id");
+        if ($search = trim((string) request("search"))) {
+            $query->where(function ($q) use ($search) {
+                $q->where("name", "like", $this->likeTerm($search))
+                    ->orWhere("types", "like", $this->likeTerm($search))
+                    ->orWhere("rules", "like", $this->likeTerm($search));
+            });
+        }
+        if ($types = array_filter((array) request("types"))) {
+            $query->whereIn("types", array_map("strtoupper", $types));
+        }
+        $categories = $query->paginate($this->perPage())->withQueryString();
+        return view("backend.library.categories.index", compact('categories'));
     }
 
 
@@ -27,27 +38,25 @@ class CategoryController extends Controller
             'name' => 'required|min:3|max:191',
             'types' => 'required',
             'rules' => 'required',
+            'monthly_budget' => 'nullable|numeric|min:0',
         ]);
 
-        $categories = Category::all();
         // Data insert
         $categories = new Category;
         $categories->name = $request->name;
         $categories->types = $request->types;
-        if ($request->types == 'expense') // if types is 'expense
-        {
-            $categories->rules = $request->rules;
-        } elseif ($request->types == 'Loan' || $request->types == 'Return') { // if types is 'income
+        $types = strtoupper((string) $request->types);
+        if (in_array($types, ['EXPENSE', 'LOAN', 'RETURN'], true)) {
             $categories->rules = $request->rules;
         } else {
             $categories->rules = '0';
         }
-
+        $categories->monthly_budget = $request->filled('monthly_budget') ? $request->monthly_budget : null;
 
         $categories->save();
 
         // Redirect
-        return redirect()->route('categories.index');
+        return $this->redirectToIndex('categories.index');
     }
 
 
@@ -71,24 +80,24 @@ class CategoryController extends Controller
             'name' => 'required|min:3|max:191',
             'types' => 'required',
             'rules' => 'required',
+            'monthly_budget' => 'nullable|numeric|min:0',
         ]);
 
         // Data update
         $categories = Category::findOrFail($id);
         $categories->name = $request->name;
         $categories->types = $request->types;
-        if ($request->types == 'expense') // if types is 'expense
-        {
-            $categories->rules = $request->rules;
-        } elseif ($request->types == 'Loan' || $request->types == 'Return') { // if types is 'income
+        $types = strtoupper((string) $request->types);
+        if (in_array($types, ['EXPENSE', 'LOAN', 'RETURN'], true)) {
             $categories->rules = $request->rules;
         } else {
             $categories->rules = '0';
         }
+        $categories->monthly_budget = $request->filled('monthly_budget') ? $request->monthly_budget : null;
         $categories->save();
 
         // Redirect
-        return redirect()->route('categories.index');
+        return $this->redirectToIndex('categories.index');
     }
 
 
@@ -96,6 +105,6 @@ class CategoryController extends Controller
     {
         $categories = Category::findOrFail($id)->delete();
 
-        return redirect()->route('categories.index')->withMessage('Category are deleted successfully!');
+        return $this->redirectToIndex('categories.index')->withMessage('Category are deleted successfully!');
     }
 }

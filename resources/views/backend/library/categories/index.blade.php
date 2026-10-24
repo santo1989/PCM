@@ -21,88 +21,123 @@
                     </div>
                 </div>
             @else
-                @if (session('message'))
-                    <div class="alert alert-success">
-                        <span class="close" data-dismiss="alert">&times;</span>
-                        <strong>{{ session('message') }}.</strong>
-                    </div>
-                @endif
-
+                <x-backend.layouts.elements.message :message="session('message')" />
                 <x-backend.layouts.elements.errors />
 
-                <div class="row">
-                    <div class="col-12">
-                        <div class="card">
-                            <div class="card-header">
-
-                                <x-backend.form.anchor :href="route('categories.create')" type="create" />
-                            </div>
-                            <!-- /.card-header -->
-                            <div class="card-body">
-                                {{-- category Table goes here --}}
-
-                                <table id="datatablesSimple" class="table table-bordered table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Sl#</th>
-                                            <th>Name</th>
-                                            <th>Types</th>
-                                            <th>Rules</th>
-                                            <th>Actions</th>
-
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @php $sl=0 @endphp
-                                        @foreach ($categories as $category)
-                                            <tr>
-                                                <td>{{ ++$sl }}</td>
-                                                <td>{{ $category->name }}</td>
-                                                <td>{{ $category->types }}</td>
-                                                <td>{{ $category->rules }}</td>
-                                                <td>
-
-                                                    <x-backend.form.anchor :href="route('categories.edit', ['category' => $category->id])" type="edit" />
-
-
-
-                                                    <x-backend.form.anchor :href="route('categories.show', ['category' => $category->id])" type="show" />
-
-                                                    <form style="display:inline"
-                                                        action="{{ route('categories.destroy', ['category' => $category->id]) }}"
-                                                        method="POST">
-                                                        @csrf
-                                                        @method('delete')
-
-                                                        <button
-                                                            onclick="return confirm('Are you sure want to delete ?')"
-                                                            class="btn btn-outline-danger my-1 mx-1 inline btn-sm"
-                                                            type="submit"><i class="bi bi-trash"></i> Delete</button>
-                                                    </form>
-
-                                                </td>
-                                            </tr>
-                                        @endforeach
-
-                                    </tbody>
-                                </table>
-                            </div>
-                            <!-- /.card-body -->
-                        </div>
-                        <!-- /.card -->
-
-
-                        <!-- /.card -->
+                <div class="gradient-header mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <h4 class="mb-1 text-white">Categories</h4>
+                        <div class="small">Income, expense and 50/30/20 rule categories used across every entry.</div>
                     </div>
-                    <!-- /.col -->
+                    <a href="{{ route('categories.create') }}" class="btn btn-light">
+                        <i class="bi bi-plus-circle"></i> Create Category
+                    </a>
                 </div>
-                <!-- /.row -->
+
+                <x-backend.insights-panel :insights="\App\Services\InsightEngine::dashboardSummary()" />
+
+                <div class="card mb-3 no-print">
+                    <div class="card-body">
+                        <form method="GET" action="{{ route('categories.index') }}" data-live-filter class="row g-2 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label small mb-1">Search</label>
+                                <input type="search" name="search" class="form-control" value="{{ request('search') }}" placeholder="Name, type or rule..." autocomplete="off">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small mb-1">Types</label>
+                                <select name="types[]" class="form-select select2" multiple data-placeholder="All Types">
+                                    @foreach (['INCOME', 'EXPENSE', 'LOAN', 'RETURN'] as $t)
+                                        <option value="{{ $t }}" {{ in_array($t, array_map('strtoupper', (array) request('types', []))) ? 'selected' : '' }}>{{ $t }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-2"><x-backend.per-page :default="25" /></div>
+                            <div class="col-md-3">
+                                <a href="{{ route('categories.index') }}" class="btn btn-outline-danger"><i class="bi bi-x-circle"></i> Reset</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12" id="live-categories" data-live-region>
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    @php
+                                        // Client-side-only icon lookup keyed on the category's existing "types"
+                                        // value — categories has no icon column, so nothing is persisted here.
+                                        $categoryTypeIcon = [
+                                            'INCOME' => 'bi-cash-coin text-success',
+                                            'EXPENSE' => 'bi-cart-fill text-danger',
+                                            'LOAN' => 'bi-arrow-left-right text-warning',
+                                            'RETURN' => 'bi-arrow-left-right text-info',
+                                        ];
+                                        $budgets = \App\Services\BudgetService::currentMonth()->keyBy('id');
+                                    @endphp
+                                    <table class="table table-bordered table-hover table-responsive-cards">
+                                        <thead>
+                                            <tr>
+                                                <th>Sl#</th>
+                                                <th>Name</th>
+                                                <th>Types</th>
+                                                <th>Rules</th>
+                                                <th>Budget ({{ now()->format('M') }})</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @php $sl = ($categories->currentPage() - 1) * $categories->perPage(); @endphp
+                                            @foreach ($categories as $category)
+                                                <tr>
+                                                    <td data-label="Sl#">{{ ++$sl }}</td>
+                                                    <td data-label="Name">
+                                                        <i class="bi {{ $categoryTypeIcon[$category->types] ?? 'bi-tag-fill text-secondary' }} me-1"></i>
+                                                        {{ $category->name }}
+                                                    </td>
+                                                    <td data-label="Types">{{ $category->types }}</td>
+                                                    <td data-label="Rules">{{ $category->rules }}</td>
+                                                    <td data-label="Budget" style="min-width: 150px;">
+                                                        @if ($b = $budgets[$category->id] ?? null)
+                                                            <div class="small text-nowrap">
+                                                                {{ number_format($b['spent'], 0) }} / {{ number_format($b['budget'], 0) }}
+                                                                <span class="{{ $b['percent'] >= 100 ? 'text-danger' : ($b['percent'] >= \App\Services\BudgetService::WARN_AT ? 'text-warning' : 'text-muted') }}">({{ $b['percent'] }}%)</span>
+                                                            </div>
+                                                            <div class="progress mt-1" style="height: 5px;">
+                                                                <div class="progress-bar {{ $b['percent'] >= 100 ? 'bg-danger' : ($b['percent'] >= \App\Services\BudgetService::WARN_AT ? 'bg-warning' : 'bg-success') }}" style="width: {{ min($b['percent'], 100) }}%"></div>
+                                                            </div>
+                                                        @else
+                                                            <span class="text-muted small">—</span>
+                                                        @endif
+                                                    </td>
+                                                    <td data-label="Actions">
+                                                        <x-backend.form.anchor
+                                                            :href="route('categories.edit', ['category' => $category->id])"
+                                                            type="edit" />
+
+                                                        <x-backend.form.anchor
+                                                            :href="route('categories.show', ['category' => $category->id])"
+                                                            type="show" />
+
+                                                        <button type="button"
+                                                            onclick="confirmDelete('{{ route('categories.destroy', ['category' => $category->id]) }}')"
+                                                            class="btn btn-outline-danger my-1 mx-1 inline btn-sm">
+                                                            <i class="bi bi-trash"></i> Delete
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <x-backend.pager :paginator="$categories" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
         </div>
-        <!-- /.container-fluid -->
     </section>
     @endif
-
-    <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
         function confirmDelete(url) {
@@ -116,7 +151,6 @@
                 confirmButtonText: 'Yes, delete it!'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // Submit the form if the user confirms
                     let form = document.createElement('form');
                     form.method = 'POST';
                     form.action = url;

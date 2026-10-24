@@ -12,45 +12,32 @@
         </x-backend.layouts.elements.breadcrumb>
     </x-slot>
 
-
     <x-backend.layouts.elements.errors />
-    <form action="{{ route('categories.update', ['category' => $categories->id]) }}" method="post"
-        enctype="multipart/form-data">
-        <div class="pb-3">
-            @csrf
-            @method('put')
 
-
-            <x-backend.form.input name="name" type="text" label="Name" :value="$categories->name" />
-            <br>
-            <div class="form-group">
-                <label for="types">Category Types</label>
-                <select class="form-control" name="types" id="types">
-                    <option value="income" {{ $categories->types == 'income' ? 'selected' : '' }}>Income</option>
-                    <option value="expense" {{ $categories->types == 'expense' ? 'selected' : '' }}>Expense</option>
-                    <option value="saving" {{ $categories->types == 'saving' ? 'selected' : '' }}>Saving</option>
-                    <option value="Loan" {{ $categories->types == 'Loan' ? 'selected' : '' }}>Loan to Other</option>
-                    <option value="Return" {{ $categories->types == 'Return' ? 'selected' : '' }}>Loan Return</option>
-                </select>
-            </div>
-            <br>
-
-            <div class="form-group">
-                <label for="rules">50/30/20 rules</label>
-                <select class="form-control" name="rules" id="rules">
-                    <option value="needs" {{ $categories->rules == 'needs' ? 'selected' : '' }}>50% of income: needs
-                    </option>
-                    <option value="wants" {{ $categories->rules == 'wants' ? 'selected' : '' }}>30% of income: wants
-                    </option>
-                    <option value="savings" {{ $categories->rules == 'savings' ? 'selected' : '' }}>20% of income:
-                        savings</option>
-                </select>
-            </div>
-            <br>
-
-            <x-backend.form.saveButton>Save</x-backend.form.saveButton>
+    <div class="card overflow-hidden">
+        <div class="p-4" style="background: var(--grad-primary);">
+            <h5 class="mb-0 text-white"><i class="bi bi-pencil-square"></i> Edit Category</h5>
         </div>
-    </form>
+        <div class="card-body">
+            <form action="{{ route('categories.update', ['category' => $categories->id]) }}" method="post">
+                @csrf
+                @method('put')
 
+                <x-backend.form.input name="name" type="text" label="Name" :value="$categories->name" required />
+
+                <x-backend.form.select name="types" label="Category Types" class="select2"
+                    :options="config('finance.category_types')" :selected="$categories->types" />
+
+                <x-backend.form.select name="rules" label="50/30/20 rules" class="select2"
+                    :options="config('finance.budget_rules')" :selected="$categories->rules" />
+
+                <x-backend.form.input name="monthly_budget" type="number" step="0.01" min="0" inputmode="decimal"
+                    label="Monthly budget (optional)" placeholder="e.g. 5000" :value="old('monthly_budget', $categories->monthly_budget)" />
+                <div class="form-text mt-n2 mb-3">Expense categories only. You'll get an alert at {{ \App\Services\BudgetService::WARN_AT }}% and when it's exceeded.</div>
+
+                <x-backend.form.saveButton>Save</x-backend.form.saveButton>
+            </form>
+        </div>
+    </div>
 
 </x-backend.layouts.master>
