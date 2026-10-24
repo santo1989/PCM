@@ -10,3 +10,7 @@ yarn-error.log
 /.idea
 /.vscode
 .qodo
+/storage/app/backups
+.env
+.env.*
+!.env.example
