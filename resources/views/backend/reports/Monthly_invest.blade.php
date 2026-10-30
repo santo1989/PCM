@@ -17,6 +17,8 @@
                 </button>
         </x-backend.date-range-filter>
 
+        <x-analytics-context :start="$startDate" :end="$endDate" />
+
         <!-- Detailed Analysis Section -->
         <div class="row mb-4">
             <div class="col-md-2 col-6 mb-2">

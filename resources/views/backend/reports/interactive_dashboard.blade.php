@@ -23,6 +23,12 @@
 
         <div id="budgetAlerts"></div>
 
+        {{-- Reloaded on date change (this page filters by AJAX, without a page reload). --}}
+        <div id="analyticsContext" data-url="{{ route('analytics.context') }}" data-from="{{ $startDate }}" data-to="{{ $endDate }}">
+            <x-analytics-context :start="$startDate" :end="$endDate" />
+        </div>
+        @include('backend.reports.partials._analytics_context_loader')
+
         <div class="row mb-3" id="insightCards">
             <!-- Insight/analysis cards will be injected here -->
         </div>
@@ -514,6 +520,11 @@
         }
         startDateInput.addEventListener('change', () => { syncRangeToUrl(startDateInput, endDateInput); refreshAll(); });
         endDateInput.addEventListener('change', () => { syncRangeToUrl(startDateInput, endDateInput); refreshAll(); });
+
+        // Analytics block (comparisons, forecast, insights) follows the chosen range.
+        const refreshAnalyticsContext = () => reloadAnalyticsContext(startDateInput.value, endDateInput.value);
+        startDateInput.addEventListener('change', refreshAnalyticsContext);
+        endDateInput.addEventListener('change', refreshAnalyticsContext);
 
         // near-real-time: re-poll every 30s (matches the app-wide AJAX-polling
         // approach chosen over WebSockets, since no Pusher/Echo/websocket

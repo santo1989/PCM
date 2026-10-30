@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\ExpenseCalculation;
 use App\Services\AI\MLPipeline;
+use App\Services\Analytics\Engine;
+use App\Services\Analytics\LedgerSeries;
+use App\Services\BudgetPredictor;
 use App\Services\FinancialAnalyticsService;
 use App\Services\InsightEngine;
 use Carbon\Carbon;
@@ -106,6 +109,18 @@ class AnalyticsController extends Controller
             'month' => $month,
             'rows' => $this->analytics->budgetUtilization($year, $month),
         ]);
+    }
+
+    /**
+     * Budget Projection "Budget vs Actual" modal: one month (?month=YYYY-MM).
+     */
+    public function budgetVsActual(Request $request)
+    {
+        $month = preg_match('/^\d{4}-\d{2}$/', (string) $request->get('month'))
+            ? Carbon::createFromFormat('Y-m-d', $request->get('month') . '-01')
+            : now();
+
+        return response()->json(BudgetPredictor::cached('compare', $month, fn() => (new BudgetPredictor())->compare($month)));
     }
 
     /**
@@ -258,6 +273,9 @@ class AnalyticsController extends Controller
             ->groupBy('category_id')
             ->map(fn($g) => $g->pluck('total', 'ym'));
 
+        $target = end($historyMonths)->copy()->addMonthNoOverflow();
+        $backtested = $this->backtestedForecasts($target);
+
         foreach ($categories as $category) {
             $monthlyTotals = [];
             foreach ($historyMonths as $m) {
@@ -269,13 +287,21 @@ class AnalyticsController extends Controller
             }
 
             $forecast = $this->analytics->linearForecast($monthlyTotals, 1);
+            $linear = max($forecast['forecast'][0], 0);
+            // Back-tested forecast (best model per category, one-offs excluded) replaces the linear trend;
+            // the linear value stays visible for comparison.
+            $b = $backtested[$category->id] ?? null;
 
             $rows[] = [
                 'category' => $category->name,
                 'last_6_months' => $monthlyTotals,
-                'predicted_next_month' => max($forecast['forecast'][0], 0),
-                'lower' => max($forecast['lower'][0], 0),
-                'upper' => max($forecast['upper'][0], 0),
+                'predicted_next_month' => $b ? $b['mean'] : $linear,
+                'lower' => $b ? $b['lo80'] : max($forecast['lower'][0], 0),
+                'upper' => $b ? $b['hi80'] : max($forecast['upper'][0], 0),
+                'model' => $b['model'] ?? 'Linear trend',
+                'mase' => $b['mase'] ?? null,
+                'note' => $b['note'] ?? 'No back-tested model for this category; linear trend shown.',
+                'linear_prediction' => $linear,
             ];
         }
 
@@ -285,11 +311,56 @@ class AnalyticsController extends Controller
 
         return view('backend.reports.predictive_budget', [
             'rows' => $rows,
+            'targetMonth' => $target->format('F Y'),
+            'totalLinear' => array_sum(array_column($rows, 'linear_prediction')),
             'totalPredicted' => array_sum(array_column($rows, 'predicted_next_month')),
             'aiInsights' => $aiInsights,
             'startDate' => $startDate,
             'endDate' => $endDate,
             'minDataDate' => $minDataDate,
         ]);
+    }
+
+    /**
+     * Per expense category: the best back-tested model's forecast for $target, trained on every
+     * completed month before it (a partial current month would look like a drop). Cached until the
+     * ledger changes. Returns category id => [mean, lo80, hi80, model, mase, note].
+     */
+    private function backtestedForecasts(Carbon $target): array
+    {
+        $lastCompleted = $target->copy()->subMonthNoOverflow()->min(now()->startOfMonth()->subMonthNoOverflow());
+        $ahead = $lastCompleted->diffInMonths($target); // 1 = next month; the engine forecasts up to 3 ahead
+        if ($ahead < 1 || $ahead > Engine::H) {
+            return [];
+        }
+        $key = 'predictive_budget:' . $target->format('Y-m') . ':' . BudgetPredictor::signature();
+
+        return \Illuminate\Support\Facades\Cache::remember($key, now()->addDay(), function () use ($lastCompleted, $ahead) {
+            $to = $lastCompleted->copy()->endOfMonth()->toDateString();
+            $months = LedgerSeries::months(LedgerSeries::firstDate(), $to);
+            $flags = fn($ym) => (fn($f) => [$f['ramadan_days'] / 30, (int) $f['eid_fitr'], (int) $f['eid_adha']])(LedgerSeries::monthFlags($ym));
+            $X = array_map($flags, $months);
+            $Xf = [];
+            for ($i = 1; $i <= Engine::H; $i++) {
+                $Xf[] = $flags($lastCompleted->copy()->addMonthsNoOverflow($i)->format('Y-m'));
+            }
+            $out = [];
+            foreach (LedgerSeries::categoryMonthly(null, $to)['categories'] as $id => $c) {
+                if ($c['type'] !== 'EXPENSE') {
+                    continue;
+                }
+                $y = array_values(array_map(fn($a, $o) => $a - $o, $c['months'], $c['one_off']));
+                $r = Engine::runSeries("category:$id", $y, $X, $Xf, false);
+                if ($r['forecast']) {
+                    $f = $r['forecast'][$ahead - 1];
+                    $mase = array_column($r['models'], 'mase', 'model')[$r['chosen']] ?? null;
+                    $out[$id] = ['mean' => $f['mean'], 'lo80' => $f['lo80'], 'hi80' => $f['hi80'], 'model' => $r['chosen'],
+                        'mase' => $mase !== null ? round($mase, 2) : null, 'note' => $r['note']];
+                } elseif (isset($r['average'])) {
+                    $out[$id] = ['mean' => $r['average'], 'lo80' => $r['average'], 'hi80' => $r['average'], 'model' => '12-month average', 'mase' => null, 'note' => $r['note']];
+                }
+            }
+            return $out;
+        });
     }
 }

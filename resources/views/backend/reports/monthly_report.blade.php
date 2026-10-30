@@ -23,6 +23,10 @@
                 <h3>{{ $startDate }} - {{ $endDate }}</h3>
             </div>
 
+            <div class="col-12 text-start">
+                <x-analytics-context :start="$startDate" :end="$endDate" />
+            </div>
+
             {{-- Detailed analysis / insights --}}
             <div class="row justify-content-center pt-2 pb-2">
                 <div class="col-md-2 col-6 mb-2">

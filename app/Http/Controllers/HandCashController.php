@@ -1289,24 +1289,8 @@ class HandCashController extends Controller
         $hasDateRange = $startDate && $endDate;
         $minDataDate = ExpenseCalculation::min('date');
 
-        // Average expenses per category over the selected range (all-time when no range is chosen)
-        $allYearExpensesQuery = ExpenseCalculation::where('types', 'EXPENSE');
-        if ($hasDateRange) {
-            $allYearExpensesQuery->whereBetween('date', [$startDate, $endDate]);
-        }
-        $allYearExpenses = $allYearExpensesQuery
-            ->groupBy('category_id')
-            ->select('category_id', DB::raw('sum(amount) as totalExpense'), DB::raw('count(distinct MONTH(date)) as totalMonths'))
-            ->get();
-
-        $thisYearExpense = [];
-        foreach ($allYearExpenses as $expense) {
-            $averageExpense = $expense->totalExpense / $expense->totalMonths;
-            $thisYearExpense[] = [
-                'category_id' => $expense->category_id,
-                'averageExpense' => ceil($averageExpense),
-            ];
-        }
+        // Avg / last-month / saved-budget columns (shared with the Excel export).
+        $columns = \App\Services\BudgetPredictor::historyColumns($hasDateRange ? $startDate : null, $hasDateRange ? $endDate : null);
 
         // ========== NEW: Multi-Year Monthly Averages ==========
         // Get multi-year monthly averages for each category
@@ -1364,23 +1348,6 @@ class HandCashController extends Controller
             ];
         }
 
-        // Get last month's expenses per category
-        $lastMonth = date('m') == '01' ? '12' : str_pad(date('m') - 1, 2, '0', STR_PAD_LEFT);
-        $lastYear = date('m') == '01' ? date('Y') - 1 : date('Y');
-
-        $lastMonthExpense = ExpenseCalculation::whereYear('date', $lastYear)
-            ->whereMonth('date', $lastMonth)
-            ->where('types', 'EXPENSE')
-            ->groupBy('category_id')
-            ->select('category_id', DB::raw('SUM(amount) as totalExpense'))
-            ->get()
-            ->map(function ($expense) {
-                $expense->totalExpense = ceil($expense->totalExpense);
-                return $expense;
-            });
-
-        $totallastMonthExpense = $lastMonthExpense->sum('totalExpense');
-
         // Get total income for the current month
         $totalMonthlyIncome = ExpenseCalculation::where('category_id', 1)
             ->whereYear('date', now()->year)
@@ -1402,26 +1369,25 @@ class HandCashController extends Controller
 
         $MonthlyactualLimitExpense = max(0, ($totalMonthlyIncome - $dpsThisMonth - $islamicDpsThisMonth) * 0.7);
 
-        // This is a new part of the code to get the projected expenses for this month
-        $thisMonthProjectedExpenses = ProjectedExpense::whereYear('date', now()->year)
-            ->whereMonth('date', now()->month)
-            ->get()
-            ->keyBy('category_id');
-
         $aiRangeStart = $hasDateRange ? Carbon::parse($startDate)->startOfDay() : now()->startOfMonth();
         $aiRangeEnd = $hasDateRange ? Carbon::parse($endDate)->endOfDay() : now()->endOfMonth();
         $aiInsights = MLPipeline::run($aiRangeStart, $aiRangeEnd);
+        $nextMonth = now()->addMonthNoOverflow()->startOfMonth();
+        $reduction = max(0, min(0.9, (float) request('reduction_percent', 0)));
+        $predictor = null;
+        $make = function () use (&$predictor) { return $predictor ??= new \App\Services\BudgetPredictor(); };
+        $prediction = \App\Services\BudgetPredictor::cached("predict-$reduction", $nextMonth, fn() => $make()->predict($nextMonth, $reduction));
+        $budgetAnalytics = \App\Services\BudgetPredictor::cached('analytics', $nextMonth, fn() => $make()->analytics($nextMonth));
 
         return view('backend.reports.projection_report', compact(
+            'prediction',
+            'budgetAnalytics',
+            'columns',
             'categories',
-            'thisYearExpense',
             'formattedMultiYearAverages',
             'formattedOverallMultiYearAverages',
-            'lastMonthExpense',
-            'totallastMonthExpense',
             'MonthlyactualLimitExpense',
             'totalMonthlyIncome',
-            'thisMonthProjectedExpenses',
             'aiInsights',
             'startDate',
             'endDate',
@@ -1661,116 +1627,40 @@ class HandCashController extends Controller
 
     public function calculateAndSaveBudget()
     {
-        // 1. Get total income for the current month
-        $totalMonthlyIncome = ExpenseCalculation::where('category_id', 1)
-            ->whereYear('date', Carbon::now()->year)
-            ->whereMonth('date', Carbon::now()->month)
-            ->sum('amount');
+        // Next month's budget from BudgetPredictor (seasonal run-rate, learned bias,
+        // cut to 70% of salary). Values the user edited in the Preview modal win.
+        $nextMonth = Carbon::now()->addMonthNoOverflow()->startOfMonth();
+        $plan = (new \App\Services\BudgetPredictor())->predict($nextMonth, floatval(request()->get('reduction_percent', 0.10)));
 
-        if ($totalMonthlyIncome <= 0) {
-            return back()->with('error_message', 'No income data found for the current month. Cannot calculate budget.');
+        if ($plan['income'] <= 0) {
+            return back()->with('error_message', 'No salary found in the last months. Cannot calculate budget.');
         }
 
-        // 2. Calculate the total budget for expenses after a 10% saving
-        $savingRate = 0.10;
-        $totalBudgetForExpenses = $totalMonthlyIncome * (1 - $savingRate);
-
-        // 3. Get total average yearly expenses for proportional allocation
-        $allYearExpenses = ExpenseCalculation::where('types', 'EXPENSE')
-            ->whereYear('date', Carbon::now()->year)
-            ->whereMonth('date', '!=', Carbon::now()->month)
-            ->groupBy('category_id')
-            ->select('category_id', DB::raw('sum(amount) as totalExpense'))
-            ->get();
-
-        $totalAllYearExpense = $allYearExpenses->sum('totalExpense');
-
-        // 4. Allocate budget to each category and prepare for saving.
-        //    Apply a reduction target (default 10%) relative to last month's expense for each category
-        $reductionPercent = floatval(request()->get('reduction_percent', 0.10));
+        $posted = collect(request()->input('projectedExpense', []))
+            ->map(fn($v) => (float) str_replace(',', '', (string) $v))
+            ->filter(fn($v) => $v > 0);
+        $amounts = $posted->isNotEmpty() ? $posted->all() : array_column($plan['rows'], 'budget', 'category_id');
+        $validIds = Category::where('types', 'EXPENSE')->pluck('id')->map(fn($id) => (int) $id)->all();
 
         $projectedExpensesData = [];
-        $nextMonth = Carbon::now()->addMonth();
+        foreach ($amounts as $catId => $amount) {
+            if (in_array((int) $catId, $validIds, true)) {
+                $projectedExpensesData[] = [
+                    'category_id' => (int) $catId,
+                    'date' => $nextMonth,
+                    'amount' => (int) ceil($amount),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+        }
 
-        // Delete existing projected budget for the next month to avoid duplicates
+        // Replace (not duplicate) any budget already saved for next month.
         ProjectedExpense::whereYear('date', $nextMonth->year)
             ->whereMonth('date', $nextMonth->month)
             ->delete();
 
-        // Last month's totals per category
-        $prev = Carbon::now()->subMonth();
-        $lastMonthRows = ExpenseCalculation::where('types', 'EXPENSE')
-            ->whereYear('date', $prev->year)
-            ->whereMonth('date', $prev->month)
-            ->groupBy('category_id')
-            ->select('category_id', DB::raw('SUM(amount) as total'))
-            ->get()
-            ->keyBy('category_id')
-            ->map(function ($r) {
-                return (float) $r->total;
-            })->toArray();
-
-        // Build a base amount for each category using last month if available, otherwise use yearly avg
-        $baseAmounts = [];
-        foreach ($allYearExpenses as $expense) {
-            $catId = $expense->category_id;
-            $lastMonthAmt = $lastMonthRows[$catId] ?? null;
-            if ($lastMonthAmt !== null && $lastMonthAmt > 0) {
-                $base = $lastMonthAmt;
-            } else {
-                // fallback to average expense per active month
-                $monthsCount = max($expense->totalMonths ?? 1, 1);
-                $base = ($expense->totalExpense / $monthsCount) ?: 0;
-            }
-            $baseAmounts[$catId] = (float) $base;
-        }
-
-        // If there are categories from last month not in allYearExpenses, include them
-        foreach ($lastMonthRows as $catId => $amt) {
-            if (!array_key_exists($catId, $baseAmounts)) {
-                $baseAmounts[$catId] = (float) $amt;
-            }
-        }
-
-        // Initial projected per-category: try to reduce last-month/base by reductionPercent
-        $initialProjected = [];
-        $initialTotal = 0.0;
-        foreach ($baseAmounts as $catId => $base) {
-            $proj = max(0, $base * (1 - $reductionPercent));
-            $initialProjected[$catId] = $proj;
-            $initialTotal += $proj;
-        }
-
-        // If no data, fallback to proportional allocation like before
-        if ($initialTotal <= 0.0) {
-            foreach ($allYearExpenses as $expense) {
-                $proportion = ($totalAllYearExpense > 0) ? ($expense->totalExpense / $totalAllYearExpense) : 0;
-                $allocatedAmount = ceil($totalBudgetForExpenses * $proportion);
-
-                $projectedExpensesData[] = [
-                    'category_id' => $expense->category_id,
-                    'date' => $nextMonth,
-                    'amount' => $allocatedAmount,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-            }
-        } else {
-            // Scale initialProjected to fit total budget
-            $scale = $totalBudgetForExpenses / $initialTotal;
-            foreach ($initialProjected as $catId => $val) {
-                $allocated = (int) ceil($val * $scale);
-                $projectedExpensesData[] = [
-                    'category_id' => $catId,
-                    'date' => $nextMonth,
-                    'amount' => $allocated,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-            }
-        }
-
-        // 5. Save the new projected budget to the database
+        // Save the new projected budget
         if (!empty($projectedExpensesData)) {
             // Bulk insert skips model events, so stamp the owner here.
             ProjectedExpense::insert(array_map(fn($row) => $row + ['user_id' => auth()->id()], $projectedExpensesData));

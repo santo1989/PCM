@@ -22,6 +22,8 @@
             <h2 class="text-center">Report: {{ \Carbon\Carbon::parse($startDate)->format('M d, Y') }} &ndash;
                 {{ \Carbon\Carbon::parse($endDate)->format('M d, Y') }}</h2>
 
+            <x-analytics-context :start="$startDate" :end="$endDate" />
+
             {{-- Detailed analysis / insights --}}
             <div class="row justify-content-center mb-4">
                 <div class="col-md-2 col-6 mb-2">

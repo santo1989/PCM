@@ -9,6 +9,12 @@
 
         @include('backend.reports.financial_analysis.partials._kpi_cards')
 
+        {{-- Follows the period/range picked above (reloaded after each refresh). --}}
+        <div id="analyticsContext" data-url="{{ route('analytics.context') }}" data-from="{{ $range['start']->toDateString() }}" data-to="{{ $range['end']->toDateString() }}">
+            <x-analytics-context :start="$range['start']->toDateString()" :end="$range['end']->toDateString()" />
+        </div>
+        @include('backend.reports.partials._analytics_context_loader')
+
         @include('backend.reports.financial_analysis.partials._charts')
 
         @include('backend.reports.financial_analysis.partials._insights')
@@ -346,6 +352,7 @@
             try {
                 const payload = await fetchDashboard();
                 render(payload);
+                reloadAnalyticsContext(payload.range?.start, payload.range?.end);
             } catch (e) {
                 console.error('Failed to refresh Financial Analysis dashboard', e);
             }

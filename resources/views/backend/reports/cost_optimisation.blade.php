@@ -24,6 +24,8 @@
             </button>
         </x-backend.date-range-filter>
 
+        <x-analytics-context :start="$startDate" :end="$endDate" />
+
         <h5 class="mb-3"><i class="bi bi-speedometer2"></i> Spending Pace This Month</h5>
         <div id="paceSection">
             @include('backend.reports.partials._cost_optimisation_pace', ['paceRows' => $paceRows, 'totalProjectedOverspend' => $totalProjectedOverspend])

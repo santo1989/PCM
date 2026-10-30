@@ -35,6 +35,7 @@ return [
             'label' => 'Reports',
             'can' => 'Admin',
             'items' => [
+                ['route' => 'analytics.index', 'label' => 'Analytics', 'icon' => 'bi-activity', 'match' => 'analytics.*'],
                 ['route' => 'financial_analysis.index', 'label' => 'Financial Analysis', 'icon' => 'bi-clipboard-data'],
                 ['route' => 'Budge_Projection', 'label' => 'Budget Projection', 'icon' => 'bi-graph-up-arrow'],
                 ['route' => 'Yearly_report', 'label' => 'Yearly Report', 'icon' => 'bi-calendar3'],

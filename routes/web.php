@@ -125,10 +125,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/home/data/kpis', [AnalyticsController::class, 'homeKpis'])->name('home.data.kpis');
     Route::get('/Budge_Projection/data/forecast', [AnalyticsController::class, 'budgetForecast'])->name('Budge_Projection.data.forecast');
     Route::get('/Budge_Projection/data/compare-actual', [AnalyticsController::class, 'compareActual'])->name('Budge_Projection.data.compare_actual');
+    Route::get('/Budge_Projection/data/budget-vs-actual', [AnalyticsController::class, 'budgetVsActual'])->name('Budge_Projection.data.budget_vs_actual');
     Route::get('/interactive-dashboard/data/budget-alerts', [AnalyticsController::class, 'budgetAlerts'])->name('interactive.dashboard.data.budget_alerts');
     Route::get('/cost-optimisation', [AnalyticsController::class, 'costOptimisation'])->name('cost_optimisation');
     Route::get('/cost-optimisation/data', [AnalyticsController::class, 'costOptimisationData'])->name('cost_optimisation.data');
     Route::get('/predictive-budget', [AnalyticsController::class, 'predictiveBudget'])->name('predictive_budget');
+    Route::get('/analytics', [App\Http\Controllers\AnalyticsReportController::class, 'index'])->name('analytics.index');
+    Route::get('/analytics/context', [App\Http\Controllers\AnalyticsReportController::class, 'context'])->name('analytics.context');
+    Route::get('/analytics/export-excel', [App\Http\Controllers\AnalyticsReportController::class, 'export'])->name('analytics.export_excel');
+    Route::post('/analytics/recompute', [App\Http\Controllers\AnalyticsReportController::class, 'recompute'])->middleware('can:Admin')->name('analytics.recompute');
 
     // Financial Analysis Dashboard: consolidated, drillable view over all the reports above
     Route::get('/financial-analysis', [FinancialAnalysisDashboardController::class, 'index'])->name('financial_analysis.index');
