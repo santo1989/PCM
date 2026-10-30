@@ -101,6 +101,25 @@ class CategoryController extends Controller
     }
 
 
+    /** "Set as budgets" from the AI outlook: budgets[CATEGORY NAME] => amount (empty clears it). */
+    public function applyBudgets(Request $request)
+    {
+        $request->validate([
+            'budgets' => 'required|array',
+            'budgets.*' => 'nullable|numeric|min:0',
+        ]);
+
+        $categories = Category::where('types', 'EXPENSE')->whereIn('name', array_keys($request->budgets))->get();
+        foreach ($categories as $category) {
+            $amount = $request->budgets[$category->name];
+            $category->monthly_budget = $amount === null || $amount === '' ? null : $amount;
+            $category->save();
+        }
+
+        // Report pages don't show flash messages; the category list does, with the new budgets.
+        return redirect()->route('categories.index')->with('message', "Monthly budgets saved for {$categories->count()} categories.");
+    }
+
     public function destroy($id)
     {
         $categories = Category::findOrFail($id)->delete();

@@ -75,6 +75,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
     Route::get('/categories/create', [CategoryController::class, 'create'])->name('categories.create');
     Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
+    Route::post('/categories/budgets', [CategoryController::class, 'applyBudgets'])->name('categories.budgets.apply');
     Route::get('/categories/{category}', [CategoryController::class, 'show'])->name('categories.show');
     Route::get('/categories/{category}/edit', [CategoryController::class, 'edit'])->name('categories.edit');
     Route::put('/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
@@ -105,6 +106,7 @@ Route::middleware('auth')->group(function () {
     //reports
 
     Route::get('/Yearly_report', [HandCashController::class, 'Yearly_report'])->name('Yearly_report');
+    Route::get('/income-expense-sheet', [App\Http\Controllers\IncomeExpenseSheetController::class, 'index'])->name('income_expense_sheet');
     Route::get('/Monthly_report', [HandCashController::class, 'Monthly_report'])->name('Monthly_report');
     Route::get('/Monthly_invest', [HandCashController::class, 'Monthly_invest'])->name('Monthly_invest');
 

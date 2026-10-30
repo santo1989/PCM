@@ -75,20 +75,34 @@
 
                 <div class="col-12 col-lg-4">
                     <h6 class="mb-2"><i class="bi bi-bullseye"></i> Suggested budgets for {{ $f['labels'][0] }}</h6>
-                    <table class="table table-sm mb-0">
-                        <thead><tr><th>Category</th><th class="text-end">Avg</th><th class="text-end">Budget</th></tr></thead>
-                        <tbody>
-                            @foreach (array_slice($outlook['budgets'], 0, 8) as $b)
-                                <tr>
-                                    <td class="text-truncate" style="max-width: 160px;" title="{{ $b['category'] }}">{{ $b['category'] }}</td>
-                                    <td class="text-end text-muted">{{ number_format($b['average'], 0) }}</td>
-                                    <td class="text-end fw-semibold">{{ number_format($b['suggested'], 0) }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                    <div class="small text-muted mt-1">Lower of forecast and average, so the plan nudges spending down.
-                        <a href="{{ route('categories.index') }}">Set as budgets</a></div>
+                    @php($currentBudgets = \App\Models\Category::where('types', 'EXPENSE')->pluck('monthly_budget', 'name'))
+                    <form method="POST" action="{{ route('categories.budgets.apply') }}"
+                        onsubmit="return confirm('Save these amounts as the monthly budgets for these categories?')">
+                        @csrf
+                        <div style="max-height: 320px; overflow-y: auto;">
+                            <table class="table table-sm mb-0 align-middle">
+                                <thead><tr><th>Category</th><th class="text-end">Avg</th><th class="text-end">Now</th><th class="text-end">Budget</th></tr></thead>
+                                <tbody>
+                                    @foreach ($outlook['budgets'] as $b)
+                                        <tr>
+                                            <td class="text-truncate" style="max-width: 140px;" title="{{ $b['category'] }}">{{ $b['category'] }}</td>
+                                            <td class="text-end text-muted">{{ number_format($b['average'], 0) }}</td>
+                                            <td class="text-end text-muted">{{ ($currentBudgets[$b['category']] ?? 0) > 0 ? number_format($currentBudgets[$b['category']], 0) : '–' }}</td>
+                                            <td class="text-end" style="width: 110px;">
+                                                <input type="number" min="0" step="100" class="form-control form-control-sm text-end"
+                                                    name="budgets[{{ $b['category'] }}]" value="{{ (int) $b['suggested'] }}"
+                                                    aria-label="Budget for {{ $b['category'] }}">
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
+                            <span class="small text-muted">Lower of forecast and average, so the plan nudges spending down. Edit any amount first; empty = no budget.</span>
+                            <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-check2-circle"></i> Set as budgets</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
