@@ -41,6 +41,8 @@ class Kernel extends HttpKernel
             \App\Http\Middleware\UserActivity::class,
             \App\Http\Middleware\RememberIndexUrl::class,
             \App\Http\Middleware\RunDueRecurringTransactions::class,
+            \App\Http\Middleware\CheckLicense::class,
+            \App\Http\Middleware\SecurityHeaders::class,
         ],
 
         'api' => [
