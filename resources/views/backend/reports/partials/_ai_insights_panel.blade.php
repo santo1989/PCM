@@ -16,7 +16,7 @@
     $priorityBadge = fn($priority) => $priority === 'critical' ? 'danger' : ($priority === 'high' ? 'warning' : 'secondary');
 @endphp
 <div class="card mt-4">
-    <div class="card-header {{ $headerClass }} d-flex justify-content-between align-items-center">
+    <div class="card-header {{ $headerClass }} d-flex flex-wrap gap-2 justify-content-between align-items-center">
         <span><i class="bi {{ $icon }}"></i> {{ $title }}</span>
         <span class="badge bg-light text-dark">Rule-based, built-in statistics</span>
     </div>

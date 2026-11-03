@@ -236,6 +236,11 @@ body.app {
   min-width: 0;
 }
 
+/* Keep wide content inside the screen: absolutely positioned bits (e.g. visually-hidden
+   button labels) stay inside their scroll box, and charts shrink to their column. */
+.table-responsive { position: relative; }
+.app-main canvas { max-width: 100%; }
+
 /* Bottom bar (phones/tablets) */
 .app-bottomnav {
   position: fixed;
@@ -322,7 +327,17 @@ body.app {
     left: 0;
     width: var(--app-sidebar-w);
     z-index: 1020;
-    transition: transform .2s ease;
+    transition: transform .2s ease, visibility .2s;
+    /* Column so the body below gets a real height and scrolls; the menu is taller than most laptop screens. */
+    display: flex;
+    flex-direction: column;
+  }
+
+  .app-sidebar .offcanvas-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .app-main {
@@ -331,7 +346,8 @@ body.app {
     transition: margin-left .2s ease;
   }
 
-  body.sidebar-collapsed .app-sidebar { transform: translateX(-100%); }
+  /* visibility keeps the hidden rail's links out of the Tab order */
+  body.sidebar-collapsed .app-sidebar { transform: translateX(-100%); visibility: hidden; }
   body.sidebar-collapsed .app-main { margin-left: 0; }
 }
 

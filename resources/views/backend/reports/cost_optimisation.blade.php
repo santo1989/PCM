@@ -174,7 +174,7 @@
 
             container.innerHTML = `
                 <div class="card mt-4">
-                    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <div class="card-header bg-info text-white d-flex flex-wrap gap-2 justify-content-between align-items-center">
                         <span><i class="bi bi-robot"></i> AI Recommendations</span>
                         <span class="badge bg-light text-dark">Rule-based, built-in statistics</span>
                     </div>

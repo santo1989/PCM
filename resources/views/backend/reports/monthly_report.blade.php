@@ -149,7 +149,7 @@
             <div class="row justify-content-center pt-4">
                 <div class="col-md-6">
                     <h4>{{ $startDate }} - {{ $endDate }} (Selected Period)</h4>
-                    <table class="table table-bordered">
+                    <div class="table-responsive"><table class="table table-bordered">
                         <thead>
                             <tr>
                                 <th></th>
@@ -198,11 +198,11 @@
                                 <td>{{ number_format($savings - $thisMonthsavings, 2) }}</td>
                             </tr>
                         </tbody>
-                    </table>
+                    </table></div>
                 </div>
                 <div class="col-md-6">
                     <h4>{{ $currentYear }} Year-to-Date</h4>
-                    <table class="table table-bordered">
+                    <div class="table-responsive"><table class="table table-bordered">
                         <thead>
                             <tr>
                                 <th>Total Income</th>
@@ -220,14 +220,14 @@
                                 </td>
                             </tr>
                         </tbody>
-                    </table>
+                    </table></div>
                 </div>
             </div>
             <div class="row justify-content-center mt-5">
 
                 <div class="col-md-3">
                     <h4>Income by Category (Selected Period)</h4>
-                    <table class="table table-bordered">
+                    <div class="table-responsive"><table class="table table-bordered">
                         <thead>
                             <tr>
                                 <th>Category</th>
@@ -252,11 +252,11 @@
                                 <td colspan="3">Total Income: {{ number_format($MonthlyIncomeCategorieswise->sum('totalIncome'), 2) }}</td>
                             </tr>
                         </tbody>
-                    </table>
+                    </table></div>
                 </div>
                 <div class="col-md-3">
                     <h4>Expense by Category (Selected Period)</h4>
-                    <table class="table table-bordered">
+                    <div class="table-responsive"><table class="table table-bordered">
                         <thead>
                             <tr>
                                 <th>Category</th>
@@ -280,12 +280,12 @@
                                     {{ number_format($thisMonthExpense->sum('totalExpense'), 2) }}</td>
                             </tr>
                         </tbody>
-                    </table>
+                    </table></div>
                 </div>
 
                 <div class="col-md-3">
                     <h4>{{ $currentYear }} Income by Category (Year)</h4>
-                    <table class="table table-bordered">
+                    <div class="table-responsive"><table class="table table-bordered">
                         <thead>
                             <tr>
                                 <th>Name</th>
@@ -309,11 +309,11 @@
                                 </td>
                             </tr>
                         </tbody>
-                    </table>
+                    </table></div>
                 </div>
                 <div class="col-md-3">
                     <h4>{{ $currentYear }} Expense by Category (Year)</h4>
-                    <table class="table table-bordered">
+                    <div class="table-responsive"><table class="table table-bordered">
                         <thead>
                             <tr>
                                 <th>Name</th>
@@ -337,7 +337,7 @@
                                     {{ number_format($thisYearExpense->sum('totalExpenseYear'), 2) }}</td>
                             </tr>
                         </tbody>
-                    </table>
+                    </table></div>
                 </div>
             </div>
 
