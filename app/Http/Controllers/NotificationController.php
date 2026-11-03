@@ -22,7 +22,7 @@ class NotificationController extends Controller
 
     public function read($id)
     {
-        $notifications = Notification::find($id);
+        $notifications = Notification::findOrFail($id);
         $notifications->status = 'read';
         $notifications->color = 'gray';
         $notifications->update();

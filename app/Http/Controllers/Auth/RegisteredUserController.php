@@ -47,7 +47,7 @@ class RegisteredUserController extends Controller
 
         if ($request->hasFile('picture')) {
             $image = $request->file('picture');
-            $name = $user->id . '.' . $image->getClientOriginalExtension();
+            $name = $user->id . '.' . $image->extension(); // from the file's content, not its client-chosen name
             $destinationPath = public_path('/images/users');
             $image->move($destinationPath, $name);
             $user->picture = $name;
@@ -58,8 +58,7 @@ class RegisteredUserController extends Controller
 
         event(new Registered($user));
 
-        Auth::login($user);
-
-        return redirect(RouteServiceProvider::HOME);
+        // Only an admin reaches this now; stay logged in as the admin.
+        return redirect()->route('users.index')->withMessage('User created.');
     }
 }

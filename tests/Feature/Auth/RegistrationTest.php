@@ -2,31 +2,35 @@
 
 namespace Tests\Feature\Auth;
 
-use App\Providers\RouteServiceProvider;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
+// Sign-up is admin-only: guests are sent to login, an admin adds users and stays logged in as themselves.
 class RegistrationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_registration_screen_can_be_rendered()
+    public function test_guests_cannot_open_the_registration_screen()
     {
-        $response = $this->get('/register');
-
-        $response->assertStatus(200);
+        $this->get('/register')->assertRedirect('/login');
     }
 
-    public function test_new_users_can_register()
+    public function test_admin_can_add_a_user()
     {
-        $response = $this->post('/register', [
+        $admin = User::factory()->create(['role_id' => 1, 'mobile' => '0100', 'dob' => '1990-01-01']);
+
+        $response = $this->actingAs($admin)->post('/register', [
             'name' => 'Test User',
             'email' => 'test@example.com',
             'password' => 'password',
             'password_confirmation' => 'password',
+            'mobile' => '0111',
+            'dob' => '1995-05-05',
         ]);
 
-        $this->assertAuthenticated();
-        $response->assertRedirect(RouteServiceProvider::HOME);
+        $response->assertRedirect(route('users.index'));
+        $this->assertAuthenticatedAs($admin);
+        $this->assertDatabaseHas('users', ['email' => 'test@example.com', 'role_id' => 2]);
     }
 }

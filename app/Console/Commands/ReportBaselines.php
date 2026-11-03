@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\FinancialAnalysisDashboardController;
-use App\Http\Controllers\HandCashController;
+use App\Http\Controllers\ReportController;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Http\Request;
@@ -28,16 +28,16 @@ class ReportBaselines extends Command
     private const PERIODS = ['2024-01' => ['2024-01-01', '2024-01-31'], '2025-06' => ['2025-06-01', '2025-06-30'], '2025' => ['2025-01-01', '2025-12-31']];
 
     private const REPORTS = [
-        'Yearly_report' => [HandCashController::class, 'Yearly_report'],
-        'Monthly_report' => [HandCashController::class, 'Monthly_report'],
-        'Monthly_invest' => [HandCashController::class, 'Monthly_invest'],
-        'Budge_Projection' => [HandCashController::class, 'Budge_Projection'],
-        'interactive.summary' => [HandCashController::class, 'interactiveDashboardSummary'],
-        'interactive.monthly-trend' => [HandCashController::class, 'interactiveDashboardMonthlyTrend'],
-        'interactive.category-breakdown' => [HandCashController::class, 'interactiveDashboardCategoryBreakdown'],
-        'interactive.savings-loans' => [HandCashController::class, 'interactiveDashboardSavingsLoans'],
-        'interactive.top-categories' => [HandCashController::class, 'interactiveDashboardTopCategories'],
-        'interactive.running-balance' => [HandCashController::class, 'interactiveDashboardRunningBalance'],
+        'Yearly_report' => [ReportController::class, 'Yearly_report'],
+        'Monthly_report' => [ReportController::class, 'Monthly_report'],
+        'Monthly_invest' => [ReportController::class, 'Monthly_invest'],
+        'Budge_Projection' => [ReportController::class, 'Budge_Projection'],
+        'interactive.summary' => [ReportController::class, 'interactiveDashboardSummary'],
+        'interactive.monthly-trend' => [ReportController::class, 'interactiveDashboardMonthlyTrend'],
+        'interactive.category-breakdown' => [ReportController::class, 'interactiveDashboardCategoryBreakdown'],
+        'interactive.savings-loans' => [ReportController::class, 'interactiveDashboardSavingsLoans'],
+        'interactive.top-categories' => [ReportController::class, 'interactiveDashboardTopCategories'],
+        'interactive.running-balance' => [ReportController::class, 'interactiveDashboardRunningBalance'],
         'financial_analysis.data' => [FinancialAnalysisDashboardController::class, 'data'],
         'cost_optimisation.data' => [AnalyticsController::class, 'costOptimisationData'],
         'predictive_budget' => [AnalyticsController::class, 'predictiveBudget'],

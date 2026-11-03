@@ -25,26 +25,28 @@ Route::middleware('auth')->group(function () {
 
     // Moved inside auth: these served financial data to anyone without logging in.
     // Interactive dashboard
-    Route::get('/interactive-dashboard', [App\Http\Controllers\HandCashController::class, 'interactiveDashboard'])->name('interactive.dashboard');
-    Route::get('/interactive-dashboard/data/summary', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardSummary']);
-    Route::get('/interactive-dashboard/data/monthly-trend', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardMonthlyTrend']);
-    Route::get('/interactive-dashboard/data/category-breakdown', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardCategoryBreakdown']);
-    Route::get('/interactive-dashboard/data/savings-loans', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardSavingsLoans']);
-    Route::get('/interactive-dashboard/data/top-categories', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardTopCategories']);
-    Route::get('/interactive-dashboard/data/running-balance', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardRunningBalance']);
-    Route::get('/interactive-dashboard/data/recent-transactions', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardRecentTransactions']);
-    Route::get('/interactive-dashboard/data/ai-insights', [App\Http\Controllers\HandCashController::class, 'interactiveDashboardAI']);
+    Route::get('/interactive-dashboard', [App\Http\Controllers\ReportController::class, 'interactiveDashboard'])->name('interactive.dashboard');
+    Route::get('/interactive-dashboard/data/summary', [App\Http\Controllers\ReportController::class, 'interactiveDashboardSummary']);
+    Route::get('/interactive-dashboard/data/monthly-trend', [App\Http\Controllers\ReportController::class, 'interactiveDashboardMonthlyTrend']);
+    Route::get('/interactive-dashboard/data/category-breakdown', [App\Http\Controllers\ReportController::class, 'interactiveDashboardCategoryBreakdown']);
+    Route::get('/interactive-dashboard/data/savings-loans', [App\Http\Controllers\ReportController::class, 'interactiveDashboardSavingsLoans']);
+    Route::get('/interactive-dashboard/data/top-categories', [App\Http\Controllers\ReportController::class, 'interactiveDashboardTopCategories']);
+    Route::get('/interactive-dashboard/data/running-balance', [App\Http\Controllers\ReportController::class, 'interactiveDashboardRunningBalance']);
+    Route::get('/interactive-dashboard/data/recent-transactions', [App\Http\Controllers\ReportController::class, 'interactiveDashboardRecentTransactions']);
+    Route::get('/interactive-dashboard/data/ai-insights', [App\Http\Controllers\ReportController::class, 'interactiveDashboardAI']);
 
     Route::get('/filter', [ExpenseCalculationController::class, 'filter'])->name('expenseCalculations.filter');
 
     // power_bi_report
-    Route::get('/power_bi_report', [HandCashController::class, 'power_bi_report'])->name('power_bi_report');
+    Route::get('/power_bi_report', [App\Http\Controllers\ReportController::class, 'power_bi_report'])->name('power_bi_report');
 
 
     Route::get('/home', function () {
         return view('backend.home');
     })->name('home');
 
+    // Users and roles: admin only (any logged-in user could otherwise make themselves admin).
+    Route::middleware('can:Admin')->group(function () {
     //role
 
     Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
@@ -69,6 +71,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/online-user', [UserController::class, 'onlineuserlist'])->name('online_user');
 
     Route::post('/users/{user}/users_active', [UserController::class, 'user_active'])->name('users.active');
+    });
 
     //categories
 
@@ -105,23 +108,23 @@ Route::middleware('auth')->group(function () {
 
     //reports
 
-    Route::get('/Yearly_report', [HandCashController::class, 'Yearly_report'])->name('Yearly_report');
+    Route::get('/Yearly_report', [App\Http\Controllers\ReportController::class, 'Yearly_report'])->name('Yearly_report');
     Route::get('/income-expense-sheet', [App\Http\Controllers\IncomeExpenseSheetController::class, 'index'])->name('income_expense_sheet');
-    Route::get('/Monthly_report', [HandCashController::class, 'Monthly_report'])->name('Monthly_report');
-    Route::get('/Monthly_invest', [HandCashController::class, 'Monthly_invest'])->name('Monthly_invest');
+    Route::get('/Monthly_report', [App\Http\Controllers\ReportController::class, 'Monthly_report'])->name('Monthly_report');
+    Route::get('/Monthly_invest', [App\Http\Controllers\ReportController::class, 'Monthly_invest'])->name('Monthly_invest');
 
-    Route::get('/Budge_Projection', [HandCashController::class, 'Budge_Projection'])->name('Budge_Projection');
+    Route::get('/Budge_Projection', [App\Http\Controllers\ReportController::class, 'Budge_Projection'])->name('Budge_Projection');
     Route::get('/handCashes_transfer_create', [HandCashController::class, 'handCashes_transfer_create'])->name('handCashes_transfer_create');
     Route::post('/handCashes_transfer', [HandCashController::class, 'handCashes_transfer'])->name('handCashes_transfer');
 
-    Route::post('/calculate-and-save-budget', [HandCashController::class, 'calculateAndSaveBudget'])->name('calculate_and_save_budget');
+    Route::post('/calculate-and-save-budget', [App\Http\Controllers\ReportController::class, 'calculateAndSaveBudget'])->name('calculate_and_save_budget');
 
     // report Excel exports
-    Route::get('/Yearly_report/export-excel', [HandCashController::class, 'exportYearlyReport'])->name('Yearly_report.export_excel');
-    Route::get('/Monthly_report/export-excel', [HandCashController::class, 'exportMonthlyReport'])->name('Monthly_report.export_excel');
-    Route::get('/Monthly_invest/export-excel', [HandCashController::class, 'exportMonthlyInvest'])->name('Monthly_invest.export_excel');
-    Route::get('/Budge_Projection/export-excel', [HandCashController::class, 'exportBudgeProjection'])->name('Budge_Projection.export_excel');
-    Route::get('/interactive-dashboard/export-excel', [HandCashController::class, 'exportInteractiveDashboard'])->name('interactive.dashboard.export_excel');
+    Route::get('/Yearly_report/export-excel', [App\Http\Controllers\ReportController::class, 'exportYearlyReport'])->name('Yearly_report.export_excel');
+    Route::get('/Monthly_report/export-excel', [App\Http\Controllers\ReportController::class, 'exportMonthlyReport'])->name('Monthly_report.export_excel');
+    Route::get('/Monthly_invest/export-excel', [App\Http\Controllers\ReportController::class, 'exportMonthlyInvest'])->name('Monthly_invest.export_excel');
+    Route::get('/Budge_Projection/export-excel', [App\Http\Controllers\ReportController::class, 'exportBudgeProjection'])->name('Budge_Projection.export_excel');
+    Route::get('/interactive-dashboard/export-excel', [App\Http\Controllers\ReportController::class, 'exportInteractiveDashboard'])->name('interactive.dashboard.export_excel');
 
     // Financial analytics: AJAX data endpoints + new pages
     Route::get('/home/data/kpis', [AnalyticsController::class, 'homeKpis'])->name('home.data.kpis');
@@ -165,7 +168,7 @@ Route::middleware('auth')->group(function () {
 });
 
 
-Route::get('/read/{notification}', [NotificationController::class, 'read'])->name('notification.read');
+Route::get('/read/{notification}', [NotificationController::class, 'read'])->middleware('auth')->name('notification.read');
 
 
 require __DIR__ . '/auth.php';
@@ -187,17 +190,18 @@ Route::middleware(['auth', 'can:Admin'])->group(function () {
         echo "Config cleared<br>";
     });
 
-    Route::get('/key =', function () {
+    // POST: a plain link or <img> must not be able to trigger these (CSRF only guards POST).
+    Route::post('/key =', function () {
         $key =  Artisan::call('key:generate');
         echo "key:generate<br>";
     });
 
-    Route::get('/migrate', function () {
+    Route::post('/migrate', function () {
         $migrate = Artisan::call('migrate');
         echo "migration create<br>";
     });
 
-    Route::get('/migrate-fresh', function () {
+    Route::post('/migrate-fresh', function () {
         $fresh = Artisan::call('migrate:fresh --seed');
         echo "migrate:fresh --seed create<br>";
     });

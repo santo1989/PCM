@@ -48,6 +48,9 @@ class UserController extends Controller
 
     public function update(Request $request, User $user)
     {
+        // Pictures land in public/; without this an uploaded .php file would be runnable.
+        $request->validate(['picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048']);
+
         try {
             $requestData = [
                 'name' => $request->name,
@@ -58,7 +61,7 @@ class UserController extends Controller
 
             if ($request->hasFile('picture')) {
                 $file = $request->file('picture');
-                $extension = $file->getClientOriginalExtension();
+                $extension = $file->extension(); // from the file's content, not its client-chosen name
                 $filename = time() . '.' . $extension;
                 $file->move('images/users', $filename);
                 $requestData['picture'] = $filename;
