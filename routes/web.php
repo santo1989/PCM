@@ -110,6 +110,14 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/Yearly_report', [App\Http\Controllers\ReportController::class, 'Yearly_report'])->name('Yearly_report');
     Route::get('/income-expense-sheet', [App\Http\Controllers\IncomeExpenseSheetController::class, 'index'])->name('income_expense_sheet');
+
+    // DSE stock portfolio
+    Route::get('/stocks', [App\Http\Controllers\StockPortfolioController::class, 'index'])->name('stocks.index');
+    Route::post('/stocks/trades', [App\Http\Controllers\StockPortfolioController::class, 'storeTrade'])->name('stocks.trades.store');
+    Route::post('/stocks/cash', [App\Http\Controllers\StockPortfolioController::class, 'storeCash'])->name('stocks.cash.store');
+    Route::post('/stocks/dividends', [App\Http\Controllers\StockPortfolioController::class, 'storeDividend'])->name('stocks.dividends.store');
+    Route::post('/stocks/prices', [App\Http\Controllers\StockPortfolioController::class, 'updatePrices'])->name('stocks.prices.update');
+    Route::post('/stocks/prices/fetch', [App\Http\Controllers\StockPortfolioController::class, 'fetchPrices'])->name('stocks.prices.fetch');
     Route::get('/Monthly_report', [App\Http\Controllers\ReportController::class, 'Monthly_report'])->name('Monthly_report');
     Route::get('/Monthly_invest', [App\Http\Controllers\ReportController::class, 'Monthly_invest'])->name('Monthly_invest');
 

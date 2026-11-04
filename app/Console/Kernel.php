@@ -20,6 +20,8 @@ class Kernel extends ConsoleKernel
         $schedule->command('db:backup')->dailyAt('02:00');
         $schedule->command('backup:health')->hourly();
         $schedule->command('backup:restore-test')->monthlyOn(1, '05:00')->withoutOverlapping();
+        // DSE trades Sun–Thu until 14:30 Dhaka time; fetch the day's prices once it has closed.
+        $schedule->command('stocks:prices')->days([0, 1, 2, 3, 4])->at('15:15')->timezone('Asia/Dhaka');
     }
 
     /**

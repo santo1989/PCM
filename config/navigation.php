@@ -28,6 +28,7 @@ return [
                 ['route' => 'expenseCalculations.index', 'label' => 'Income & Expenses', 'icon' => 'bi-receipt', 'match' => 'expenseCalculations.*'],
                 ['route' => 'handCashes.index', 'label' => 'Cash & Accounts', 'icon' => 'bi-wallet2', 'match' => 'handCashes*'],
                 ['route' => 'recurring.index', 'label' => 'Recurring', 'icon' => 'bi-arrow-repeat', 'match' => 'recurring.*'],
+                ['route' => 'stocks.index', 'label' => 'Stock Portfolio', 'icon' => 'bi-graph-up', 'match' => 'stocks.*'],
                 ['route' => 'categories.index', 'label' => 'Categories & Budgets', 'icon' => 'bi-tags', 'match' => 'categories.*'],
             ],
         ],
