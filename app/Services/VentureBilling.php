@@ -55,8 +55,8 @@ class VentureBilling
             ->orderByDesc('date')->orderByDesc('id')->get()
             ->map(function ($i) use ($today) {
                 $paid = (float) $i->paid_raw;
-                // A cash memo is a receipt for money taken on the spot: it is never "due".
-                $status = $i->type === 'Cash memo' ? 'Paid' : self::status($i->total, $paid, optional($i->due_date)->toDateString(), $today);
+                // Status always comes from real payments; a cash memo books its own payment when saved.
+                $status = self::status($i->total, $paid, optional($i->due_date)->toDateString(), $today);
 
                 return ['model' => $i, 'paid' => $paid, 'due' => $status === 'Paid' ? 0.0 : max($i->total - $paid, 0), 'status' => $status];
             })->all();

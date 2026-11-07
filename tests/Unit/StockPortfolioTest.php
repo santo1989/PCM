@@ -53,6 +53,15 @@ class StockPortfolioTest extends TestCase
         $this->assertNull(StockPortfolio::parseDsePrice('<p>Page not found</p>'));
     }
 
+    public function test_a_sell_dated_before_its_buy_is_flagged()
+    {
+        $ok = StockPortfolio::compute([$this->trade('2026-10-01', 'Buy', 'GP', 100, 230), $this->trade('2026-10-05', 'Sell', 'GP', 100, 240)], ['GP' => ['category' => 'A']], [], [], '2026-11-01');
+        $typo = StockPortfolio::compute([$this->trade('2026-09-05', 'Sell', 'GP', 100, 240), $this->trade('2026-10-01', 'Buy', 'GP', 100, 230)], ['GP' => ['category' => 'A']], [], [], '2026-11-01');
+
+        $this->assertSame([], $ok['oversold']);
+        $this->assertSame([['date' => '2026-09-05', 'symbol' => 'GP', 'qty' => 100, 'held' => 0]], $typo['oversold']);
+    }
+
     public function test_selling_consumes_the_oldest_lots_first()
     {
         $trades = [$this->trade('2026-10-01', 'Buy', 'GP', 100, 230), $this->trade('2026-11-04', 'Buy', 'GP', 100, 230), $this->trade('2026-11-04', 'Sell', 'GP', 120, 231)];

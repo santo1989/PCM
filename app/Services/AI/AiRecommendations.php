@@ -42,6 +42,10 @@ class AiRecommendations
         if ($row->rejected === 'pending') {
             $in = json_decode($row->metrics, true);
             $e = ReportExplainer::explain($in['page'], $in['metrics'], $in['template']);
+            // AI unreachable or rate-limited: keep it pending so the next visit tries again instead of pinning the fallback.
+            if (str_starts_with((string) $e['rejected'], 'provider error')) {
+                return ['pending' => false] + self::shape($row);
+            }
             DB::table('analytics_insights')->where('id', $id)->update(['source' => $e['source'], 'model' => $e['model'], 'rejected' => $e['rejected'],
                 'insights' => json_encode($e['insights']), 'actions' => json_encode($e['actions']), 'updated_at' => now()]);
             $row = DB::table('analytics_insights')->find($id);

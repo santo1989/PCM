@@ -41,6 +41,7 @@ class StockPortfolio
     {
         $pos = [];
         $rows = [];
+        $oversold = []; // sells of more shares than held on their date (a mistyped date or quantity)
         foreach ($trades as $t) {
             $p = &$pos[$t['symbol']];
             $p ??= ['qty' => 0, 'cost' => 0.0, 'lots' => [], 'buy_qty' => 0, 'buy_cost' => 0.0, 'sell_qty' => 0, 'sell_net' => 0.0, 'commission' => 0.0, 'realized' => 0.0];
@@ -59,6 +60,7 @@ class StockPortfolio
                 $p['lots'][] = ['qty' => $t['qty'], 'date' => $t['date'], 'mature' => self::addWorkingDays($t['date'], $days)];
             } else {
                 $t['net'] = $amount - $t['commission'];
+                if ($t['qty'] > $p['qty']) $oversold[] = ['date' => $t['date'], 'symbol' => $t['symbol'], 'qty' => $t['qty'], 'held' => max($p['qty'], 0)];
                 $soldCost = $p['qty'] > 0 ? $p['cost'] / $p['qty'] * min($t['qty'], $p['qty']) : 0.0;
                 $t['realized'] = $t['net'] - $soldCost;
                 $p['qty'] -= $t['qty'];
@@ -129,6 +131,7 @@ class StockPortfolio
             'holdings' => $holdings,
             'realized' => $realized,
             'trades' => $rows,
+            'oversold' => $oversold,
             'totals' => [
                 'deposit' => $deposit, 'withdraw' => $withdraw, 'fees' => $cashBy('Fee', 'cash_out'),
                 'dividends_received' => $cashBy('Dividend', 'cash_in'),
@@ -184,14 +187,21 @@ class StockPortfolio
         $symbols ??= array_column(self::load()['holdings'], 'symbol');
         $updated = [];
         $failed = [];
+        $down = false;
         foreach ($symbols as $symbol) {
+            $quote = null;
             try {
-                $r = \Illuminate\Support\Facades\Http::timeout(20)->retry(2, 1000)
-                    ->withHeaders(['User-Agent' => 'Mozilla/5.0 (PCM personal portfolio; daily price check)'])
-                    ->get('https://www.dse.com.bd/company/' . rawurlencode($symbol));
-                $quote = $r->successful() ? self::parseDsePrice($r->body()) : null;
+                // Short waits: this runs while the "Fetch DSE prices" button spins.
+                if (!$down) {
+                    $r = \Illuminate\Support\Facades\Http::timeout(8)->retry(1, 500)
+                        ->withHeaders(['User-Agent' => 'Mozilla/5.0 (PCM personal portfolio; daily price check)'])
+                        ->get('https://www.dse.com.bd/company/' . rawurlencode($symbol));
+                    $quote = $r->successful() ? self::parseDsePrice($r->body()) : null;
+                }
+            } catch (\Illuminate\Http\Client\ConnectionException $e) {
+                $down = true; // site unreachable: don't wait again for every remaining symbol
             } catch (\Throwable $e) {
-                $quote = null;
+                // an error page for this one symbol: try the next
             }
             if (!$quote) {
                 $failed[] = $symbol;

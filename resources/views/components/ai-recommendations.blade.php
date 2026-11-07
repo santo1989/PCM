@@ -33,7 +33,9 @@
         (function () {
             var box = document.getElementById(@json($boxId));
             var aliases = JSON.parse(box.dataset.aliases || '{}');
-            var real = function (s) { Object.keys(aliases).forEach(function (k) { s = s.split(k).join(aliases[k]); }); return s; };
+            // Longest label first, so "Client 10" is not read as "Client 1" + "0".
+            var labels = Object.keys(aliases).sort(function (a, b) { return b.length - a.length; });
+            var real = function (s) { labels.forEach(function (k) { s = s.split(k).join(aliases[k]); }); return s; };
             var item = function (s, action) {
                 var li = document.createElement('li');
                 if (action) { li.className = 'mb-1'; li.innerHTML = '<i class="bi bi-check2-circle text-success"></i> <strong>Do:</strong> '; }

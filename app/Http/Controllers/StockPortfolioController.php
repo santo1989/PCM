@@ -44,13 +44,6 @@ class StockPortfolioController extends Controller
         ]);
         $data['symbol'] = strtoupper(trim($data['symbol']));
 
-        if ($data['side'] === 'Sell') {
-            $held = collect(StockPortfolio::load()['holdings'])->firstWhere('symbol', $data['symbol'])['qty'] ?? 0;
-            if ($data['qty'] > $held) {
-                throw ValidationException::withMessages(['qty' => "You hold only {$held} {$data['symbol']} shares."]);
-            }
-        }
-
         DB::transaction(function () use ($data) {
             // New symbol: remember its company and category (category decides when shares become sellable).
             StockSymbol::firstOrCreate(['symbol' => $data['symbol']], ['company' => $data['company'] ?? null, 'category' => $data['category'] ?? 'A']);
@@ -59,6 +52,10 @@ class StockPortfolioController extends Controller
                 'qty' => $data['qty'], 'rate' => $data['rate'], 'note' => $data['note'] ?? null,
                 'commission' => $data['commission'] ?? round($data['qty'] * $data['rate'] * StockPortfolio::COMMISSION, 4),
             ]);
+            // Checked with the new trade in date order, so a sell dated before its buy is caught too (throwing undoes the insert).
+            if ($bad = collect(StockPortfolio::load()['oversold'])->firstWhere('symbol', $data['symbol'])) {
+                throw ValidationException::withMessages(['qty' => "On {$bad['date']} you held only {$bad['held']} {$bad['symbol']} shares, so {$bad['qty']} cannot be sold then. Check the date and quantity."]);
+            }
             StockPortfolio::syncUnrealizedLedger();
         });
 

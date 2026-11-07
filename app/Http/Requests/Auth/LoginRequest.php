@@ -45,7 +45,8 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        // is_active: an account switched off on the Users page cannot log in.
+        if (! Auth::attempt($this->only('email', 'password') + ['is_active' => 1], $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([

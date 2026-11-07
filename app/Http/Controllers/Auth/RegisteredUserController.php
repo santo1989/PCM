@@ -41,6 +41,7 @@ class RegisteredUserController extends Controller
             'mobile' => $request->mobile,
             'dob' => $request->dob,
             'role_id' => 2,
+            'is_active' => 1, // can log in until switched off on the Users page
             'email_verified_at' => now(),
             'remember_token' => Str::random(10),
         ]);
