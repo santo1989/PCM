@@ -85,7 +85,62 @@ class IncomeExpenseSheetController extends Controller
         }
         unset($r);
         $rules = array_values($rules);
+        $advice = self::advice($groups, $rules, $periods, $all ? 'all years' : (string) $year);
 
-        return view('backend.reports.income_expense_sheet', compact('year', 'years', 'periods', 'groups', 'rules'));
+        return view('backend.reports.income_expense_sheet', compact('year', 'years', 'periods', 'groups', 'rules', 'advice'));
+    }
+
+    /** Pure: figures for the AI and rule-based recommendations for the sheet. */
+    public static function advice(array $groups, array $rules, array $periods, string $scope): array
+    {
+        $sum = fn(array $items) => array_sum(array_map(fn($i) => array_sum($i['months']), $items));
+        $income = $expense = 0.0;
+        $blocks = [];
+        $categories = [];
+        foreach ($groups as $g) {
+            [$in, $out] = [$sum($g['income']), $sum($g['expense'])];
+            [$income, $expense] = [$income + $in, $expense + $out];
+            $blocks[] = ['block' => $g['label'], 'income' => round($in), 'expense' => round($out), 'difference' => round($in - $out)];
+            foreach ($g['expense'] as $e) $categories[$e['name']] = array_sum($e['months']);
+        }
+        arsort($categories);
+        $top = [];
+        foreach (array_slice($categories, 0, 5, true) as $name => $v) {
+            $top[] = ['category' => $name, 'amount' => round($v), 'share_percent' => $expense > 0 ? round($v / $expense * 100, 1) : 0];
+        }
+        $byPeriod = [];
+        foreach ($periods as $k => $label) {
+            $pi = array_sum(array_map(fn($g) => array_sum(array_map(fn($i) => $i['months'][$k], $g['income'])), $groups));
+            $pe = array_sum(array_map(fn($g) => array_sum(array_map(fn($i) => $i['months'][$k], $g['expense'])), $groups));
+            if ($pi || $pe) $byPeriod[$label] = ['income' => round($pi), 'expense' => round($pe), 'difference' => round($pi - $pe)];
+        }
+        $savings = round(array_sum(array_map(fn($r) => array_sum($r['months']), $rules)));
+        $m = ['scope' => $scope, 'income' => round($income), 'expense' => round($expense), 'difference' => round($income - $expense),
+            'kept_percent_of_income' => $income > 0 ? round(($income - $expense) / $income * 100, 1) : 0,
+            'added_to_hand_cash_accounts' => $savings, 'blocks' => $blocks, 'top_expense_categories' => $top, 'by_period' => $byPeriod];
+
+        $f = fn($v) => number_format($v);
+        $ins = [sprintf('For %s: income %s, expenses %s, difference %s (%s%% of income kept).', $scope, $f($m['income']), $f($m['expense']), $f($m['difference']), $m['kept_percent_of_income'])];
+        $act = [];
+        if ($top) {
+            $ins[] = sprintf('%s is the largest expense at %s (%s%% of all expenses).', $top[0]['category'], $f($top[0]['amount']), $top[0]['share_percent']);
+            $act[] = sprintf('Set or tighten a monthly budget for %s, the biggest cost at %s%%.', $top[0]['category'], $top[0]['share_percent']);
+        }
+        foreach ($blocks as $b) {
+            if ($b['difference'] < 0 && $b['income'] > 0) $ins[] = sprintf('%s spends more than it earns: %s.', $b['block'], $f($b['difference']));
+        }
+        if (count($byPeriod) > 1) {
+            $labels = array_keys($byPeriod);
+            $diffs = array_column($byPeriod, 'difference');
+            $ins[] = sprintf('Best period: %s (%s); weakest: %s (%s).', $labels[array_search(max($diffs), $diffs)], $f(max($diffs)), $labels[array_search(min($diffs), $diffs)], $f(min($diffs)));
+        }
+        $ins[] = sprintf('Hand-cash accounts grew by %s in this period.', $f($savings));
+        if ($m['difference'] > 0 && $savings < $m['difference']) {
+            $act[] = sprintf('Only %s of the %s left over reached savings accounts: move the rest on salary day.', $f($savings), $f($m['difference']));
+        }
+        if ($m['difference'] < 0) $act[] = sprintf('Expenses exceed income by %s: cut the top categories first.', $f(abs($m['difference'])));
+        if (!$act) $act[] = 'Keep tagging every entry to the right category so these blocks stay accurate.';
+
+        return ['metrics' => $m, 'template' => ['insights' => array_slice($ins, 0, 5), 'actions' => array_slice($act, 0, 3)]];
     }
 }

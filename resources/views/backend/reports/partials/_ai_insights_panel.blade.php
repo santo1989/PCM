@@ -64,4 +64,7 @@
     </div>
 </div>
 
+@php($panelAdvice = \App\Services\AI\MLPipeline::advice($aiInsights))
+<x-ai-recommendations :page="'panel:' . (request()->route() ? request()->route()->getName() : 'report')" :metrics="$panelAdvice['metrics']" :template="$panelAdvice['template']" title="AI recommendations (free AI)" />
+
 @include('backend.reports.partials._ai_outlook', ['outlook' => $aiInsights['outlook'] ?? null])

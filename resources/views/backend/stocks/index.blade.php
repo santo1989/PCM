@@ -54,6 +54,9 @@
         @endforeach
     </div>
 
+    @php($stockAdvice = \App\Services\StockPortfolio::advice($portfolio))
+    <div class="mb-3"><x-ai-recommendations page="stocks" :metrics="$stockAdvice['metrics']" :template="$stockAdvice['template']" title="AI recommendations for your portfolio" /></div>
+
     <ul class="nav nav-tabs mb-3 flex-nowrap overflow-auto" role="tablist">
         @foreach (['holdings' => 'Holdings', 'realized' => 'Realized P/L', 'trades' => 'Trades', 'cash' => 'Cash & dividends'] as $id => $label)
             <li class="nav-item" role="presentation">

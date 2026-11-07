@@ -25,6 +25,8 @@
         </div>
     </div>
 
+    <div class="mb-3"><x-ai-recommendations :page="'venture:' . $key" :metrics="$advice['metrics']" :template="$advice['template']" :aliases="$advice['aliases']" :title="'AI recommendations · ' . $ventures[$key]['label']" /></div>
+
     @php($soon = $schedules->whereIn('id', $sendSoon))
     @if ($soon->isNotEmpty())
         <div class="alert alert-warning d-flex flex-column gap-2" role="status">

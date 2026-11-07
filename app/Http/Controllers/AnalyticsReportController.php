@@ -157,6 +157,15 @@ class AnalyticsReportController extends Controller
         return $out;
     }
 
+    /** Free-AI version of a page's recommendations (<x-ai-recommendations> asks for it after the page loads). */
+    public function recommendation(int $id)
+    {
+        $r = \App\Services\AI\AiRecommendations::resolve($id);
+        abort_unless($r, 404);
+
+        return response()->json(array_intersect_key($r, array_flip(['insights', 'actions', 'source', 'model', 'rejected'])));
+    }
+
     /** The analytics block alone (HTML), for pages that change their date range without reloading. */
     public function context(Request $request)
     {

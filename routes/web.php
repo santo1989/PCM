@@ -159,6 +159,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/predictive-budget', [AnalyticsController::class, 'predictiveBudget'])->name('predictive_budget');
     Route::get('/analytics', [App\Http\Controllers\AnalyticsReportController::class, 'index'])->name('analytics.index');
     Route::get('/analytics/context', [App\Http\Controllers\AnalyticsReportController::class, 'context'])->name('analytics.context');
+    Route::get('/ai/recommendations/{id}', [App\Http\Controllers\AnalyticsReportController::class, 'recommendation'])->whereNumber('id')->name('ai.recommendations');
     Route::get('/analytics/export-excel', [App\Http\Controllers\AnalyticsReportController::class, 'export'])->name('analytics.export_excel');
     Route::post('/analytics/recompute', [App\Http\Controllers\AnalyticsReportController::class, 'recompute'])->middleware('can:Admin')->name('analytics.recompute');
 

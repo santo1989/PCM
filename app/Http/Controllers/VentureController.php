@@ -24,8 +24,10 @@ class VentureController extends Controller
         $dueByClient = VentureBilling::dueByClient($invoices);
         $schedules = \App\Models\VentureSchedule::where('venture', $key)->orderByDesc('is_active')->orderBy('next_due')->get();
         $sendSoon = VentureBilling::reminders()['send']->where('venture', $key)->pluck('id')->all();
+        $advice = VentureLedger::advice($ventures[$key]['label'], $summary, $dueByClient,
+            $schedules->whereIn('id', $sendSoon)->map(fn($s) => [$s->client, $s->next_due->toDateString(), VentureBilling::itemsTotal($s->items)])->values()->all(), now()->format('Y'));
 
-        return view('backend.ventures.index', compact('ventures', 'key', 'rows', 'summary', 'overview', 'clients', 'accounts', 'invoices', 'dueByClient', 'schedules', 'sendSoon'));
+        return view('backend.ventures.index', compact('ventures', 'key', 'rows', 'summary', 'overview', 'clients', 'accounts', 'invoices', 'dueByClient', 'schedules', 'sendSoon', 'advice'));
     }
 
     public function store(Request $request)

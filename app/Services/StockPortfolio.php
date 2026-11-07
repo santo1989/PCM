@@ -218,6 +218,48 @@ class StockPortfolio
         return $price > 0 ? ['price' => $price, 'prev_close' => $prev > 0 ? $prev : null] : null;
     }
 
+    /**
+     * Pure: figures for the AI and rule-based recommendations for the Stock Portfolio page.
+     * Every number in the text is one of the (rounded) metrics, so the AI check accepts them.
+     */
+    public static function advice(array $p): array
+    {
+        $t = $p['totals'];
+        $pct = fn($v) => round($v * 100, 1);
+        $holdings = array_map(fn($h) => ['symbol' => $h['symbol'], 'category' => $h['category'], 'cost' => round($h['cost']),
+            'market_value' => $h['value'] === null ? null : round($h['value']), 'weight_percent' => $t['value'] > 0 && $h['value'] !== null ? $pct($h['value'] / $t['value']) : null,
+            'unrealized_percent' => $h['unrealized_pct'] === null ? null : $pct($h['unrealized_pct']), 'price' => $h['price'], 'break_even_price' => round($h['break_even'], 2)], $p['holdings']);
+        $m = ['equity' => round($t['equity']), 'capital_invested' => round($t['capital']), 'gain_vs_capital' => round($t['gain']), 'return_percent' => $pct($t['return_pct']),
+            'realized_profit' => round($t['realized']), 'unrealized' => round($t['unrealized']), 'unrealized_percent' => $pct($t['unrealized_pct']),
+            'cash_in_bo_account' => round($t['cash_balance']), 'cash_percent_of_equity' => $t['equity'] > 0 ? $pct($t['cash_balance'] / $t['equity']) : 0,
+            'dividends_receivable' => round($t['dividends_receivable']), 'shares_not_yet_sellable' => $t['immature'],
+            'holdings_count' => count($holdings), 'holdings_below_cost' => count(array_filter($holdings, fn($h) => $h['unrealized_percent'] !== null && $h['unrealized_percent'] < 0)),
+            'holdings' => $holdings];
+
+        $f = fn($v) => number_format($v);
+        $ins = [sprintf('Total equity is %s against %s invested, a %s of %s (%s%%).', $f($m['equity']), $f($m['capital_invested']), $m['gain_vs_capital'] < 0 ? 'loss' : 'gain', $f(abs($m['gain_vs_capital'])), abs($m['return_percent'])),
+            sprintf('Closed trades made %s; the open positions are at %s (%s%%) after sell commission.', $f($m['realized_profit']), $f($m['unrealized']), $m['unrealized_percent'])];
+        $act = [];
+        $priced = array_filter($holdings, fn($h) => $h['weight_percent'] !== null);
+        if ($priced) {
+            $top = array_reduce($priced, fn($a, $h) => $a === null || $h['weight_percent'] > $a['weight_percent'] ? $h : $a);
+            $ins[] = sprintf('%s is the largest holding at %s%% of market value.', $top['symbol'], $top['weight_percent']);
+            if ($top['weight_percent'] >= 40) $act[] = sprintf('%s is %s%% of the portfolio: avoid adding more to it until the other holdings catch up.', $top['symbol'], $top['weight_percent']);
+        }
+        $under = array_filter($holdings, fn($h) => $h['unrealized_percent'] !== null && $h['unrealized_percent'] < 0);
+        if ($under) {
+            $worst = array_reduce($under, fn($a, $h) => $a === null || $h['unrealized_percent'] < $a['unrealized_percent'] ? $h : $a);
+            $ins[] = sprintf('%d of %d holdings trade below cost; the deepest is %s at %s%% (break-even %s).', count($under), count($holdings), $worst['symbol'], $worst['unrealized_percent'], $worst['break_even_price']);
+            $act[] = sprintf('Review %s: it needs %s per share just to break even; decide whether to hold or cut it.', $worst['symbol'], $worst['break_even_price']);
+        }
+        $ins[] = sprintf('Cash in the BO account is %s (%s%% of equity).', $f($m['cash_in_bo_account']), $m['cash_percent_of_equity']);
+        if ($m['cash_percent_of_equity'] >= 40) $act[] = sprintf('%s%% of the account is idle cash: invest it gradually or move part to a deposit.', $m['cash_percent_of_equity']);
+        if ($m['dividends_receivable'] > 0) $act[] = sprintf('Follow up the %s of dividends still receivable.', $f($m['dividends_receivable']));
+        if (!$act) $act[] = 'Fetch DSE prices after market close so these figures stay current.';
+
+        return ['metrics' => $m, 'template' => ['insights' => array_slice($ins, 0, 5), 'actions' => array_slice($act, 0, 3)]];
+    }
+
     // shortcut: skips Fri/Sat only, not DSE public holidays; add a holiday list if maturity dates drift around Eid.
     public static function addWorkingDays(string $date, int $days): string
     {

@@ -95,6 +95,8 @@
         </div>
     </div>
 
+    <div class="container-fluid pb-3"><x-ai-recommendations :page="'sheet:' . $year" :metrics="$advice['metrics']" :template="$advice['template']" /></div>
+
     @include('backend.reports.partials._sheet_modal', ['id' => 'sheet-income', 'title' => 'Income', 'rowLabel' => 'category', 'rows' => $income])
     @include('backend.reports.partials._sheet_modal', ['id' => 'sheet-expense', 'title' => 'Expense', 'rowLabel' => 'category', 'rows' => $expense])
     @include('backend.reports.partials._sheet_modal', ['id' => 'sheet-savings', 'title' => 'Savings (hand cash)', 'rowLabel' => 'account', 'rows' => $rules,
