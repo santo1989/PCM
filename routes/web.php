@@ -118,6 +118,20 @@ Route::middleware('auth')->group(function () {
     Route::post('/stocks/dividends', [App\Http\Controllers\StockPortfolioController::class, 'storeDividend'])->name('stocks.dividends.store');
     Route::post('/stocks/prices', [App\Http\Controllers\StockPortfolioController::class, 'updatePrices'])->name('stocks.prices.update');
     Route::post('/stocks/prices/fetch', [App\Http\Controllers\StockPortfolioController::class, 'fetchPrices'])->name('stocks.prices.fetch');
+
+    // Freelance & Business (AUGUSTA IT)
+    Route::get('/ventures', [App\Http\Controllers\VentureController::class, 'index'])->name('ventures.index');
+    Route::post('/ventures', [App\Http\Controllers\VentureController::class, 'store'])->name('ventures.store');
+    Route::post('/ventures/{expense}/client', [App\Http\Controllers\VentureController::class, 'setClient'])->name('ventures.client');
+    Route::get('/ventures/invoices/create', [App\Http\Controllers\VentureBillingController::class, 'create'])->name('ventures.invoices.create');
+    Route::post('/ventures/invoices', [App\Http\Controllers\VentureBillingController::class, 'store'])->name('ventures.invoices.store');
+    Route::get('/ventures/invoices/{invoice}', [App\Http\Controllers\VentureBillingController::class, 'show'])->name('ventures.invoices.show');
+    Route::get('/ventures/invoices/{invoice}/edit', [App\Http\Controllers\VentureBillingController::class, 'edit'])->name('ventures.invoices.edit');
+    Route::put('/ventures/invoices/{invoice}', [App\Http\Controllers\VentureBillingController::class, 'update'])->name('ventures.invoices.update');
+    Route::post('/ventures/invoices/{invoice}/pay', [App\Http\Controllers\VentureBillingController::class, 'pay'])->name('ventures.invoices.pay');
+    Route::post('/ventures/schedules', [App\Http\Controllers\VentureBillingController::class, 'storeSchedule'])->name('ventures.schedules.store');
+    Route::put('/ventures/schedules/{schedule}', [App\Http\Controllers\VentureBillingController::class, 'updateSchedule'])->name('ventures.schedules.update');
+    Route::post('/ventures/letterhead', [App\Http\Controllers\VentureBillingController::class, 'profile'])->name('ventures.letterhead');
     Route::get('/Monthly_report', [App\Http\Controllers\ReportController::class, 'Monthly_report'])->name('Monthly_report');
     Route::get('/Monthly_invest', [App\Http\Controllers\ReportController::class, 'Monthly_invest'])->name('Monthly_invest');
 

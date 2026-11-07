@@ -29,6 +29,7 @@ return [
                 ['route' => 'handCashes.index', 'label' => 'Cash & Accounts', 'icon' => 'bi-wallet2', 'match' => 'handCashes*'],
                 ['route' => 'recurring.index', 'label' => 'Recurring', 'icon' => 'bi-arrow-repeat', 'match' => 'recurring.*'],
                 ['route' => 'stocks.index', 'label' => 'Stock Portfolio', 'icon' => 'bi-graph-up', 'match' => 'stocks.*'],
+                ['route' => 'ventures.index', 'label' => 'Freelance & Business', 'icon' => 'bi-briefcase', 'match' => 'ventures.*'],
                 ['route' => 'categories.index', 'label' => 'Categories & Budgets', 'icon' => 'bi-tags', 'match' => 'categories.*'],
             ],
         ],

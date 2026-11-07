@@ -18,6 +18,7 @@ class IncomeExpenseSheetController extends Controller
     private const PAIRS = [
         [['INTERNET BILL PAYMENT REFUND BY MOTHER'], ['PHONE AND INTERNET BILL']],
         [['FREELANCING INCOME'], ['FREELANCING COST']],
+        [['AUGUSTA IT INCOME'], ['AUGUSTA IT COST']],
         [['STOCK INCOME FROM DSE'], ['STOCK COMM. FROM DSE', 'STOCK UNREALIZE LOSS FROM DSE', 'STOCK LOSS FROM DSE']],
         [['BANK INTEREST'], ['ZAKAT 2.5%']],
     ];

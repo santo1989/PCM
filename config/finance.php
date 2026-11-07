@@ -57,6 +57,13 @@ return [
         'INVESTMENT' => 'Investment',
     ],
 
+    // Freelance & Business page: each venture is its income + cost ledger categories (by name).
+    // Rows stay ordinary Income & Expenses entries, so every report already includes them.
+    'ventures' => [
+        'freelance' => ['label' => 'Freelance', 'income' => 'FREELANCING INCOME', 'cost' => 'FREELANCING COST'],
+        'augusta' => ['label' => 'AUGUSTA IT', 'income' => 'AUGUSTA IT INCOME', 'cost' => 'AUGUSTA IT COST'],
+    ],
+
     // Monthly Investment page: how each month's salary should be split (shares of salary).
     // Expense 70%, itself split 50/30/20 into needs / wants / FD-DPS installments
     // (= 35 / 21 / 14 % of salary); savings 20% (Bank, DPS, FD); invest 10% (stocks).

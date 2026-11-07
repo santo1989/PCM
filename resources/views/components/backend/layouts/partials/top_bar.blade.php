@@ -3,6 +3,8 @@
     $greeting = $hour >= 5 && $hour < 12 ? 'Good morning' : ($hour >= 12 && $hour < 18 ? 'Good afternoon' : 'Good evening');
     $user = auth()->user();
     $budgetAlerts = \App\Services\BudgetService::alerts();
+    $bills = \App\Services\VentureBilling::reminders();
+    $billCount = $bills['send']->count() + $bills['unpaid']->count();
 @endphp
 <header class="app-topbar no-print">
     {{-- Phones/tablets: open the sidebar drawer. Desktop: collapse/expand the rail. --}}
@@ -58,11 +60,32 @@
             <button class="app-icon-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false"
                 aria-label="Budget alerts">
                 <i class="bi bi-bell"></i>
-                @if ($budgetAlerts->isNotEmpty())
-                    <span class="badge rounded-pill bg-danger">{{ $budgetAlerts->count() }}</span>
+                @if ($budgetAlerts->isNotEmpty() || $billCount)
+                    <span class="badge rounded-pill bg-danger">{{ $budgetAlerts->count() + $billCount }}</span>
                 @endif
             </button>
-            <div class="dropdown-menu dropdown-menu-end p-0" style="width: min(340px, 92vw);">
+            <div class="dropdown-menu dropdown-menu-end p-0" style="width: min(340px, 92vw); max-height: 75vh; overflow-y: auto;">
+                @if ($billCount)
+                    <div class="px-3 py-2 border-bottom fw-semibold small">Bills &amp; invoices</div>
+                    @foreach ($bills['send'] as $s)
+                        <a href="{{ route('ventures.invoices.create', ['schedule' => $s->id]) }}" class="dropdown-item py-2 text-wrap">
+                            <div class="d-flex justify-content-between small gap-2">
+                                <span class="fw-semibold">Send bill · {{ $s->client }}</span>
+                                <span class="{{ $s->next_due->isPast() ? 'text-danger' : 'text-warning' }} text-nowrap">{{ $s->next_due->format('d M') }}</span>
+                            </div>
+                            <div class="text-muted small">{{ $s->title }} · Tk {{ number_format(\App\Services\VentureBilling::itemsTotal($s->items), 0) }}</div>
+                        </a>
+                    @endforeach
+                    @foreach ($bills['unpaid'] as $i)
+                        <a href="{{ route('ventures.invoices.show', $i['model']) }}" class="dropdown-item py-2 text-wrap">
+                            <div class="d-flex justify-content-between small gap-2">
+                                <span class="fw-semibold">Due from {{ $i['model']->client }}</span>
+                                <span class="{{ $i['status'] === 'Overdue' ? 'text-danger' : 'text-warning' }} text-nowrap">Tk {{ number_format($i['due'], 0) }}</span>
+                            </div>
+                            <div class="text-muted small">{{ $i['model']->type }} {{ $i['model']->number }} · {{ $i['status'] }}{{ $i['model']->due_date ? ' · due ' . $i['model']->due_date->format('d M Y') : '' }}</div>
+                        </a>
+                    @endforeach
+                @endif
                 <div class="px-3 py-2 border-bottom fw-semibold small">Budget alerts · {{ now()->format('F') }}</div>
                 @forelse ($budgetAlerts as $row)
                     <a href="{{ route('categories.index') }}" class="dropdown-item py-2 text-wrap">
