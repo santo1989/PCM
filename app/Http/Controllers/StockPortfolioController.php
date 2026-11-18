@@ -18,9 +18,10 @@ class StockPortfolioController extends Controller
     private const CASH_IN = ['Deposit', 'Dividend'];
     private const CASH_OUT = ['Withdraw', 'Fee'];
 
-    public function index()
+    public function index(Request $request)
     {
-        $portfolio = StockPortfolio::load();
+        $target = (float) $request->query('target', 3) / 100;
+        $portfolio = StockPortfolio::load(null, in_array($target, StockPortfolio::LOT_TARGETS) ? $target : 0.03);
         $symbols = StockSymbol::orderBy('symbol')->get();
         $cash = StockCash::orderByDesc('date')->orderByDesc('id')->get();
         $dividends = StockDividend::orderByDesc('record_date')->get();
@@ -41,15 +42,19 @@ class StockPortfolioController extends Controller
             'category' => ['nullable', Rule::in(array_keys(StockPortfolio::SETTLEMENT_DAYS))],
             'company' => 'nullable|string|max:191',
             'note' => 'nullable|string|max:191',
+            'lot_id' => 'nullable|integer',
         ]);
         $data['symbol'] = strtoupper(trim($data['symbol']));
+        if (!empty($data['lot_id']) && ($data['side'] !== 'Sell' || !StockTrade::whereKey($data['lot_id'])->where('side', 'Buy')->where('symbol', $data['symbol'])->exists())) {
+            throw ValidationException::withMessages(['lot_id' => 'Pick a buy lot of ' . $data['symbol'] . ', and only on a sell.']);
+        }
 
         DB::transaction(function () use ($data) {
             // New symbol: remember its company and category (category decides when shares become sellable).
             StockSymbol::firstOrCreate(['symbol' => $data['symbol']], ['company' => $data['company'] ?? null, 'category' => $data['category'] ?? 'A']);
             StockTrade::create([
                 'date' => $data['date'], 'side' => $data['side'], 'symbol' => $data['symbol'], 'market' => $data['market'],
-                'qty' => $data['qty'], 'rate' => $data['rate'], 'note' => $data['note'] ?? null,
+                'qty' => $data['qty'], 'rate' => $data['rate'], 'note' => $data['note'] ?? null, 'lot_id' => $data['lot_id'] ?? null,
                 'commission' => $data['commission'] ?? round($data['qty'] * $data['rate'] * StockPortfolio::COMMISSION, 4),
             ]);
             // Checked with the new trade in date order, so a sell dated before its buy is caught too (throwing undoes the insert).

@@ -101,6 +101,7 @@
     </script>
     <script src="{{ asset('ui/backend/js/app.js') }}?v={{ @filemtime(public_path('ui/backend/js/app.js')) }}"></script>
     <script src="{{ asset('js/live-index.js') }}?v={{ @filemtime(public_path('js/live-index.js')) }}"></script>
+    <script src="{{ asset('js/page-export.js') }}?v={{ @filemtime(public_path('js/page-export.js')) }}"></script>
 </body>
 
 </html>

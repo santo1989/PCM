@@ -58,7 +58,7 @@
     <div class="mb-3"><x-ai-recommendations page="stocks" :metrics="$stockAdvice['metrics']" :template="$stockAdvice['template']" title="AI recommendations for your portfolio" /></div>
 
     <ul class="nav nav-tabs mb-3 flex-nowrap overflow-auto" role="tablist">
-        @foreach (['holdings' => 'Holdings', 'realized' => 'Realized P/L', 'trades' => 'Trades', 'cash' => 'Cash & dividends'] as $id => $label)
+        @foreach (['holdings' => 'Holdings', 'lots' => 'Lots', 'realized' => 'Realized P/L', 'trades' => 'Trades', 'cash' => 'Cash & dividends'] as $id => $label)
             <li class="nav-item" role="presentation">
                 <button class="nav-link text-nowrap {{ $loop->first ? 'active' : '' }}" data-bs-toggle="tab" data-bs-target="#tab-{{ $id }}" type="button" role="tab">{{ $label }}</button>
             </li>
@@ -110,6 +110,72 @@
                                         <td class="text-end {{ $tone($t['unrealized']) }}">{{ $tk($t['unrealized']) }}</td><td class="text-end {{ $tone($t['unrealized_pct']) }}">{{ $pct($t['unrealized_pct']) }}</td><td></td><td></td></tr>
                                 </tfoot>
                             @endif
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @php($ls = $portfolio['lot_summary'])
+        <div class="tab-pane fade" id="tab-lots" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                    <span class="fw-semibold">Lot-wise holdings – sell each buy lot on its own profit</span>
+                    <form method="GET" class="d-flex align-items-center gap-2 no-print">
+                        <label class="small text-muted text-nowrap" for="lotTarget">Target profit per lot</label>
+                        <select id="lotTarget" name="target" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+                            @foreach (\App\Services\StockPortfolio::LOT_TARGETS as $o)<option value="{{ $o * 100 }}" {{ abs($o - $ls['target']) < 1e-9 ? 'selected' : '' }}>{{ $o * 100 }}%</option>@endforeach
+                        </select>
+                    </form>
+                </div>
+                <div class="card-body">
+                    <div class="small text-muted mb-2">
+                        Lots in profit now: <strong>{{ $ls['in_profit'] }} of {{ $ls['count'] }}</strong> ·
+                        Net profit if you sell all profitable lots now: <strong class="{{ $tone($ls['profit_now']) }}">{{ $tk($ls['profit_now']) }}</strong> ·
+                        Target is net, after both 0.40% commissions. A sell saved against a lot comes out of that lot; otherwise the oldest lot goes first.
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle text-nowrap mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Lot</th><th>Buy date</th><th class="text-end">Buy qty</th><th class="text-end">Open qty</th><th class="text-end">Buy rate</th>
+                                    <th class="text-end">Paid (incl comm)</th><th>Sellable from</th><th class="text-end">Cost / share</th><th class="text-end">Open cost</th>
+                                    <th class="text-end">Days</th><th class="text-end">Price</th><th class="text-end">Market value</th><th class="text-end">Net if sold</th>
+                                    <th class="text-end">Lot P/L</th><th class="text-end">%</th><th class="text-end">Break-even</th><th class="text-end">Target price</th>
+                                    <th class="text-end">Move needed</th><th>Decision</th><th class="no-print"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse ($portfolio['lots'] as $l)
+                                    @php($sell = $l['matured'] && $l['pl'] > 0)
+                                    <tr>
+                                        <td><span class="fw-semibold">{{ $l['symbol'] }}-L{{ $l['id'] }}</span> <span class="badge text-bg-light border">{{ $l['category'] }}</span></td>
+                                        <td>{{ \Carbon\Carbon::parse($l['date'])->format('d M Y') }}</td>
+                                        <td class="text-end">{{ number_format($l['buy_qty']) }}</td>
+                                        <td class="text-end">{{ number_format($l['qty']) }}</td>
+                                        <td class="text-end">{{ $tk($l['rate']) }}</td>
+                                        <td class="text-end">{{ $tk($l['paid']) }}</td>
+                                        <td class="{{ $l['matured'] ? '' : 'text-warning' }}">{{ \Carbon\Carbon::parse($l['mature'])->format('d M Y') }}</td>
+                                        <td class="text-end">{{ $tk($l['cost_share']) }}</td>
+                                        <td class="text-end">{{ $tk($l['cost']) }}</td>
+                                        <td class="text-end">{{ $l['days'] }}</td>
+                                        <td class="text-end">{{ $tk($l['price']) }}</td>
+                                        <td class="text-end">{{ $tk($l['value']) }}</td>
+                                        <td class="text-end">{{ $tk($l['net_if_sold']) }}</td>
+                                        <td class="text-end fw-semibold {{ $tone($l['pl']) }}">{{ $tk($l['pl']) }}</td>
+                                        <td class="text-end {{ $tone($l['pl_pct']) }}">{{ $pct($l['pl_pct']) }}</td>
+                                        <td class="text-end">{{ $tk($l['break_even']) }}</td>
+                                        <td class="text-end">{{ $tk($l['target_price']) }}</td>
+                                        <td class="text-end">{{ $pct($l['move']) }}</td>
+                                        <td><span class="badge {{ str_starts_with($l['decision'], 'SELL') ? 'text-bg-success' : ($sell ? 'text-bg-info' : 'text-bg-light border') }}">{{ $l['decision'] }}</span></td>
+                                        <td class="no-print">@if ($sell)
+                                            <button type="button" class="btn btn-sm btn-outline-success" data-sell-lot="{{ json_encode(['lot_id' => $l['id'], 'symbol' => $l['symbol'], 'qty' => $l['qty'], 'rate' => $l['price']]) }}">Sell lot</button>
+                                        @endif</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="20" class="text-center text-muted py-4">No open lots.</td></tr>
+                                @endforelse
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -244,6 +310,11 @@
                     <div class="col-6"><label class="form-label" for="tr_rate">Rate (Tk)</label><input type="number" id="tr_rate" name="rate" min="0.0001" step="any" class="form-control" value="{{ old('rate') }}" required></div>
                     <div class="col-12"><label class="form-label" for="tr_comm">Commission (Tk)</label><input type="number" id="tr_comm" name="commission" min="0" step="any" class="form-control" value="{{ old('commission') }}" placeholder="Empty = 0.40% of amount">
                         <div class="form-text">Leave empty to use 0.40%, or type the amount from the LBSL ledger.</div></div>
+                    <div class="col-12"><label class="form-label" for="tr_lot">Sell against lot (optional, sells only)</label>
+                        <select id="tr_lot" name="lot_id" class="form-select">
+                            <option value="">Oldest lot first</option>
+                            @foreach ($portfolio['lots'] as $l)<option value="{{ $l['id'] }}" {{ (string) old('lot_id') === (string) $l['id'] ? 'selected' : '' }}>{{ $l['symbol'] }}-L{{ $l['id'] }} · {{ number_format($l['qty']) }} @ {{ number_format($l['rate'], 2) }} · {{ $pct($l['pl_pct']) }}</option>@endforeach
+                        </select></div>
                     <div class="col-12"><details><summary class="small">New stock? Company and DSE category</summary>
                         <div class="row g-2 mt-1">
                             <div class="col-8"><input name="company" class="form-control" placeholder="Company name" value="{{ old('company') }}" maxlength="191" aria-label="Company name"></div>
@@ -317,6 +388,25 @@
             </form>
         </div>
     </div>
+
+    <script>
+        @if (request()->has('target'))
+            // Back on the Lots tab after changing the target.
+            document.addEventListener('DOMContentLoaded', function () { bootstrap.Tab.getOrCreateInstance(document.querySelector('[data-bs-target="#tab-lots"]')).show(); });
+        @endif
+        // "Sell lot": open the trade form filled in for that lot at today's price.
+        document.addEventListener('click', function (e) {
+            var b = e.target.closest('[data-sell-lot]');
+            if (!b) return;
+            var d = JSON.parse(b.dataset.sellLot);
+            document.getElementById('tr_side').value = 'Sell';
+            document.getElementById('tr_symbol').value = d.symbol;
+            document.getElementById('tr_qty').value = d.qty;
+            document.getElementById('tr_rate').value = d.rate;
+            document.getElementById('tr_lot').value = d.lot_id;
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('tradeModal')).show();
+        });
+    </script>
 
     @if ($errors->any())
         {{-- Reopen the form that failed validation. --}}

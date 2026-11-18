@@ -69,4 +69,25 @@ class StockPortfolioTest extends TestCase
 
         $this->assertSame([80, 0, 80], [$h['qty'], $h['sellable'], $h['immature']]);
     }
+
+    public function test_a_sell_tagged_with_a_lot_leaves_the_other_lots_and_each_lot_has_its_own_profit()
+    {
+        // Made-up lots: 10 @ 250 and 100 @ 200, price 205, 3% target.
+        $trades = [
+            ['id' => 1] + $this->trade('2026-07-19', 'Buy', 'GP', 10, 250),
+            ['id' => 2] + $this->trade('2026-11-10', 'Buy', 'GP', 100, 200),
+            ['id' => 3] + $this->trade('2026-11-10', 'Buy', 'GP', 50, 200),
+            ['id' => 4, 'lot_id' => 3] + $this->trade('2026-11-15', 'Sell', 'GP', 50, 210),
+        ];
+        $p = StockPortfolio::compute($trades, ['GP' => ['category' => 'A', 'price' => 205]], [], [], '2026-11-18');
+
+        $lots = array_column($p['lots'], null, 'id');
+        $this->assertSame([1, 2], array_keys($lots)); // lot 3 sold out, the old lot 1 untouched
+        $this->assertEqualsWithDelta(-468.20, $lots[1]['pl'], 0.01);   // 2,041.80 net − 2,510 paid
+        $this->assertEqualsWithDelta(338.00, $lots[2]['pl'], 0.01);    // 20,418 net − 20,080 paid
+        $this->assertEqualsWithDelta(207.66, $lots[2]['target_price'], 0.01); // 200.80 × 1.03 / 0.996
+        $this->assertSame('In profit – can sell this lot', $lots[2]['decision']);
+        $this->assertSame('HOLD – needs 26.6% more', $lots[1]['decision']);
+        $this->assertSame(['in_profit' => 1, 'count' => 2], array_intersect_key($p['lot_summary'], array_flip(['in_profit', 'count'])));
+    }
 }

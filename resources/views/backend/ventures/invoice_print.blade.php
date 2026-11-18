@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $invoice->type }} {{ $invoice->number }} – {{ $invoice->client }}</title>
-    <style>
+    <style data-export-style>
         :root { --ink: #111827; --muted: #6b7280; --line: #d1d5db; --brand: #4f46e5; }
         * { box-sizing: border-box; }
         body { margin: 0; background: #f3f4f6; color: var(--ink); font: 14px/1.45 "Segoe UI", Roboto, Arial, sans-serif; }
@@ -42,7 +42,8 @@
         <a href="{{ route('ventures.index', ['venture' => $invoice->venture]) }}">← Freelance &amp; Business</a>
         <a href="{{ route('ventures.invoices.edit', $invoice) }}">Edit</a>
         <a href="{{ route('ventures.invoices.create', ['from' => $invoice->id]) }}">Copy as new</a>
-        <button type="button" class="primary" onclick="window.print()">Print / Save as PDF</button>
+        <button type="button" class="primary" onclick="window.print()">Print</button>
+        <span data-export-bar style="display: contents;"></span>
     </div>
     @if (!$memo && $due > 0)
         <form method="POST" action="{{ route('ventures.invoices.pay', $invoice) }}" class="pay no-print">
@@ -126,5 +127,6 @@
             @endif
         @endif
     </main>
+    <script src="{{ asset('js/page-export.js') }}?v={{ @filemtime(public_path('js/page-export.js')) }}"></script>
 </body>
 </html>

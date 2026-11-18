@@ -24,20 +24,26 @@ class StockPortfolio
     public const LEDGER_GAIN = 26;
     public const LEDGER_LOSS = 34;
 
-    public static function load(?string $today = null): array
+    // Lot targets offered on the page (net profit per lot after both commissions), as in the workbook's Settings.
+    public const LOT_TARGETS = [0.01, 0.03, 0.05, 0.08, 0.10];
+
+    public static function load(?string $today = null, float $target = 0.03): array
     {
         $trades = StockTrade::orderBy('date')->orderBy('id')->get()
-            ->map(fn($t) => ['id' => $t->id, 'date' => $t->date->toDateString(), 'side' => $t->side, 'symbol' => $t->symbol,
+            ->map(fn($t) => ['id' => $t->id, 'date' => $t->date->toDateString(), 'side' => $t->side, 'symbol' => $t->symbol, 'lot_id' => $t->lot_id,
                 'market' => $t->market, 'qty' => $t->qty, 'rate' => $t->rate, 'commission' => $t->commission])->all();
         $symbols = StockSymbol::all()->keyBy('symbol')->map(fn($s) => $s->only('company', 'category', 'price', 'prev_close', 'price_date'))->all();
         $cash = StockCash::orderBy('date')->get(['type', 'cash_in', 'cash_out'])->toArray();
         $dividends = StockDividend::get(['status', 'gross', 'net'])->toArray();
 
-        return self::compute($trades, $symbols, $cash, $dividends, $today ?? now()->toDateString());
+        return self::compute($trades, $symbols, $cash, $dividends, $today ?? now()->toDateString(), $target);
     }
 
-    /** Pure: plain arrays in, every portfolio figure out. Trades must be in date order. */
-    public static function compute(array $trades, array $symbols, array $cash, array $dividends, string $today): array
+    /**
+     * Pure: plain arrays in, every portfolio figure out. Trades must be in date order.
+     * $target: net profit wanted per lot for the lot-wise view (0.03 = 3%).
+     */
+    public static function compute(array $trades, array $symbols, array $cash, array $dividends, string $today, float $target = 0.03): array
     {
         $pos = [];
         $rows = [];
@@ -57,7 +63,8 @@ class StockPortfolio
                 $p['buy_cost'] += $t['net'];
                 $category = $symbols[$t['symbol']]['category'] ?? 'A';
                 $days = $t['market'] === 'Spot' ? 1 : (self::SETTLEMENT_DAYS[$category] ?? 2);
-                $p['lots'][] = ['qty' => $t['qty'], 'date' => $t['date'], 'mature' => self::addWorkingDays($t['date'], $days)];
+                $p['lots'][] = ['id' => $t['id'] ?? null, 'qty' => $t['qty'], 'buy_qty' => $t['qty'], 'rate' => $t['rate'], 'paid' => $t['net'],
+                    'date' => $t['date'], 'mature' => self::addWorkingDays($t['date'], $days)];
             } else {
                 $t['net'] = $amount - $t['commission'];
                 if ($t['qty'] > $p['qty']) $oversold[] = ['date' => $t['date'], 'symbol' => $t['symbol'], 'qty' => $t['qty'], 'held' => max($p['qty'], 0)];
@@ -68,13 +75,23 @@ class StockPortfolio
                 $p['sell_qty'] += $t['qty'];
                 $p['sell_net'] += $t['net'];
                 $p['realized'] += $t['realized'];
-                // Maturity is tracked per lot, oldest sold first.
-                for ($left = $t['qty']; $left > 0 && $p['lots'];) {
-                    $take = min($left, $p['lots'][0]['qty']);
-                    $left -= $take;
-                    $p['lots'][0]['qty'] -= $take;
-                    if ($p['lots'][0]['qty'] <= 0) array_shift($p['lots']);
+                // Lots: a sell tagged with a lot comes out of that lot first, the rest from the oldest lot.
+                $left = $t['qty'];
+                foreach ($p['lots'] as &$lot) {
+                    if (!empty($t['lot_id']) && $lot['id'] == $t['lot_id']) {
+                        $take = min($left, $lot['qty']);
+                        $lot['qty'] -= $take;
+                        $left -= $take;
+                    }
                 }
+                unset($lot);
+                foreach ($p['lots'] as &$lot) {
+                    $take = min($left, $lot['qty']);
+                    $lot['qty'] -= $take;
+                    $left -= $take;
+                }
+                unset($lot);
+                $p['lots'] = array_values(array_filter($p['lots'], fn($l) => $l['qty'] > 0));
             }
             $rows[] = $t;
             unset($p);
@@ -82,12 +99,39 @@ class StockPortfolio
 
         $holdings = [];
         $realized = [];
+        $lots = [];
         foreach ($pos as $symbol => $p) {
             $s = $symbols[$symbol] ?? [];
             $realized[] = ['symbol' => $symbol, 'company' => $s['company'] ?? null, 'open' => $p['qty'] > 0] + array_intersect_key($p, array_flip(['buy_qty', 'buy_cost', 'sell_qty', 'sell_net', 'commission', 'realized']));
             if ($p['qty'] <= 0) continue;
 
             $price = $s['price'] ?? null;
+            // Lot-wise: each open buy lot judged on its own cost (incl. buy commission) against today's price.
+            foreach ($p['lots'] as $l) {
+                $perShare = $l['paid'] / $l['buy_qty'];
+                $openCost = $perShare * $l['qty'];
+                $net = $price !== null ? $price * $l['qty'] * (1 - self::COMMISSION) : null;
+                $pl = $net !== null ? $net - $openCost : null;
+                $targetPrice = $perShare * (1 + $target) / (1 - self::COMMISSION);
+                $move = $price ? $targetPrice / $price - 1 : null;
+                $matured = $l['mature'] <= $today;
+                $lots[] = [
+                    'id' => $l['id'], 'symbol' => $symbol, 'category' => $s['category'] ?? '?', 'date' => $l['date'],
+                    'buy_qty' => $l['buy_qty'], 'qty' => $l['qty'], 'rate' => $l['rate'], 'paid' => $l['paid'],
+                    'mature' => $l['mature'], 'matured' => $matured, 'cost_share' => $perShare, 'cost' => $openCost,
+                    'days' => Carbon::parse($l['date'])->diffInDays($today), 'price' => $price,
+                    'value' => $price !== null ? $price * $l['qty'] : null, 'net_if_sold' => $net,
+                    'pl' => $pl, 'pl_pct' => $pl !== null ? $pl / $openCost : null,
+                    'break_even' => $perShare / (1 - self::COMMISSION), 'target_price' => $targetPrice, 'move' => $move,
+                    'decision' => match (true) {
+                        $price === null => 'No price yet',
+                        !$matured => 'Not matured – sellable from ' . Carbon::parse($l['mature'])->format('d M'),
+                        $move <= 0 => 'SELL this lot – target hit',
+                        $pl > 0 => 'In profit – can sell this lot',
+                        default => 'HOLD – needs ' . number_format($move * 100, 1) . '% more',
+                    },
+                ];
+            }
             $value = $price !== null ? $price * $p['qty'] : null;
             $sellComm = $value !== null ? $value * self::COMMISSION : null;
             $immature = array_filter($p['lots'], fn($l) => $l['mature'] > $today);
@@ -110,6 +154,9 @@ class StockPortfolio
         }
         usort($holdings, fn($a, $b) => strcmp($a['symbol'], $b['symbol']));
         usort($realized, fn($a, $b) => strcmp($a['symbol'], $b['symbol']));
+        // As in the workbook: by symbol, the deepest loss first.
+        usort($lots, fn($a, $b) => [$a['symbol'], $a['pl_pct'] ?? 0] <=> [$b['symbol'], $b['pl_pct'] ?? 0]);
+        $winners = array_filter($lots, fn($l) => $l['matured'] && $l['pl'] > 0);
 
         $cashBy = fn(string $type, string $col) => array_sum(array_map(fn($c) => $c['type'] === $type ? (float) $c[$col] : 0, $cash));
         $buy = array_sum(array_map(fn($t) => $t['side'] === 'Buy' ? $t['net'] : 0, $rows));
@@ -132,6 +179,8 @@ class StockPortfolio
             'realized' => $realized,
             'trades' => $rows,
             'oversold' => $oversold,
+            'lots' => $lots,
+            'lot_summary' => ['target' => $target, 'in_profit' => count($winners), 'count' => count($lots), 'profit_now' => array_sum(array_column($winners, 'pl'))],
             'totals' => [
                 'deposit' => $deposit, 'withdraw' => $withdraw, 'fees' => $cashBy('Fee', 'cash_out'),
                 'dividends_received' => $cashBy('Dividend', 'cash_in'),
