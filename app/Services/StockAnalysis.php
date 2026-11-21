@@ -34,9 +34,10 @@ class StockAnalysis
         $out = [];
         foreach ($symbols as $s) {
             $fund = Cache::get($fundKey($s));
-            $out[$s] = ['bars' => $withHistory ? (Cache::get($histKey($s)) ?: []) : [], 'fund' => is_array($fund) && count($fund) > 1 ? $fund : ['symbol' => $s]];
+            // No category = an old save of a DSE error page: fetch it again.
+            $out[$s] = ['bars' => $withHistory ? (Cache::get($histKey($s)) ?: []) : [], 'fund' => !empty($fund['category']) ? $fund : ['symbol' => $s]];
         }
-        $missing = array_filter($symbols, fn($s) => ($withHistory && !$out[$s]['bars']) || count($out[$s]['fund']) <= 1);
+        $missing = array_filter($symbols, fn($s) => ($withHistory && !$out[$s]['bars']) || empty($out[$s]['fund']['category']));
 
         foreach (array_chunk(array_values($missing), 4) as $batch) { // a few at a time, to stay polite to dse.com.bd
             $replies = Http::pool(function ($pool) use ($batch, $out, $withHistory, $days) {
@@ -46,34 +47,39 @@ class StockAnalysis
                         $calls[] = $pool->as("h:$s")->timeout(12)->withHeaders(['User-Agent' => self::UA])->get(self::BASE . '/api/live/data-archive/day-end',
                             ['from' => now()->subDays($days)->toDateString(), 'to' => now()->toDateString(), 'inst' => $s, 'page' => 1]);
                     }
-                    if (count($out[$s]['fund']) <= 1) {
+                    if (empty($out[$s]['fund']['category'])) {
                         $calls[] = $pool->as("f:$s")->timeout(12)->withHeaders(['User-Agent' => self::UA])->get(self::BASE . '/company/' . rawurlencode($s));
                     }
                 }
                 return $calls;
             });
+            $answered = 0;
             foreach ($replies as $key => $r) {
                 if (!$r instanceof \Illuminate\Http\Client\Response || !$r->successful()) continue; // timeouts come back as exceptions
+                $answered++;
                 [$kind, $s] = explode(':', $key, 2);
                 if ($kind === 'h' && ($bars = self::bars($r->json('rows') ?? []))) {
                     Cache::put($histKey($s), $bars, now()->addHours(6));
                     $out[$s]['bars'] = $bars;
                 } elseif ($kind === 'f') {
                     $out[$s]['fund'] = self::parseCompany($r->body(), $s);
-                    Cache::put($fundKey($s), $out[$s]['fund'], now()->addHours(12));
+                    // A maintenance page also returns 200 but has no category: never keep it.
+                    if ($out[$s]['fund']['category']) Cache::put($fundKey($s), $out[$s]['fund'], now()->addHours(12));
                 }
             }
+            if (!$answered) break; // DSE is down: don't wait 12 seconds for every remaining group
         }
         return $out;
     }
 
     /**
      * Buy / Sell / Hold for each of the last $count candles, using only the prices known on that day.
-     * Fundamentals block a Buy on weak companies (Z category, negative NAV).
+     * Fundamentals block a Buy on weak companies (Z category, negative NAV) and when company data is missing.
      * @return array<string, array{call: string, meaning: string}> keyed by bar date
      */
     public static function candleCalls(array $bars, array $fund = [], int $count = 15): array
     {
+        $unknown = empty($fund['category']);
         $weak = ($fund['category'] ?? null) === 'Z' || ($fund['nav'] ?? 1) < 0;
         $out = [];
         for ($i = max(0, count($bars) - $count); $i < count($bars); $i++) {
@@ -86,6 +92,7 @@ class StockAnalysis
                 $a['rsi'] !== null && $a['rsi'] > 72 => ['call' => 'Sell', 'meaning' => 'Overbought (RSI ' . round($a['rsi']) . '): a pullback is likely, so take profit if you hold.'],
                 $a['bearish'] && $a['tech_score'] < 3 => ['call' => 'Sell', 'meaning' => 'Bearish candle with a weak trend: sellers are in control, so reduce or exit.'],
                 $a['close'] < $a['ma14'] && $a['hist'] < 0 && $a['tech_score'] <= 0 => ['call' => 'Sell', 'meaning' => 'Below MA14 with falling momentum: the downtrend continues, so do not add.'],
+                $a['tech_score'] >= 4 && !$a['bearish'] && $unknown => ['call' => 'Hold', 'meaning' => "Chart looks good ($why), but company data is missing: do not buy until it loads."],
                 $a['tech_score'] >= 4 && !$a['bearish'] && $weak => ['call' => 'Hold', 'meaning' => "Chart looks good ($why), but the company is weak: do not buy."],
                 $a['tech_score'] >= 4 && !$a['bearish'] => ['call' => 'Buy', 'meaning' => "Momentum is strong ($why): a possible entry inside the buy range."],
                 default => ['call' => 'Hold', 'meaning' => "No clear edge ($why): keep what you hold and wait."],
@@ -97,20 +104,32 @@ class StockAnalysis
     /** Every instrument's bars for the last $days, grouped by symbol (one paged fetch, cached). */
     public static function allHistory(int $days = 60): array
     {
-        return Cache::remember('dse_hist_all_' . now()->toDateString(), now()->addHours(6), function () use ($days) {
-            $rows = [];
-            $from = now()->subDays($days)->toDateString();
-            for ($page = 1, $pages = 1; $page <= $pages && $page <= 80; $page++) {
-                $r = Http::timeout(20)->retry(2, 1000)->withHeaders(['User-Agent' => self::UA])
-                    ->get(self::BASE . '/api/live/data-archive/day-end', ['from' => $from, 'to' => now()->toDateString(), 'page' => $page]);
-                if (!$r->successful()) break;
-                $rows = array_merge($rows, $r->json('rows') ?? []);
-                $pages = (int) ceil(($r->json('total') ?? 0) / max(1, $r->json('pageSize') ?? 500));
-            }
-            $by = [];
-            foreach ($rows as $row) $by[$row['tradingCode']][] = $row;
-            return array_map(fn($r) => self::bars($r), $by);
-        });
+        $today = now()->toDateString();
+        if ($cached = Cache::get("dse_hist_all_{$today}")) return $cached;
+
+        $by = [];
+        $from = now()->subDays($days)->toDateString();
+        for ($page = 1, $pages = 1; $page <= $pages && $page <= 80; $page++) {
+            $r = Http::timeout(20)->retry(2, 1000)->withHeaders(['User-Agent' => self::UA])
+                ->get(self::BASE . '/api/live/data-archive/day-end', ['from' => $from, 'to' => $today, 'page' => $page])
+                ->throw(); // a missing page would silently give wrong indicators
+            foreach ($r->json('rows') ?? [] as $row) $by[$row['tradingCode']][] = $row;
+            $pages = (int) ceil(($r->json('total') ?? 0) / max(1, $r->json('pageSize') ?? 500));
+        }
+        $all = array_map(fn($rows) => self::bars($rows), $by);
+        if ($all) {
+            Cache::put("dse_hist_all_{$today}", $all, now()->addHours(6));
+            // Each share on its own too, so a popup need not load the whole market.
+            Cache::putMany(collect($all)->mapWithKeys(fn($bars, $s) => ["dse_scan_{$s}_{$today}" => $bars])->all(), now()->addHours(6));
+        }
+        return $all;
+    }
+
+    /** One share's bars from today's saved scan; never downloads. Empty when there is no saved scan. */
+    public static function scanBars(string $symbol): array
+    {
+        $today = now()->toDateString();
+        return Cache::get("dse_scan_{$symbol}_{$today}") ?: (Cache::get("dse_hist_all_{$today}")[$symbol] ?? []);
     }
 
     /** API rows → [date, open, high, low, close, volume] oldest first; days with no trade are dropped. */

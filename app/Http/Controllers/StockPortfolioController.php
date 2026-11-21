@@ -8,6 +8,7 @@ use App\Models\StockSymbol;
 use App\Models\StockTrade;
 use App\Services\StockAnalysis;
 use App\Services\StockPortfolio;
+use Illuminate\Http\Client\HttpClientException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -43,11 +44,17 @@ class StockPortfolioController extends Controller
         $scan = $request->query('scan') === 'all';
         $rows = [];
         $failed = [];
+        $dseDown = false;
 
         if ($scan) {
             // Whole market: technicals for every share first (one cached fetch), fundamentals only for the 20 best.
             set_time_limit(300); // first scan of the day pages through ~40 DSE archive pages (≈3 min); later scans hit the cache
-            $all = StockAnalysis::allHistory(70);
+            try {
+                $all = StockAnalysis::allHistory(70);
+            } catch (HttpClientException $e) {
+                $all = [];
+                $dseDown = true;
+            }
             $ranked = [];
             foreach ($all as $symbol => $bars) {
                 if (count($bars) < 26 || end($bars)['close'] < 5 || preg_match('/MF$|BOND|SUKUK|GSEC/', $symbol)) continue;
@@ -73,14 +80,14 @@ class StockPortfolioController extends Controller
         }
         uasort($rows, fn($a, $b) => [!($a['held'] ?? false), -$a['score']] <=> [!($b['held'] ?? false), -$b['score']]);
 
-        return view('backend.stocks.analysis', ['rows' => $rows, 'failed' => $failed, 'scan' => $scan, 'watch' => $watch->implode(',')]);
+        return view('backend.stocks.analysis', ['rows' => $rows, 'failed' => $failed, 'dseDown' => $dseDown, 'scan' => $scan, 'watch' => $watch->implode(',')]);
     }
 
     /** Full details of one share for the Stock Analysis popup; ?scan=1 uses the same bars as the whole-market table. */
     public function analysisDetail(Request $request, string $symbol)
     {
         $symbol = strtoupper($symbol);
-        $bars = $request->boolean('scan') ? (StockAnalysis::allHistory(70)[$symbol] ?? []) : StockAnalysis::history($symbol);
+        $bars = ($request->boolean('scan') ? StockAnalysis::scanBars($symbol) : []) ?: StockAnalysis::history($symbol);
         $h = collect(StockPortfolio::load()['holdings'])->firstWhere('symbol', $symbol);
         $a = StockAnalysis::analyze($bars, StockAnalysis::fundamentals($symbol), $h ? ['qty' => $h['qty'], 'avg_cost' => $h['avg_cost']] : null);
         abort_unless($a['ok'], 404, "No price history from DSE for {$symbol}.");

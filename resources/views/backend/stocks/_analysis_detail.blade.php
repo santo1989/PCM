@@ -7,10 +7,14 @@
     $p = $a['plan'];
     $latest = $calls[$a['date']] ?? null;
     // Public market figures only: no holdings or cost go to the AI.
+    $buyOk = ($latest['call'] ?? null) === 'Buy' && $a['verdict'] === 'BUY'; // the chart signal alone is not enough
     $metrics = ['close' => $a['close'], 'rsi' => round($a['rsi'] ?? 0, 1), 'ma14' => round($a['ma14'], 2), 'support' => $a['support'], 'resistance' => $a['resistance'],
-        'target' => $p['target'], 'stop' => $p['stop'], 'signal' => $latest['call'] ?? 'Hold', 'verdict' => $a['verdict']];
+        'target' => $p['target'], 'stop' => $p['stop'], 'signal' => $latest['call'] ?? 'Hold', 'verdict' => $a['verdict'], 'buying_allowed_today' => $buyOk];
     $template = ['insights' => [$sym . ': today\'s signal is ' . ($latest['call'] ?? 'Hold') . '. ' . ($latest['meaning'] ?? '')],
-        'actions' => ['Buy only inside ' . $n($p['buy_low'], 1) . ' – ' . $n($p['buy_high'], 1) . ', with a stop loss at ' . $n($p['stop'], 1) . '.']];
+        'actions' => [$buyOk ? 'Buy only inside ' . $n($p['buy_low'], 1) . ' – ' . $n($p['buy_high'], 1) . ', with a stop loss at ' . $n($p['stop'], 1) . '.'
+            : (($latest['call'] ?? null) === 'Buy' ? 'The chart looks good, but the full check is not a BUY yet, so do not buy today.' : 'Do not buy today.')
+                . ' If you already hold it, watch the stop loss at ' . $n($p['stop'], 1) . '.'],
+        'fixed_actions' => true];
 @endphp
 <div class="d-flex flex-wrap justify-content-between gap-2 mb-3">
     <span class="text-muted">{{ $f['sector'] ?? '' }}</span>

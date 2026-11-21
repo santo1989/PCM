@@ -24,6 +24,9 @@
         </div>
     </div>
 
+    @if ($dseDown)
+        <div class="alert alert-warning py-2" role="alert">DSE did not answer during the market scan. Nothing was saved. Please try again in a few minutes.</div>
+    @endif
     @if ($failed)
         <div class="alert alert-warning py-2">No price history from DSE for: {{ implode(', ', $failed) }}.</div>
     @endif
@@ -63,7 +66,7 @@
                                 @if ($a['zero']) {{ $pct($a['zero']['rise_needed']) }} <span class="text-muted small">(≥{{ $a['zero']['circuit_days'] }} day{{ $a['zero']['circuit_days'] == 1 ? '' : 's' }})</span>@endif</td>
                         </tr>
                     @empty
-                        <tr><td colspan="17" class="text-muted">Nothing to show.{{ $scan ? ' No share passed the screen today.' : '' }}</td></tr>
+                        <tr><td colspan="17" class="text-muted">Nothing to show.{{ $scan && !$dseDown ? ' No share passed the screen today.' : '' }}</td></tr>
                     @endforelse
                     </tbody>
                 </table>

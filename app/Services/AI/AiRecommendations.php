@@ -46,6 +46,8 @@ class AiRecommendations
             if (str_starts_with((string) $e['rejected'], 'provider error')) {
                 return ['pending' => false] + self::shape($row);
             }
+            // fixed_actions: the AI may explain, but a rule-based instruction (e.g. "do not buy") stays as written.
+            if (!empty($in['template']['fixed_actions'])) $e['actions'] = $in['template']['actions'];
             DB::table('analytics_insights')->where('id', $id)->update(['source' => $e['source'], 'model' => $e['model'], 'rejected' => $e['rejected'],
                 'insights' => json_encode($e['insights']), 'actions' => json_encode($e['actions']), 'updated_at' => now()]);
             $row = DB::table('analytics_insights')->find($id);
