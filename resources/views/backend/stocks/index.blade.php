@@ -20,6 +20,7 @@
                 @if ($priced) Prices from {{ $priced->format('d M Y') }}; fetched from DSE automatically Sun–Thu after 15:15.@endif</div>
         </div>
         <div class="d-flex flex-wrap gap-2">
+            <a href="{{ route('stocks.analysis') }}" class="btn btn-outline-dark btn-sm"><i class="bi bi-graph-up-arrow"></i> Analysis</a>
             <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#tradeModal"><i class="bi bi-plus-lg"></i> Trade</button>
             <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#cashModal"><i class="bi bi-cash-coin"></i> Cash</button>
             <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#dividendModal"><i class="bi bi-gift"></i> Dividend</button>

@@ -113,7 +113,9 @@ Route::middleware('auth')->group(function () {
 
     // DSE stock portfolio
     Route::get('/stocks', [App\Http\Controllers\StockPortfolioController::class, 'index'])->name('stocks.index');
-    Route::post('/stocks/trades', [App\Http\Controllers\StockPortfolioController::class, 'storeTrade'])->name('stocks.trades.store');
+    Route::get('/stocks/analysis', [App\Http\Controllers\StockPortfolioController::class, 'analysis'])->name('stocks.analysis');
+    Route::get('/stocks/analysis/{symbol}', [App\Http\Controllers\StockPortfolioController::class, 'analysisDetail'])->where('symbol', '[A-Za-z0-9\-\(\)&]{2,20}')->name('stocks.analysis.detail');
+    Route::post('/stocks/trades',[App\Http\Controllers\StockPortfolioController::class, 'storeTrade'])->name('stocks.trades.store');
     Route::post('/stocks/cash', [App\Http\Controllers\StockPortfolioController::class, 'storeCash'])->name('stocks.cash.store');
     Route::post('/stocks/dividends', [App\Http\Controllers\StockPortfolioController::class, 'storeDividend'])->name('stocks.dividends.store');
     Route::post('/stocks/prices', [App\Http\Controllers\StockPortfolioController::class, 'updatePrices'])->name('stocks.prices.update');

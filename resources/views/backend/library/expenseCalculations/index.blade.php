@@ -744,11 +744,11 @@
                         </thead>
                         <tbody>
                             @forelse ($expenseCalculations as $cash)
-                                <tr>
+                                <tr data-cash="{{ json_encode(['id' => $cash->id, 'date' => $cash->date ? \Carbon\Carbon::parse($cash->date)->toDateString() : '', 'category_id' => $cash->category_id, 'category' => optional($cash->category)->name, 'name' => $cash->name, 'amount' => $cash->amount, 'url' => route('expenseCalculations.update', $cash)]) }}">
 
                                     <td data-label="Sl#">
                                         <button type="button" class="btn btn-outline-info" data-bs-toggle="modal"
-                                            data-bs-target="#exampleModalCenter{{ $cash->id }}">
+                                            data-bs-target="#CashDetailModal">
                                             {{ $cash->id }}
                                         </button>
                                     </td>
@@ -761,7 +761,7 @@
                                     <td data-label="Actions">
 
                                         <a type="button" class="btn btn-outline-info" data-bs-toggle="modal"
-                                            data-bs-target="#CashEditModal{{ $cash->id }}">Edit</a>
+                                            data-bs-target="#CashEditModal">Edit</a>
 
                                         <button type="button"
                                             onclick="confirmDelete('{{ route('expenseCalculations.destroy', ['cash' => $cash->id]) }}')"
@@ -965,115 +965,85 @@
 
     <!--  end model for Data Entry -->
 
-    <div id="live-expense-modals" data-live-region>
-    <!--  start model for Data Edit -->
-    @foreach ($expenseCalculations as $cash)
-        <div class="modal fade" id="CashEditModal{{ $cash->id }}" tabindex="-1"
-            aria-labelledby="CashEditModal{{ $cash->id }}Label" aria-hidden="true" data-bs-backdrop="static"
-            data-bs-keyboard="false">
-            <div class="modal-dialog modal-xl" style="min-width:90%;">
-                <div class="modal-content" style="background-color: #fff; min-width:90%;">
-                    <div class="modal-header" style="background: var(--grad-primary); color: #fff; min-width:90%;">
-                        <h5 class="modal-title text-center" id="CashEditModalLabel">Data Edit</h5>
-                        <button type="button" class="btn btn-outline-secondary"
-                            data-bs-dismiss="modal">Close</button>
-                    </div>
-                    <div class="modal-body" style="background: #fff; min-width:90%;">
-                        <div class="container-fluid justify-content-center">
-                            <div class="row justify-content-between">
-                                <div class="col-md-12">
-                                    <div class="p-4 p-md-5">
-
-                                        <form method="POST" action="{{ route('expenseCalculations.update', $cash) }}">
-                                            @csrf
-                                            @method('PUT')
-
-                                            <div class="row g-2 align-items-end">
-                                                <div class="col-md-3">
-                                                    <x-backend.form.input name="date" :id="'edit_date_' . $cash->id"
-                                                        type="date" label="Date" :value="$cash->date" />
-                                                </div>
-                                                <div class="col-md-3">
-                                                    <x-backend.form.select name="category_id"
-                                                        :id="'edit_category_id_' . $cash->id" label="Category"
-                                                        class="select2"
-                                                        :options="$categories->pluck('name', 'id')"
-                                                        :selected="$cash->category_id" />
-                                                </div>
-                                                <div class="col-md-3">
-                                                    <x-backend.form.autocomplete-input name="name" label="Name"
-                                                        model="App\Models\ExpenseCalculation" column="name"
-                                                        :value="$cash->name" />
-                                                </div>
-                                                <div class="col-md-3">
-                                                    <x-backend.form.input name="amount"
-                                                        :id="'edit_amount_' . $cash->id" type="number" step="any"
-                                                        label="Amount" :value="$cash->amount" />
-                                                </div>
-                                            </div>
-
-                                            <div class="mt-4 text-center">
-                                                <button type="submit" class="btn btn-primary px-4">Save</button>
-                                            </div>
-                                        </form>
-
-                                    </div>
+    {{-- One shared Edit and Details popup, filled from the clicked row (100 per-row popups made this page slow). --}}
+    <div class="modal fade" id="CashEditModal" tabindex="-1" aria-labelledby="CashEditModalLabel" aria-hidden="true"
+        data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-xl" style="min-width:90%;">
+            <div class="modal-content" style="background-color: #fff; min-width:90%;">
+                <div class="modal-header" style="background: var(--grad-primary); color: #fff; min-width:90%;">
+                    <h5 class="modal-title text-center" id="CashEditModalLabel">Data Edit</h5>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+                <div class="modal-body" style="background: #fff; min-width:90%;">
+                    <div class="p-4 p-md-5">
+                        <form method="POST" id="cashEditForm">
+                            @csrf
+                            @method('PUT')
+                            <div class="row g-2 align-items-end">
+                                <div class="col-md-3"><x-backend.form.input name="date" id="edit_date" type="date" label="Date" /></div>
+                                <div class="col-md-3">
+                                    <x-backend.form.select name="category_id" id="edit_category_id" label="Category" class="select2"
+                                        :options="$categories->pluck('name', 'id')" />
                                 </div>
+                                <div class="col-md-3">
+                                    <x-backend.form.autocomplete-input name="name" id="edit_name" label="Name"
+                                        model="App\Models\ExpenseCalculation" column="name" />
+                                </div>
+                                <div class="col-md-3"><x-backend.form.input name="amount" id="edit_amount" type="number" step="any" label="Amount" /></div>
                             </div>
-                        </div>
+                            <div class="mt-4 text-center"><button type="submit" class="btn btn-primary px-4">Save</button></div>
+                        </form>
                     </div>
                 </div>
             </div>
         </div>
-    @endforeach
-
-    <!--  end model for Data Edit -->
-
-    <!--  start model for Data details -->
-
-    @foreach ($expenseCalculations as $cash)
-        <div class="modal fade" id="exampleModalCenter{{ $cash->id }}" tabindex="-1" data-bs-backdrop="static"
-            aria-labelledby="registerModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg" style="min-width:90%;">
-                <div class="modal-content" style="background-color: #fff; min-width:90%;">
-                    <div class="modal-header" style="background: var(--grad-primary); color: #fff; min-width:90%;">
-                        <h5 class="modal-title text-center" id="registerModalLabel">{{ $cash->name }}</h5>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">X</button>
-                    </div>
-                    <div class="modal-body" style="background: #fff; min-width:90%;">
-                        <div class="container-fluid">
-                            <div class="row g-2">
-                                <div class="col-md-3">
-                                    <x-backend.form.input name="date" type="date" label="Date" :value="$cash->date"
-                                        readonly />
-                                </div>
-                                <div class="col-md-3">
-                                    <x-backend.form.input name="category" type="text" label="Category"
-                                        :value="optional($cash->category)->name" readonly />
-                                </div>
-                                <div class="col-md-3">
-                                    <x-backend.form.input name="name" type="text" label="Name" :value="$cash->name"
-                                        readonly />
-                                </div>
-                                <div class="col-md-3">
-                                    <x-backend.form.input name="amount" type="number" label="Amount"
-                                        :value="$cash->amount" readonly />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <a type="button" class="btn btn-outline-info" data-bs-toggle="modal"
-                            data-bs-target="#CashEditModal{{ $cash->id }}" data-bs-dismiss="modal">Edit</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    @endforeach
-
-    <!--  End model for Data details -->
     </div>
+
+    <div class="modal fade" id="CashDetailModal" tabindex="-1" data-bs-backdrop="static" aria-labelledby="CashDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" style="min-width:90%;">
+            <div class="modal-content" style="background-color: #fff; min-width:90%;">
+                <div class="modal-header" style="background: var(--grad-primary); color: #fff; min-width:90%;">
+                    <h5 class="modal-title text-center" id="CashDetailModalLabel"></h5>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">X</button>
+                </div>
+                <div class="modal-body" style="background: #fff; min-width:90%;">
+                    <div class="row g-2">
+                        <div class="col-md-3"><label class="form-label" for="detail_date">Date</label><input id="detail_date" type="date" class="form-control" readonly></div>
+                        <div class="col-md-3"><label class="form-label" for="detail_category">Category</label><input id="detail_category" class="form-control" readonly></div>
+                        <div class="col-md-3"><label class="form-label" for="detail_name">Name</label><input id="detail_name" class="form-control" readonly></div>
+                        <div class="col-md-3"><label class="form-label" for="detail_amount">Amount</label><input id="detail_amount" class="form-control" readonly></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <a type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#CashEditModal" data-bs-dismiss="modal">Edit</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        (function () {
+            var current = null;
+            var set = function (id, v) { document.getElementById(id).value = v == null ? '' : v; };
+            // Delegated: the table is re-rendered by live search and paging.
+            var pick = function (e) {
+                var tr = e.relatedTarget && e.relatedTarget.closest('tr[data-cash]');
+                if (tr) current = JSON.parse(tr.dataset.cash);
+            };
+            document.getElementById('CashDetailModal').addEventListener('show.bs.modal', function (e) {
+                pick(e);
+                document.getElementById('CashDetailModalLabel').textContent = current.name;
+                set('detail_date', current.date); set('detail_category', current.category);
+                set('detail_name', current.name); set('detail_amount', current.amount);
+            });
+            document.getElementById('CashEditModal').addEventListener('show.bs.modal', function (e) {
+                pick(e);
+                document.getElementById('cashEditForm').action = current.url;
+                set('edit_date', current.date); set('edit_name', current.name); set('edit_amount', current.amount);
+                jQuery('#edit_category_id').val(String(current.category_id)).trigger('change');
+            });
+        })();
+    </script>
     <script>
         function validateForm() {
             var incCategory = document.getElementById("types").value;

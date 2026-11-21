@@ -29,7 +29,10 @@ class UserActivity
             Cache::put('user-is-online-' . Auth::user()->id, true, $expiresAt);
 
             /* last seen */
-            User::where('id', Auth::user()->id)->update(['last_seen' => now()]);
+            // At most once a minute: this write was the slowest query on many pages.
+            if (Cache::add('user-last-seen-' . Auth::user()->id, true, 60)) {
+                User::where('id', Auth::user()->id)->update(['last_seen' => now()]);
+            }
         }
 
         return $next($request);

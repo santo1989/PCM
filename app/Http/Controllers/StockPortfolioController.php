@@ -6,6 +6,7 @@ use App\Models\StockCash;
 use App\Models\StockDividend;
 use App\Models\StockSymbol;
 use App\Models\StockTrade;
+use App\Services\StockAnalysis;
 use App\Services\StockPortfolio;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,6 +28,64 @@ class StockPortfolioController extends Controller
         $dividends = StockDividend::orderByDesc('record_date')->get();
 
         return view('backend.stocks.index', compact('portfolio', 'symbols', 'cash', 'dividends'));
+    }
+
+    /**
+     * Stock Analysis page: your holdings (zero-loss sell, rise needed) plus a watchlist,
+     * or ?scan=all to screen every DSE share on MA14 / MACD / candle signals.
+     */
+    public function analysis(Request $request)
+    {
+        $portfolio = StockPortfolio::load();
+        $held = collect($portfolio['holdings'])->keyBy('symbol');
+        $watch = collect(explode(',', strtoupper((string) $request->query('symbols', 'BSRMSTEEL,BRACBANK,CITYBANK,UTTARABANK,SQURPHARMA'))))
+            ->map(fn($s) => trim($s))->filter(fn($s) => preg_match('/^[A-Z0-9\-\(\)&]{2,20}$/', $s))->take(25);
+        $scan = $request->query('scan') === 'all';
+        $rows = [];
+        $failed = [];
+
+        if ($scan) {
+            // Whole market: technicals for every share first (one cached fetch), fundamentals only for the 20 best.
+            set_time_limit(300); // first scan of the day pages through ~40 DSE archive pages (≈3 min); later scans hit the cache
+            $all = StockAnalysis::allHistory(70);
+            $ranked = [];
+            foreach ($all as $symbol => $bars) {
+                if (count($bars) < 26 || end($bars)['close'] < 5 || preg_match('/MF$|BOND|SUKUK|GSEC/', $symbol)) continue;
+                $a = StockAnalysis::analyze($bars);
+                if ($a['ok'] && $a['tech_score'] >= 3 && !$a['bearish']) $ranked[$symbol] = $a['tech_score'];
+            }
+            arsort($ranked);
+            $symbols = array_slice(array_keys($ranked), 0, 20);
+            $data = StockAnalysis::warm($symbols, false);
+            foreach ($symbols as $s) {
+                $h = $held->get($s);
+                $rows[$s] = StockAnalysis::analyze($all[$s], $data[$s]['fund'], $h ? ['qty' => $h['qty'], 'avg_cost' => $h['avg_cost']] : null) + ['held' => (bool) $h];
+            }
+        } else {
+            $symbols = $held->keys()->merge($watch)->unique()->values()->all();
+            $data = StockAnalysis::warm($symbols);
+            foreach ($symbols as $s) {
+                $h = $held->get($s);
+                $a = StockAnalysis::analyze($data[$s]['bars'], $data[$s]['fund'], $h ? ['qty' => $h['qty'], 'avg_cost' => $h['avg_cost']] : null);
+                if ($a['ok']) $rows[$s] = $a + ['held' => (bool) $h];
+                else $failed[] = $s;
+            }
+        }
+        uasort($rows, fn($a, $b) => [!($a['held'] ?? false), -$a['score']] <=> [!($b['held'] ?? false), -$b['score']]);
+
+        return view('backend.stocks.analysis', ['rows' => $rows, 'failed' => $failed, 'scan' => $scan, 'watch' => $watch->implode(',')]);
+    }
+
+    /** Full details of one share for the Stock Analysis popup; ?scan=1 uses the same bars as the whole-market table. */
+    public function analysisDetail(Request $request, string $symbol)
+    {
+        $symbol = strtoupper($symbol);
+        $bars = $request->boolean('scan') ? (StockAnalysis::allHistory(70)[$symbol] ?? []) : StockAnalysis::history($symbol);
+        $h = collect(StockPortfolio::load()['holdings'])->firstWhere('symbol', $symbol);
+        $a = StockAnalysis::analyze($bars, StockAnalysis::fundamentals($symbol), $h ? ['qty' => $h['qty'], 'avg_cost' => $h['avg_cost']] : null);
+        abort_unless($a['ok'], 404, "No price history from DSE for {$symbol}.");
+
+        return view('backend.stocks._analysis_detail', ['sym' => $symbol, 'a' => $a, 'calls' => StockAnalysis::candleCalls($bars, $a['fund'])]);
     }
 
     public function storeTrade(Request $request)
