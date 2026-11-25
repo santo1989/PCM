@@ -59,5 +59,11 @@ class RouteServiceProvider extends ServiceProvider
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(60)->by(optional($request->user())->id ?: $request->ip());
         });
+
+        // Phone login: 5 tries a minute per address+email, and 20 an hour per email whatever the address.
+        RateLimiter::for('mobile-login', function (Request $request) {
+            $email = strtolower((string) (is_string($request->input('email')) ? $request->input('email') : ''));
+            return [Limit::perMinute(5)->by($request->ip() . '|' . $email), Limit::perHour(20)->by('email|' . $email)];
+        });
     }
 }

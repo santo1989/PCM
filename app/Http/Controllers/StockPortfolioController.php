@@ -39,8 +39,7 @@ class StockPortfolioController extends Controller
     {
         $portfolio = StockPortfolio::load();
         $held = collect($portfolio['holdings'])->keyBy('symbol');
-        $watch = collect(explode(',', strtoupper((string) $request->query('symbols', 'BSRMSTEEL,BRACBANK,CITYBANK,UTTARABANK,SQURPHARMA'))))
-            ->map(fn($s) => trim($s))->filter(fn($s) => preg_match('/^[A-Z0-9\-\(\)&]{2,20}$/', $s))->take(25);
+        $watch = StockAnalysis::watchlist($request->query('symbols'));
         $scan = $request->query('scan') === 'all';
         $rows = [];
         $failed = [];

@@ -31,12 +31,7 @@ class StockAnalysis
     {
         $histKey = fn($s) => "dse_hist_{$s}_" . now()->toDateString();
         $fundKey = fn($s) => "dse_fund_{$s}";
-        $out = [];
-        foreach ($symbols as $s) {
-            $fund = Cache::get($fundKey($s));
-            // No category = an old save of a DSE error page: fetch it again.
-            $out[$s] = ['bars' => $withHistory ? (Cache::get($histKey($s)) ?: []) : [], 'fund' => !empty($fund['category']) ? $fund : ['symbol' => $s]];
-        }
+        $out = self::cached($symbols, $withHistory);
         $missing = array_filter($symbols, fn($s) => ($withHistory && !$out[$s]['bars']) || empty($out[$s]['fund']['category']));
 
         foreach (array_chunk(array_values($missing), 4) as $batch) { // a few at a time, to stay polite to dse.com.bd
@@ -70,6 +65,50 @@ class StockAnalysis
             if (!$answered) break; // DSE is down: don't wait 12 seconds for every remaining group
         }
         return $out;
+    }
+
+    /**
+     * Only what is already saved; never contacts DSE.
+     * @return array<string, array{bars: array, fund: array}>
+     */
+    public static function cached(array $symbols, bool $withHistory = true): array
+    {
+        $out = [];
+        foreach ($symbols as $s) {
+            $fund = Cache::get("dse_fund_{$s}");
+            // No category = an old save of a DSE error page: treat it as missing.
+            $out[$s] = ['bars' => $withHistory ? (Cache::get("dse_hist_{$s}_" . now()->toDateString()) ?: []) : [], 'fund' => !empty($fund['category']) ? $fund : ['symbol' => $s]];
+        }
+        return $out;
+    }
+
+    /** Holdings page watchlist: comma-separated trading codes, valid ones only, at most 25. */
+    public static function watchlist(?string $symbols): \Illuminate\Support\Collection
+    {
+        return collect(explode(',', strtoupper($symbols ?? 'BSRMSTEEL,BRACBANK,CITYBANK,UTTARABANK,SQURPHARMA')))
+            ->map(fn($s) => trim($s))->filter(fn($s) => preg_match('/^[A-Z0-9\-\(\)&]{2,20}$/', $s))->take(25);
+    }
+
+    /**
+     * Today's signal and the final "Do" instruction for one share (web popup and mobile app).
+     * Metrics are public market figures only: no holdings or cost go to the AI.
+     * @return array{buy_ok: bool, metrics: array, template: array}
+     */
+    public static function popupAdvice(string $sym, array $a, array $calls): array
+    {
+        $n = fn($v) => number_format($v, 1);
+        $p = $a['plan'];
+        $latest = $calls[$a['date']] ?? null;
+        $buyOk = ($latest['call'] ?? null) === 'Buy' && $a['verdict'] === 'BUY'; // the chart signal alone is not enough
+        $metrics = ['close' => $a['close'], 'rsi' => round($a['rsi'] ?? 0, 1), 'ma14' => round($a['ma14'], 2), 'support' => $a['support'], 'resistance' => $a['resistance'],
+            'target' => $p['target'], 'stop' => $p['stop'], 'signal' => $latest['call'] ?? 'Hold', 'verdict' => $a['verdict'], 'buying_allowed_today' => $buyOk];
+        $template = ['insights' => [$sym . ': today\'s signal is ' . ($latest['call'] ?? 'Hold') . '. ' . ($latest['meaning'] ?? '')],
+            'actions' => [$buyOk ? 'Buy only inside ' . $n($p['buy_low']) . ' – ' . $n($p['buy_high']) . ', with a stop loss at ' . $n($p['stop']) . '.'
+                : (($latest['call'] ?? null) === 'Buy' ? 'The chart looks good, but the full check is not a BUY yet, so do not buy today.' : 'Do not buy today.')
+                    . ' If you already hold it, watch the stop loss at ' . $n($p['stop']) . '.'],
+            'fixed_actions' => true];
+
+        return ['buy_ok' => $buyOk, 'metrics' => $metrics, 'template' => $template];
     }
 
     /**
